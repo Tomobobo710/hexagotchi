@@ -7,6 +7,7 @@
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -111,6 +112,14 @@ void UpdateDrawFrame() {
 }
 
 int main() {
+#ifdef HEXA_SHOT_TOOL
+    // Dev tooling only, compiled in solely when built with -DHEXA_SHOT_TOOL
+    // (see tools/screenshot.sh). Starts on the scene named by the HEXA_SHOT
+    // env var, renders a few frames, saves a PNG, and exits. Absent entirely
+    // from normal builds.
+    const char* shotScene = getenv("HEXA_SHOT");
+#endif
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(720, 720, "2D Engine Demo");
     SetTargetFPS(60);
@@ -122,7 +131,12 @@ int main() {
     sceneManager->registerScene("game", new GameScene());
     sceneManager->registerScene("boss", new BossScene());
     sceneManager->registerScene("input_test", new InputTestScene());
+#ifdef HEXA_SHOT_TOOL
+    sceneManager->switchSceneImmediate(
+        (shotScene && shotScene[0]) ? shotScene : "game");
+#else
     sceneManager->switchSceneImmediate("game");
+#endif
 
     dialog = new DialogBox(
         {(float)GAME_W / 2.0f, (float)GAME_H - 20.0f},
@@ -153,8 +167,20 @@ int main() {
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
 #else
+#ifdef HEXA_SHOT_TOOL
+    int shotFrame = 0;
+#endif
     while (!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE)) {
         UpdateDrawFrame();
+#ifdef HEXA_SHOT_TOOL
+        if (shotScene && shotScene[0]) {
+            // Let the scene settle a few frames, then capture and quit.
+            if (++shotFrame == 30) {
+                TakeScreenshot("shot.png");
+                break;
+            }
+        }
+#endif
     }
     UnloadRenderTexture(gameTarget);
     delete dialog;

@@ -1,6 +1,6 @@
 CXX  = g++
-EMCC = emsdk/upstream/emscripten/emcc.py
-EMAR = emsdk/upstream/emscripten/emar.py
+EMCC = emsdk/python/3.13.3_64bit/python.exe emsdk/upstream/emscripten/emcc.py
+EMAR = emsdk/python/3.13.3_64bit/python.exe emsdk/upstream/emscripten/emar.py
 RL   = raylib/src
 
 SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp)
@@ -36,7 +36,7 @@ $(DESKTOP_OUT)/obj/%.o: src/%.cpp
 # Web
 web: $(RL)/libraylib.web.a
 	mkdir -p $(WEB_OUT)
-	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/game.html $(WEBINCLUDES) $(WEBLINK) --shell-file $(RL)/minshell.html
+	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/index.html $(WEBINCLUDES) $(WEBLINK) --shell-file $(RL)/minshell.html
 
 $(RL)/libraylib.web.a:
 	$(EMCC) -c $(RL)/rcore.c     $(WEBFLAGS) -o $(RL)/rcore.wasm.o

@@ -2,6 +2,7 @@
 #define INPUT_TEST_SCENE_HPP
 
 #include "Scene.hpp"
+#include "Button.hpp"
 
 class InputTestScene : public Scene {
 public:
@@ -10,6 +11,7 @@ public:
     void init() override;
     void draw() override;
     void update(float deltaTime) override;
+    void cleanup() override;
 
 private:
     // Rebinding state
@@ -17,6 +19,16 @@ private:
     std::string rebindingAction;  // Which action we're currently rebinding
     int newKey;                   // The captured key (set by input capture)
     bool bindingsChanged;         // Track if save is needed
+
+    // Button demo
+    Button testButton;
+    int clickCount = 0;
+
+    // Sprite button demo
+    Button spriteButton;
+    Texture2D spriteButtonTexture;
+    Texture2D spriteButtonHoverTexture;
+    int spriteClickCount = 0;
 };
 
 #endif
