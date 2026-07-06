@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
-project(rEngine CXX)
+project(hexagotchi CXX C)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Set essential CMake variables for C compilation and static library creation
+set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> qc <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> q <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> <TARGET>")
+set(CMAKE_C_COMPILE_OBJECT "<CMAKE_C_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>")
+set(CMAKE_C_LINK_EXECUTABLE "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
 
 # ============================================
 # Desktop build (default)
@@ -42,12 +49,14 @@ if(RBUILD_DESKTOP)
         _CRT_SECURE_NO_WARNINGS
     )
 
-    # Raylib on Windows with GLFW - uses opengl32, gdi32, winmm
-    target_link_libraries(raylib PUBLIC
-        opengl32
-        gdi32
-        winmm
-    )
+    # Platform-specific libraries for raylib
+    if(WIN32)
+        # Windows: opengl32, gdi32, winmm
+        target_link_libraries(raylib PUBLIC opengl32 gdi32 winmm)
+    else()
+        # Linux: GL, m, pthread, dl, rt
+        target_link_libraries(raylib PUBLIC GL m pthread dl rt)
+    endif()
 
     # Build glfw as a static library
     add_subdirectory(glfw)
@@ -66,9 +75,6 @@ if(RBUILD_DESKTOP)
     target_link_libraries(game PRIVATE
         raylib
         glfw
-        opengl32
-        gdi32
-        winmm
     )
 
     # Set output directories for desktop build
