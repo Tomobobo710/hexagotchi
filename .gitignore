@@ -23,3 +23,8 @@ emsdk/.gitignore
 # IDE
 .vscode/
 .vs/
+
+# Markdown (except docs we want)
+*.md
+!README.md
+!BUILD_INSTRUCTIONS.md
