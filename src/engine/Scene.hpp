@@ -1,0 +1,82 @@
+#ifndef SCENE_HPP
+#define SCENE_HPP
+
+#include "raylib.h"
+#include "SceneActor.hpp"
+#include "SceneCamera.hpp"
+#include "SceneEffect.hpp"
+#include "SceneInputHandler.hpp"
+#include <vector>
+#include <string>
+#include <algorithm>
+
+// Scene constants
+const Color SCENE_DEFAULT_BG = RAYWHITE;
+const float SCENE_DEFAULT_WIDTH = 1920.0f;
+const float SCENE_DEFAULT_HEIGHT = 1080.0f;
+
+class Scene {
+public:
+    // Constructor and destructor
+    Scene(float width = SCENE_DEFAULT_WIDTH, float height = SCENE_DEFAULT_HEIGHT, Color bgColor = SCENE_DEFAULT_BG);
+    virtual ~Scene();
+    
+    // Actor management
+    void addActor(SceneActor* actor);
+    void removeActor(SceneActor* actor);
+    void removeActorByTag(const std::string& tag);
+    
+    SceneActor* findActorByTag(const std::string& tag);
+    std::vector<SceneActor*> findActorsByLayer(int layer);
+    std::vector<SceneActor*> getAllActors() const;
+    
+    int getActorCount() const;
+    
+    // Camera
+    SceneCamera* getCamera();
+    SceneCamera* createCamera(float x, float y, float zoom = CAMERA_DEFAULT_ZOOM);
+    
+    // Effects
+    void addEffect(SceneEffect* effect);
+
+    // Lifecycle - override these in subclasses
+    virtual void init();
+    virtual void update(float deltaTime);
+    virtual void draw();
+    virtual void cleanup();
+    
+    // State
+    void setPaused(bool p);
+    bool isPaused() const;
+    
+    // Properties
+    void setBackgroundColor(Color color);
+    Color getBackgroundColor() const;
+    
+    Vector2 getSize() const;
+    float getWidth() const;
+    float getHeight() const;
+    
+    // Utilities
+    SceneActor* findActorAt(Vector2 worldPos);
+    std::vector<SceneActor*> findActorsInRect(Rectangle rect);
+
+    // Input
+    SceneInputHandler* getInputHandler();
+    
+protected:
+    std::vector<SceneActor*> actors;
+    std::vector<SceneActor*> actorsToRemove;
+    std::vector<SceneEffect*> effects;
+    SceneCamera* camera;
+    SceneInputHandler inputHandler;
+    bool paused;
+    Color backgroundColor;
+    float width, height;
+    
+    // Helper methods
+    void processRemovals();
+    void sortActorsByLayer();
+};
+
+#endif // SCENE_HPP

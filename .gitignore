@@ -1,0 +1,11 @@
+build/
+build-web/
+
+game.exe
+raylib/src/*.o
+raylib/src/*.wasm.o
+raylib/src/libraylib.a
+raylib/src/libraylib.web.a
+glfw/build/
+.vscode/
+.vs/
