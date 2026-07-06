@@ -1,11 +1,25 @@
+# Build outputs
 build/
 build-web/
-
 game.exe
+
+# Raylib build artifacts
 raylib/src/*.o
 raylib/src/*.wasm.o
 raylib/src/libraylib.a
 raylib/src/libraylib.web.a
+
+# GLFW build
 glfw/build/
+
+# Emsdk toolchain (downloaded binaries, not the source)
+emsdk/node/
+emsdk/python/
+emsdk/upstream/
+emsdk/downloads/
+emsdk/total_size.json
+emsdk/.gitignore
+
+# IDE
 .vscode/
 .vs/

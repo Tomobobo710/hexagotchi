@@ -1,4 +1,4 @@
-# rEngine Build Instructions
+# hexagotchi Build Instructions
 
 ## Prerequisites
 
@@ -6,13 +6,19 @@
 - **make**
 - **cmake**
 
-## Desktop Build
+## Setup
 
-### 1. Clone
+### 1. Clone with submodules
 
 ```bash
-git clone --recurse-submodules https://github.com/Tomobobo710/rEngine.git
-cd rEngine
+git clone --recurse-submodules https://github.com/Tomobobo710/hexagotchi.git
+cd hexagotchi
+```
+
+If you already cloned without submodules:
+
+```bash
+git submodule update --init --recursive
 ```
 
 ### 2. Build dependencies (one-time)

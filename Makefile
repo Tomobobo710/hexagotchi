@@ -1,6 +1,6 @@
 CXX  = g++
-EMCC = python emsdk/upstream/emscripten/emcc.py
-EMAR = python emsdk/upstream/emscripten/emar.py
+EMCC = emsdk/upstream/emscripten/emcc.py
+EMAR = emsdk/upstream/emscripten/emar.py
 RL   = raylib/src
 
 SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp)
