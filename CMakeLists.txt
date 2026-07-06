@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(hexagotchi CXX C)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set essential CMake variables for C compilation and static library creation
@@ -127,7 +127,9 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/SceneInputHandler.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneManager.cpp
         ${CMAKE_SOURCE_DIR}/src/game/BossScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/ControlsOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GameScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp

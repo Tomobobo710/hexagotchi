@@ -1,11 +1,42 @@
 #include "GameScene.hpp"
 #include "PlayerActor.hpp"
+#include "PauseMenuOverlay.hpp"
+#include "ControlsOverlay.hpp"
 #include "../effects/MoonEffect.hpp"
 #include "../effects/StarfieldEffect.hpp"
+#include "../engine/GameConstants.hpp"
+#include "../engine/SceneInputHandler.hpp"
 #include <vector>
 #include <cmath>
 
-GameScene::GameScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {}
+GameScene::GameScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
+    // Set up callbacks for the pause menu
+    pauseMenu = std::make_unique<PauseMenuOverlay>(*this);
+    pauseMenu->onResume = [this]() {
+        // Resume game - close pause menu and resume physics
+        paused = false;
+        if (controlsOverlay) {
+            controlsOverlay.reset();
+        }
+        SceneInputHandler* ih = getInputHandler();
+        if (ih) {
+            ih->clearAllInputs();
+        }
+    };
+
+    pauseMenu->onClose = [this]() {
+        // Close - handled by onPause which clears inputs
+        // Kept empty to avoid double-cleanup
+    };
+
+    pauseMenu->onControlsSelected = [this]() {
+        onControlsSelected();
+    };
+
+    pauseMenu->onExitSelected = [this]() {
+        onExitSelected();
+    };
+}
 
 void GameScene::init() {
     PlayerActor* player = new PlayerActor({300.0f, 480.0f}, groundY);
@@ -88,9 +119,23 @@ void GameScene::draw() {
         }
     }
     EndMode2D();
+
+    // Draw controls overlay if active
+    if (controlsOverlay) {
+        controlsOverlay->draw();
+    }
+
+    // Draw pause menu overlay if paused and no controls overlay
+    if (paused && !controlsOverlay && pauseMenu) {
+        pauseMenu->draw();
+    }
 }
 
 void GameScene::update(float deltaTime) {
+    // Skip physics update while paused or controls overlay is active
+    if (paused || controlsOverlay) {
+        return;
+    }
     Scene::update(deltaTime);
     PlayerActor* player = (PlayerActor*)findActorByTag("player");
     if (!player) return;
@@ -134,4 +179,59 @@ void GameScene::update(float deltaTime) {
 
     if (onGround && !landedLastFrame) getCamera()->shake(4.0f, 0.15f);
     landedLastFrame = onGround;
+}
+
+void GameScene::togglePause() {
+    if (!paused) {
+        // Opening pause menu
+        paused = true;
+        if (controlsOverlay) {
+            controlsOverlay.reset();
+        }
+        if (pauseMenu) {
+            pauseMenu->open();
+        }
+    } else {
+        // Closing pause menu - clear inputs and resume game
+        paused = false;
+        if (controlsOverlay) {
+            controlsOverlay.reset();
+        }
+        if (pauseMenu) {
+            pauseMenu->close();
+
+            // Clear all key states in input handler to prevent stuck inputs
+            SceneInputHandler* ih = getInputHandler();
+            if (ih) {
+                ih->clearAllInputs();
+            }
+        }
+    }
+}
+
+void GameScene::onControlsSelected() {
+    // This callback is invoked when "Controls" is selected in pause menu
+    // Create and show controls overlay within this scene (not a separate scene)
+    if (!controlsOverlay && getInputHandler()) {
+        controlsOverlay = std::make_unique<ControlsOverlay>(getInputHandler());
+        controlsOverlay->open();
+        // When closing controls, return to paused state with menu visible
+        controlsOverlay->onClose = [this]() {
+            if (controlsOverlay) {
+                controlsOverlay.reset();
+            }
+            // Return to pause state so the menu shows
+            paused = true;
+            if (pauseMenu) {
+                pauseMenu->open();
+            }
+        };
+    }
+}
+
+void GameScene::onExitSelected() {
+    // This callback is invoked when "Exit Game" is selected in pause menu
+    // Set the global exit request flag to close the game
+    extern bool exitRequested;  // Extern declaration from main.cpp
+    exitRequested = true;
 }

@@ -8,6 +8,9 @@
 #include <string>
 #include <vector>
 
+// Global exit request flag
+bool exitRequested = false;
+
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
 #endif
@@ -83,6 +86,14 @@ void UpdateDrawFrame() {
         showDialog(seq, 0);
     }
 
+    // Toggle pause menu with 0 key (only in game and boss scenes)
+    if (IsKeyPressed(KEY_ZERO) && (currentScene == "game" || currentScene == "boss")) {
+        Scene* currentSceneObj = sceneManager->getCurrentScene();
+        if (currentSceneObj) {
+            currentSceneObj->togglePause();
+        }
+    }
+
     sceneManager->update(dt);
     dialog->update(dt);
 
@@ -93,11 +104,11 @@ void UpdateDrawFrame() {
         DrawRectangle(0, 0, GAME_W, 32, {0, 0, 0, 160});
         if (currentScene == "input_test") {
             DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input Test  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input Test  0: Menu", GAME_W - 280, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  H: Dialog  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  H: Dialog  0: Menu", GAME_W - 280, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -153,7 +164,7 @@ int main() {
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
 #else
-    while (!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE)) {
+    while (!WindowShouldClose() && !exitRequested) {
         UpdateDrawFrame();
     }
     UnloadRenderTexture(gameTarget);

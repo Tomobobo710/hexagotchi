@@ -60,18 +60,19 @@ public:
     void unmapKey(const std::string& action);
     int getMappedKey(const std::string& action) const;
     void setDefaultBindings();
-    
+
     bool isActionPressed(const std::string& action);
     bool isActionHeld(const std::string& action);
     bool isActionReleased(const std::string& action);
-    
+
     // Input capture mode - for key rebinding UI
     void setWaitingForInput(bool waiting);
     bool isWaitingForInput() const;
     int getCapturedKey() const;
-    
+
     // Utility methods
     std::vector<std::string> getAllActions() const;
+    static std::string getBindingDisplayName(int keyCode);
     static std::string getKeyDisplayName(int keyCode);
     static std::string getMouseButtonName(int buttonCode);
     
