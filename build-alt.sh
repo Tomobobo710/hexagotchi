@@ -23,13 +23,15 @@ OBJ=build/desktop/obj
 
 if [ "$1" = "clean" ]; then rm -rf build/desktop; echo "cleaned"; exit 0; fi
 
-# Repack assets.rres whenever anything under assets/ is newer than it, so
-# asset changes are picked up automatically -- no manual pack step.
-if [ -z "$(find assets -newer assets.rres 2>/dev/null)" ] && [ -f assets.rres ]; then
+# Repack build/assets.rres whenever anything under assets/ is newer than it,
+# so asset changes are picked up automatically -- no manual pack step. Packed
+# into build/ -- it's a generated artifact, never the repo root.
+mkdir -p build
+if [ -z "$(find assets -newer build/assets.rres 2>/dev/null)" ] && [ -f build/assets.rres ]; then
   echo "  assets.rres up to date"
 else
   echo "  packing assets.rres"
-  tools/pack_assets.sh assets assets.rres
+  tools/pack_assets.sh assets build/assets.rres
 fi
 
 mkdir -p "$OBJ"
@@ -44,6 +46,6 @@ timeout 120 $GPP "$OBJ"/*.o -o build/desktop/game.exe $LD
 
 # game.exe reads assets.rres via a relative path, so it must sit next to the
 # exe -- otherwise launching it from anywhere but the repo root can't find it.
-cp assets.rres build/desktop/assets.rres
+cp build/assets.rres build/desktop/assets.rres
 
 echo "=== built build/desktop/game.exe ==="
