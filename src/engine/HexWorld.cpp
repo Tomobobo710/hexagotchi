@@ -83,40 +83,47 @@ BiomeType HexWorld::getBiomeForHeight(float height) const {
 std::vector<TileType*> HexWorld::createBiomeTileTypes(BiomeType biome) const {
     std::vector<TileType*> types;
 
+    // Helper to format tile name with 3-digit zero-padding
+    auto formatTileName = [](const std::string& base, int index) -> std::string {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%s_%03d", base.c_str(), index);
+        return std::string(buf);
+    };
+
     switch (biome) {
         case BiomeType::OCEAN:
             for (int i = 0; i <= 3; i++) {
-                types.push_back(new TileType("ocean_" + std::to_string(i), "ocean", TileDepth::SHALLOW));
+                types.push_back(new TileType(formatTileName("ocean", i), "ocean", TileDepth::SHALLOW));
             }
             break;
         case BiomeType::SAND:
             for (int i = 0; i <= 3; i++) {
-                types.push_back(new TileType("sand_" + std::to_string(i), "sand", TileDepth::SHALLOW));
+                types.push_back(new TileType(formatTileName("sand", i), "sand", TileDepth::SHALLOW));
             }
             break;
         case BiomeType::GRASS:
             for (int i = 0; i <= 10; i++) {
-                types.push_back(new TileType("grass_" + std::to_string(i), "grass", TileDepth::SHALLOW));
+                types.push_back(new TileType(formatTileName("grass", i), "grass", TileDepth::SHALLOW));
             }
             break;
         case BiomeType::DIRT:
             for (int i = 0; i <= 7; i++) {
-                types.push_back(new TileType("dirt_" + std::to_string(i), "dirt", TileDepth::SHALLOW));
+                types.push_back(new TileType(formatTileName("dirt", i), "dirt", TileDepth::SHALLOW));
             }
             break;
         case BiomeType::SWAMP:
             for (int i = 0; i <= 4; i++) {
-                types.push_back(new TileType("swamp_" + std::to_string(i), "swamp", TileDepth::SHALLOW));
+                types.push_back(new TileType(formatTileName("swamp", i), "swamp", TileDepth::SHALLOW));
             }
             break;
         case BiomeType::ICE:
             for (int i = 0; i <= 10; i++) {
-                types.push_back(new TileType("ice_" + std::to_string(i), "ice", TileDepth::SHALLOW));
+                types.push_back(new TileType(formatTileName("ice", i), "ice", TileDepth::SHALLOW));
             }
             break;
         case BiomeType::LAVA:
             for (int i = 0; i <= 1; i++) {
-                types.push_back(new TileType("lava_" + std::to_string(i), "lava", TileDepth::SHALLOW));
+                types.push_back(new TileType(formatTileName("lava", i), "lava", TileDepth::SHALLOW));
             }
             break;
         case BiomeType::SPECIAL:

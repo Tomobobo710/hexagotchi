@@ -12,8 +12,9 @@ TileType::TileType(const std::string& name, const std::string& biome, TileDepth 
 }
 
 std::string TileType::getTexturePath() const {
-    // Path format: assets/single_tiles/{biome}/{name}.png
-    return "assets/single_tiles/" + biome + "/" + name + ".png";
+    // Path format: single_tiles/{biome}/{name}.png
+    // (AssetPack reads packed resources, not filesystem paths)
+    return "single_tiles/" + biome + "/" + name + ".png";
 }
 
 bool TileType::canBorderBiome(HexSide side, const std::string& otherBiome) const {

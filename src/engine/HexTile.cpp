@@ -1,6 +1,8 @@
 #include "HexTile.hpp"
 #include <cmath>
 
+#include "AssetPack.hpp"
+
 // Convert hex coordinates to pixel coordinates (flat-top hex)
 Vector2 HexCoords::toPixel(float hexSize) const {
     float x = hexSize * (3.0f / 2.0f * q);
@@ -33,7 +35,7 @@ Vector2 HexTile::getWorldPosition() const {
 void HexTile::loadTexture() {
     if (!tileType) return;
     std::string path = tileType->getTexturePath();
-    Texture2D texture = LoadTexture(path.c_str());
+    Texture2D texture = AssetPack::loadTexture(path);
     setTexture(texture);
 }
 
