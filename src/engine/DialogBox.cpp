@@ -5,6 +5,7 @@
 DialogBox::DialogBox(Vector2 pos, float w, float h)
     : position(pos), width(w), height(h), anchorPoint("center"),
       speakerName(""), speakerColor(YELLOW), portraitColor({80, 80, 120, 255}),
+      portraitTexture({0}),
       currentCharIndex(0), charAccumulator(0.0f), selectedOptionIndex(0),
       textColor(WHITE), backgroundColor({10, 10, 30, 220}),
       borderColor({100, 100, 200, 255}), selectedOptionColor(YELLOW),
@@ -64,18 +65,27 @@ void DialogBox::draw() {
     // Portrait border
     DrawRectangleLines((int)portraitX, (int)portraitY, (int)DIALOG_PORTRAIT_SIZE, (int)DIALOG_PORTRAIT_SIZE, accent);
 
-    // Draw a simple character silhouette in portrait
-    Color silhouette = { (unsigned char)(portraitColor.r + 40), (unsigned char)(portraitColor.g + 40), (unsigned char)(portraitColor.b + 60), alpha };
-    // Head
-    DrawCircle((int)(portraitX + DIALOG_PORTRAIT_SIZE / 2), (int)(portraitY + DIALOG_PORTRAIT_SIZE * 0.32f), DIALOG_PORTRAIT_SIZE * 0.18f, silhouette);
-    // Body
-    DrawRectangle(
-        (int)(portraitX + DIALOG_PORTRAIT_SIZE * 0.28f),
-        (int)(portraitY + DIALOG_PORTRAIT_SIZE * 0.52f),
-        (int)(DIALOG_PORTRAIT_SIZE * 0.44f),
-        (int)(DIALOG_PORTRAIT_SIZE * 0.38f),
-        silhouette
-    );
+    if (portraitTexture.id != 0) {
+        // Real portrait art, stretched to fill the portrait box.
+        Rectangle src = {0.0f, 0.0f, (float)portraitTexture.width, (float)portraitTexture.height};
+        Rectangle dest = {portraitX, portraitY, DIALOG_PORTRAIT_SIZE, DIALOG_PORTRAIT_SIZE};
+        Color tint = WHITE;
+        tint.a = alpha;
+        DrawTexturePro(portraitTexture, src, dest, {0.0f, 0.0f}, 0.0f, tint);
+    } else {
+        // No art set yet: placeholder character silhouette.
+        Color silhouette = { (unsigned char)(portraitColor.r + 40), (unsigned char)(portraitColor.g + 40), (unsigned char)(portraitColor.b + 60), alpha };
+        // Head
+        DrawCircle((int)(portraitX + DIALOG_PORTRAIT_SIZE / 2), (int)(portraitY + DIALOG_PORTRAIT_SIZE * 0.32f), DIALOG_PORTRAIT_SIZE * 0.18f, silhouette);
+        // Body
+        DrawRectangle(
+            (int)(portraitX + DIALOG_PORTRAIT_SIZE * 0.28f),
+            (int)(portraitY + DIALOG_PORTRAIT_SIZE * 0.52f),
+            (int)(DIALOG_PORTRAIT_SIZE * 0.44f),
+            (int)(DIALOG_PORTRAIT_SIZE * 0.38f),
+            silhouette
+        );
+    }
 
     // --- Speaker name above portrait ---
     if (!speakerName.empty()) {
@@ -143,6 +153,8 @@ void DialogBox::draw() {
 void DialogBox::setSpeakerName(const std::string& name) { speakerName = name; }
 void DialogBox::setSpeakerColor(Color c) { speakerColor = c; }
 void DialogBox::setPortraitColor(Color c) { portraitColor = c; }
+void DialogBox::setPortraitTexture(Texture2D tex) { portraitTexture = tex; }
+void DialogBox::clearPortraitTexture() { portraitTexture = {0}; }
 
 void DialogBox::setText(const std::string& text) {
     fullText = text;
