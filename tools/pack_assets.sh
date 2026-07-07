@@ -4,7 +4,7 @@
 # tools/screenshot.sh (see that file's comments for why).
 #
 # Usage:
-#   tools/pack_assets.sh              pack assets/ -> assets.rres (repo root)
+#   tools/pack_assets.sh              pack assets/ -> build/assets.rres
 #   tools/pack_assets.sh <dir> <out>  pack <dir> -> <out>
 set -e
 cd "$(dirname "$0")/.."
@@ -27,4 +27,6 @@ mkdir -p build/devtools
 timeout 120 $GPP $SYS -std=c++11 $INC -c tools/pack_assets.cpp -o "$OBJ"
 timeout 120 $GPP "$OBJ" -o "$BIN" $LD
 
-"$BIN" "${1:-assets}" "${2:-assets.rres}"
+OUT="${2:-build/assets.rres}"
+mkdir -p "$(dirname "$OUT")"
+"$BIN" "${1:-assets}" "$OUT"
