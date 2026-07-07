@@ -1,6 +1,10 @@
 # Build outputs
 build/
 build-web/
+build/web/
+
+# Executables
+game
 game.exe
 
 # Raylib build artifacts
@@ -11,6 +15,9 @@ raylib/src/libraylib.web.a
 
 # GLFW build
 glfw/build/
+glfw/CMakeFiles/
+glfw/cmake_install.cmake
+glfw/Makefile
 
 # Emsdk toolchain (downloaded binaries, not the source)
 emsdk/node/
@@ -19,6 +26,18 @@ emsdk/upstream/
 emsdk/downloads/
 emsdk/total_size.json
 emsdk/.gitignore
+
+# Emscripten build artifacts
+emsdk/.emscripten*
+emsdk/upstream/emscripten/cache/
+emsdk/java/
+emsdk/emscripten-*
+
+# CMake cache and temp files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
 
 # IDE
 .vscode/
