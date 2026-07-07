@@ -32,6 +32,7 @@ Texture2D loadTexture(const std::string& key) {
     }
 
     Texture2D tex = LoadTextureFromImage(img);
+    SetTextureFilter(tex, TEXTURE_FILTER_POINT);
     UnloadImage(img);
     return tex;
 }

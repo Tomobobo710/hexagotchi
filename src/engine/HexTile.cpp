@@ -2,20 +2,33 @@
 #include <cmath>
 #include "AssetPack.hpp"
 
-// Convert hex coordinates to pixel coordinates (flat-top hex)
+static const float SQRT3 = 1.7320508f;
+static const float HEX_FILL = 1.10f; // >1 covers transparent art margins
+
+// Convert hex coordinates to pixel coordinates (pointy-top hex, odd-r offset)
+// For pointy-top hexes, odd rows (r % 2 == 1) are offset by half a hex width
 Vector2 HexCoords::toPixel(float hexSize) const {
-    float x = hexSize * (3.0f / 2.0f * q);
-    float y = hexSize * (std::sqrt(3.0f) * q / 2.0f + std::sqrt(3.0f) * r);
-    return Vector2{x, y};
+    // Pointy-top: width = sqrt(3) * S (across flats, horizontal)
+    //              height = 2 * S (corner to corner, vertical)
+    const float width = SQRT3 * hexSize;
+    const float height = 2.0f * hexSize;
+
+    // x position: odd rows shifted right by half width
+    float xOffset = width * ((float)q + 0.5f * (float)(r & 1));
+
+    // y position: row spacing is 1.5 * S (3/4 of height)
+    float yOffset = 0.75f * height * (float)r;
+
+    return Vector2{xOffset, yOffset};
 }
 
 HexTile::HexTile(HexCoords coords, TileType* tileType, float hexSize)
-    : SceneActor({0, 0}, hexSize * 2.0f, hexSize * std::sqrt(3.0f)),
+    : SceneActor({0, 0}, SQRT3 * hexSize, 2.0f * hexSize),
       coords(coords), tileType(tileType), hexSize(hexSize) {
     // Position will be updated by setHexPosition
     setHexPosition(coords);
 
-    // Generate hex vertices (flat-top)
+    // Generate hex vertices (pointy-top)
     updateVertices();
 }
 
@@ -41,22 +54,17 @@ void HexTile::loadTexture() {
 void HexTile::updateVertices() {
     vertices.clear();
 
-    // Flat-top hexagon vertices (6 points)
-    // Starting from top and going clockwise
-    float h = hexSize * std::sqrt(3.0f);
-    float w = hexSize * 2.0f;
+    // Pointy-top hexagon vertices (6 points), center-relative
+    // Pointy-top: width = sqrt(3) * S (across flats), height = 2 * S (corner to corner)
+    float hw = SQRT3 * hexSize * 0.5f;   // half width (across flats / 2)
 
-    // Vertices relative to center
-    float halfWidth = hexSize;
-    float halfHeight = h / 2.0f;
-
-    // Top, Top-Right, Bottom-Right, Bottom, Bottom-Left, Top-Left
-    vertices.push_back(Vector2{0, -halfHeight});                 // Top
-    vertices.push_back(Vector2{halfWidth, -halfHeight / 2.0f});  // Top-Right
-    vertices.push_back(Vector2{halfWidth, halfHeight / 2.0f});   // Bottom-Right
-    vertices.push_back(Vector2{0, halfHeight});                  // Bottom
-    vertices.push_back(Vector2{-halfWidth, halfHeight / 2.0f});  // Bottom-Left
-    vertices.push_back(Vector2{-halfWidth, -halfHeight / 2.0f}); // Top-Left
+    // Vertices: top point, then clockwise
+    vertices.push_back(Vector2{0.0f,     -hexSize});    // Top point (y = -S, corner to corner / 2)
+    vertices.push_back(Vector2{hw,       -hexSize * 0.5f});  // Upper-right
+    vertices.push_back(Vector2{hw,        hexSize * 0.5f});  // Lower-right
+    vertices.push_back(Vector2{0.0f,      hexSize});    // Bottom point
+    vertices.push_back(Vector2{-hw,       hexSize * 0.5f});  // Lower-left
+    vertices.push_back(Vector2{-hw,      -hexSize * 0.5f});  // Upper-left
 }
 
 void HexTile::draw() {
@@ -73,13 +81,14 @@ void HexTile::draw() {
     // Draw the tile texture if loaded
     if (texture.id != 0) {
         // Draw texture scaled to fit the hex cell using DrawTexturePro
-        // The hex cell is hexSize*2 wide and hexSize*sqrt(3) tall
+        // Pointy-top: width = sqrt(3) * S, height = 2 * S
         Rectangle src = { 0, 0, (float)texture.width, (float)texture.height };
+        float w = SQRT3 * hexSize * HEX_FILL;
+        float h = 2.0f  * hexSize * HEX_FILL;
         Rectangle dest = {
-            position.x - hexSize,
-            position.y - hexSize * std::sqrt(3.0f) / 2.0f,
-            hexSize * 2.0f,
-            hexSize * std::sqrt(3.0f)
+            position.x - w * 0.5f,
+            position.y - h * 0.5f,
+            w, h
         };
         DrawTexturePro(texture, src, dest, {0, 0}, 0.0f, color);
     } else if (tileType) {
@@ -103,6 +112,8 @@ void HexTile::draw() {
 }
 
 bool HexTile::containsPoint(Vector2 point) const {
-    // Simple hex collision using polygon
-    return CheckCollisionPointPoly(point, vertices.data(), (int)vertices.size());
+    // Check collision using polygon with local coordinates
+    // Vertices are center-relative, so subtract position from point
+    Vector2 local = { point.x - position.x, point.y - position.y };
+    return CheckCollisionPointPoly(local, vertices.data(), (int)vertices.size());
 }
