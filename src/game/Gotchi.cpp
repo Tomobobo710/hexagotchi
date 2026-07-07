@@ -1,6 +1,6 @@
 #define _USE_MATH_DEFINES
 #include "Gotchi.hpp"
-#include "SpriteLoader.hpp"
+#include "AssetPack.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -410,7 +410,7 @@ void Gotchi::wander(float deltaTime) {
     if (dead_ || sleeping_) return;
 
     // Random direction
-    float angle = (rand() % 360) * (M_PI / 180.0f);
+    float angle = (rand() % 360) * (PI / 180.0f);
     Vector2 dir = {std::cos(angle), std::sin(angle)};
 
     velocity.x = dir.x * GOTCHI_WANDER_SPEED;
@@ -518,20 +518,20 @@ bool Gotchi::loadAnimationFrames(const std::string& basePath) {
     animSad_.clear();
     animHappy_.clear();
 
-    // Load animation frames using SpriteLoader (which uses AssetPack)
+    // Load animation frames using AssetPack
     // Expected format: basePath_action_00.png, basePath_action_01.png, etc.
     // Returns true if at least idle frames were loaded
 
-    animIdle_ = SpriteLoader::loadFrames(basePath, "idle");
-    animMove_ = SpriteLoader::loadFrames(basePath, "walk");  // Map move to walk
-    animEat_ = SpriteLoader::loadFrames(basePath, "bounce");  // Map eat to bounce
-    animSleep_ = SpriteLoader::loadFrames(basePath, "sleep");
-    animPlay_ = SpriteLoader::loadFrames(basePath, "bounce");  // Map play to bounce
-    animSad_ = SpriteLoader::loadFrames(basePath, "hurt");  // Map sad to hurt
-    animHappy_ = SpriteLoader::loadFrames(basePath, "happy");
-    animBounce_ = SpriteLoader::loadFrames(basePath, "bounce");
-    animHurt_ = SpriteLoader::loadFrames(basePath, "hurt");
-    animWalk_ = SpriteLoader::loadFrames(basePath, "walk");
+    animIdle_ = AssetPack::loadFrames(basePath, "idle");
+    animMove_ = AssetPack::loadFrames(basePath, "walk");  // Map move to walk
+    animEat_ = AssetPack::loadFrames(basePath, "bounce");  // Map eat to bounce
+    animSleep_ = AssetPack::loadFrames(basePath, "sleep");
+    animPlay_ = AssetPack::loadFrames(basePath, "bounce");  // Map play to bounce
+    animSad_ = AssetPack::loadFrames(basePath, "hurt");  // Map sad to hurt
+    animHappy_ = AssetPack::loadFrames(basePath, "happy");
+    animBounce_ = AssetPack::loadFrames(basePath, "bounce");
+    animHurt_ = AssetPack::loadFrames(basePath, "hurt");
+    animWalk_ = AssetPack::loadFrames(basePath, "walk");
 
     // Return true if at least idle frames were loaded
     return !animIdle_.empty();
