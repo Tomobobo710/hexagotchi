@@ -1,0 +1,236 @@
+#include "OfficeScene.hpp"
+#include "GameConstants.hpp"
+#include <cmath>
+
+static const Color GARY_COLOR     = {139, 172, 15, 255};
+static const Color BOSS_COLOR     = {142, 68, 173, 255};   // matches JS BOSS: '#8e44ad'
+static const Color NARRATOR_COLOR = {150, 150, 170, 255};
+
+OfficeScene::OfficeScene(DialogBox* sharedDialog)
+    : Scene(1024.0f, 576.0f, {20, 22, 28, 255}), dialog(sharedDialog) {
+}
+
+void OfficeScene::init() {
+    getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
+
+    gary = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
+    gary->setTag("gary");
+    gary->setVisible(false);
+    addActor(gary);
+
+    boss = new SceneActor({650.0f, 380.0f}, 50.0f, 76.0f);
+    boss->setTag("boss");
+    boss->setVisible(false);
+    addActor(boss);
+
+    // --- Event 0: "Performance Review", ported almost line-for-line ---
+    events.push_back({
+        { "Narrator", "Gary arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
+          NARRATOR_COLOR, -1, false },
+        { "Boss",  "Gary. My office.\nBring the Hendricks file.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "...What's the Hendricks file.",
+          GARY_COLOR, 0, false },
+        { "Boss",  "The one I emailed you about.\nFive times.\nAlso on the physical memo.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "I don't have a desk.\nYou took my desk.",
+          GARY_COLOR, 0, true },
+        { "Boss",  "We hot-desk now Gary.\nIt's a flex workspace environment.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "I sit on a yoga ball.\nI am 34 years old.",
+          GARY_COLOR, 0, false },
+        { "Narrator", "The review goes poorly.\nGary does not receive the 3% raise.\nHe receives a 'verbal commendation'.",
+          NARRATOR_COLOR, -1, false },
+        { "Gary",  "A verbal commendation.\nI have $11 in my account.\nA verbal commendation.",
+          GARY_COLOR, 0, true },
+    });
+
+    // --- Event 1: "The Promotion (Sort Of)", ported almost line-for-line ---
+    events.push_back({
+        { "Narrator", "Gary's boss calls him in.\nThis time it's different.",
+          NARRATOR_COLOR, -1, false },
+        { "Boss",  "Gary we're expanding your role.\nCongratulations.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "...A raise?",
+          GARY_COLOR, 0, false },
+        { "Boss",  "More responsibility!\nYou'll now manage the Henderson account\nAND the Brickford account.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "Okay and the raise --",
+          GARY_COLOR, 0, false },
+        { "Boss",  "We're calling it a 'growth opportunity'.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "So no raise.",
+          GARY_COLOR, 0, false },
+        { "Boss",  "We're also moving your start time to 8:30.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "Earlier?!",
+          GARY_COLOR, 0, true },
+        { "Boss",  "It's the flex workspace, Gary.\nThe ball yoga spot is first come, first served now.",
+          BOSS_COLOR, 1, false },
+        { "Gary",  "I... cannot process this\nright now.",
+          GARY_COLOR, 0, false },
+        { "Narrator", "Gary processes it on his commute home.\nHe misses his exit.\nTwice.",
+          NARRATOR_COLOR, -1, false },
+    });
+}
+
+void OfficeScene::update(float deltaTime) {
+    Scene::update(deltaTime);
+
+    if (activeEvent < 0) {
+        // Ambient: Gary balancing/wobbling on the yoga ball, boss absent
+        // (only appears during the scripted events, called into "his office").
+        garyWobbleTimer += deltaTime * 3.0f;
+        gary->setPosition({420.0f, 400.0f + sinf(garyWobbleTimer) * 6.0f});
+
+        getCamera()->setPosition(460.0f, 320.0f);
+        getCamera()->setZoom(1.0f);
+    }
+
+    if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
+        SceneInputHandler* ih = getInputHandler();
+        if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
+            advanceLine();
+        }
+    }
+}
+
+void OfficeScene::draw() {
+    Scene::draw();
+
+    Camera2D cam = getCamera()->getRaylibCamera();
+    BeginMode2D(cam);
+    drawOffice();
+    drawGary(gary->getPosition());
+    if (activeEvent >= 0) drawBoss(boss->getPosition());
+    EndMode2D();
+}
+
+void OfficeScene::cleanup() {
+    Scene::cleanup();
+}
+
+void OfficeScene::triggerEvent(int index) {
+    if (activeEvent >= 0) return;
+    if (index < 0 || index >= (int)events.size()) return;
+
+    activeEvent = index;
+    lineIndex = 0;
+    playLine(events[activeEvent][lineIndex]);
+}
+
+bool OfficeScene::isPlayingEvent() const {
+    return activeEvent >= 0;
+}
+
+void OfficeScene::advanceLine() {
+    if (activeEvent < 0) return;
+
+    lineIndex++;
+    auto& seq = events[activeEvent];
+    if (lineIndex >= (int)seq.size()) {
+        endEvent();
+        return;
+    }
+    playLine(seq[lineIndex]);
+}
+
+void OfficeScene::playLine(const OfficeLine& line) {
+    dialog->setSpeakerName(line.speaker);
+    dialog->setSpeakerColor(line.speakerColor);
+    dialog->setText(line.text);
+    dialog->show();
+    focusCameraOn(line.focusActor, line.shake);
+}
+
+void OfficeScene::endEvent() {
+    activeEvent = -1;
+    lineIndex = 0;
+    dialog->hide();
+    getCamera()->zoomTo(1.0f, 0.6f);
+}
+
+void OfficeScene::focusCameraOn(int actorIndex, bool shake) {
+    SceneActor* target = nullptr;
+    if (actorIndex == 0) target = gary;
+    else if (actorIndex == 1) target = boss;
+
+    if (target) {
+        Vector2 pos = target->getCenter();
+        getCamera()->setPosition(pos.x, pos.y - 40.0f);
+        getCamera()->zoomTo(1.4f, 0.5f);
+    }
+
+    if (shake) {
+        getCamera()->shake(5.0f, 0.3f);
+    }
+}
+
+// --- Set dressing ---------------------------------------------------------
+void OfficeScene::drawOffice() {
+    // Open-plan "flex workspace" -- rows of identical hot-desks, mostly empty
+    Color deskColor = {70, 70, 85, 255};
+    Color deskDark = {50, 50, 62, 255};
+    for (int row = 0; row < 2; row++) {
+        for (int col = 0; col < 3; col++) {
+            float dx = 80.0f + col * 220.0f;
+            float dy = 90.0f + row * 100.0f;
+            DrawRectangle((int)dx, (int)dy, 160, 12, deskColor);
+            DrawRectangle((int)dx, (int)(dy + 12), 160, 4, deskDark);
+        }
+    }
+
+    // Glass-walled "boss office" on the right
+    Color glassFrame = {40, 40, 50, 255};
+    Color glassPane = {90, 100, 120, 120};
+    DrawRectangle(760, 60, 220, 300, glassFrame);
+    DrawRectangle(772, 72, 196, 276, glassPane);
+    // Small nameplate
+    DrawRectangle(790, 40, 100, 16, {30, 30, 38, 255});
+
+    // Motivational poster, because of course there is one
+    Color posterFrame = {60, 55, 40, 255};
+    Color posterBg = {200, 190, 160, 255};
+    DrawRectangle(60, 300, 100, 130, posterFrame);
+    DrawRectangle(68, 308, 84, 114, posterBg);
+}
+
+void OfficeScene::drawGary(Vector2 pos) {
+    float cx = pos.x + 24.0f;
+    float cy = pos.y + 32.0f;
+
+    // Balanced precariously on the yoga ball (drawn beneath him)
+    Color ballColor = {200, 80, 80, 200};
+    DrawCircle((int)cx, (int)(cy + 46), 22, ballColor);
+
+    DrawEllipse((int)cx, (int)(cy + 18), 26, 28, GARY_COLOR);
+    DrawCircle((int)cx, (int)(cy - 16), 20, GARY_COLOR);
+
+    Color darkGary = {70, 90, 5, 255};
+    DrawEllipse((int)(cx - 8), (int)(cy - 16), 4, 2, darkGary);
+    DrawEllipse((int)(cx + 8), (int)(cy - 16), 4, 2, darkGary);
+    DrawLineEx({cx - 7, cy - 7}, {cx + 7, cy - 5}, 2.0f, darkGary);
+
+    // Arms out slightly for balance
+    DrawLineEx({cx - 24, cy}, {cx - 34, cy + 10}, 5.0f, GARY_COLOR);
+    DrawLineEx({cx + 24, cy}, {cx + 34, cy + 10}, 5.0f, GARY_COLOR);
+}
+
+void OfficeScene::drawBoss(Vector2 pos) {
+    float cx = pos.x + 25.0f;
+    float cy = pos.y + 38.0f;
+
+    // Sharp-suited, imposing -- taller and boxier than Gary
+    Color darkBoss = {90, 40, 110, 255};
+    DrawRectangle((int)(cx - 20), (int)(cy - 6), 40, 52, BOSS_COLOR);
+    DrawCircle((int)cx, (int)(cy - 30), 18, BOSS_COLOR);
+
+    // Stern narrow eyes
+    DrawRectangle((int)(cx - 11), (int)(cy - 32), 6, 2, darkBoss);
+    DrawRectangle((int)(cx + 5), (int)(cy - 32), 6, 2, darkBoss);
+    // Flat unimpressed mouth
+    DrawLineEx({cx - 6, cy - 22}, {cx + 6, cy - 22}, 2.0f, darkBoss);
+
+    // Tie
+    DrawTriangle({cx - 3, cy - 4}, {cx + 3, cy - 4}, {cx, cy + 10}, darkBoss);
+}

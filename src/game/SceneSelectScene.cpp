@@ -25,8 +25,12 @@ void SceneSelectScene::init() {
 
     // Only the narrative/"world" side-scenes belong here -- the tomagotchi
     // pet-sim side has its own scenes, not listed on this hub.
-    float startY = (float)GAME_H / 2.0f - 60.0f;
+    float startY = (float)GAME_H / 2.0f - 175.0f;
     addSceneButton("PIZZA PARLOR", "pizza_parlor", startY);
+    addSceneButton("APARTMENT", "apartment", startY + (BUTTON_HEIGHT + BUTTON_SPACING));
+    addSceneButton("THERAPIST'S OFFICE", "therapist_office", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 2);
+    addSceneButton("DATATEK SOLUTIONS (OFFICE)", "office", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 3);
+    addSceneButton("SCHOOL PICKUP", "school", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 4);
 
     // Future world-scenes get one more addSceneButton() call here.
 }

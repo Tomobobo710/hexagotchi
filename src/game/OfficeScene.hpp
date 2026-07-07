@@ -1,0 +1,55 @@
+#ifndef OFFICE_SCENE_HPP
+#define OFFICE_SCENE_HPP
+
+#include "Scene.hpp"
+#include "DialogBox.hpp"
+#include <vector>
+#include <string>
+
+struct OfficeLine {
+    std::string speaker;
+    std::string text;
+    Color speakerColor;
+    int focusActor;   // 0 = Gary, 1 = Boss, -1 = none
+    bool shake;
+};
+
+// Datatek Solutions -- ported from the JS prototype's "Performance Review"
+// and "The Promotion (Sort Of)" episodes. Ambient mode is Gary alone at his
+// (nonexistent) desk, i.e. a yoga ball; the two scripted events cover both
+// office beats and are selected by index like the other world-scenes.
+class OfficeScene : public Scene {
+public:
+    OfficeScene(DialogBox* sharedDialog);
+
+    void init() override;
+    void update(float deltaTime) override;
+    void draw() override;
+    void cleanup() override;
+
+    void triggerEvent(int index);
+    bool isPlayingEvent() const;
+
+private:
+    SceneActor* gary = nullptr;
+    SceneActor* boss  = nullptr;
+
+    DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
+
+    float garyWobbleTimer = 0.0f;
+
+    std::vector<std::vector<OfficeLine>> events;
+    int activeEvent = -1;
+    int lineIndex = 0;
+
+    void advanceLine();
+    void playLine(const OfficeLine& line);
+    void endEvent();
+    void focusCameraOn(int actorIndex, bool shake);
+
+    void drawGary(Vector2 pos);
+    void drawBoss(Vector2 pos);
+    void drawOffice();
+};
+
+#endif // OFFICE_SCENE_HPP

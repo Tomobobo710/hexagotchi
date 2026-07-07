@@ -9,6 +9,10 @@
 #include "game/SpriteTestScene.hpp"
 #include "game/GotchiScene.hpp"
 #include "game/PizzaParlorScene.hpp"
+#include "game/ApartmentScene.hpp"
+#include "game/TherapistOfficeScene.hpp"
+#include "game/OfficeScene.hpp"
+#include "game/SchoolScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/DialogSequences.hpp"
 #include "engine/AssetPack.hpp"
@@ -87,7 +91,7 @@ void UpdateDrawFrame() {
         dialogIndex = 0;
         if (currentScene == "game") showDialog(gameDialogs, 0);
         if (currentScene == "boss") showDialog(bossDialogs, 0);
-        if (currentScene == "pizza_parlor" || currentScene == "scene_select") dialog->hide();
+        if (currentScene == "pizza_parlor" || currentScene == "apartment" || currentScene == "therapist_office" || currentScene == "office" || currentScene == "school" || currentScene == "scene_select") dialog->hide();
         lastScene = currentScene;
     }
 
@@ -138,11 +142,31 @@ void UpdateDrawFrame() {
         }
     }
 
-    // Debug trigger for the pizza parlor's scripted story beat (normally
-    // invoked by the tomagotchi/stat side, not by a raw key).
+    // Debug trigger for the pizza parlor's / apartment's scripted story beat
+    // (normally invoked by the tomagotchi/stat side, not by a raw key).
     if (IsKeyPressed(KEY_E) && currentScene == "pizza_parlor") {
         PizzaParlorScene* pizza = (PizzaParlorScene*)sceneManager->getCurrentScene();
         if (pizza && !pizza->isPlayingEvent()) pizza->triggerEvent(0);
+    }
+    if (IsKeyPressed(KEY_E) && currentScene == "apartment") {
+        ApartmentScene* apartment = (ApartmentScene*)sceneManager->getCurrentScene();
+        if (apartment && !apartment->isPlayingEvent()) apartment->triggerEvent(0);
+    }
+    if (IsKeyPressed(KEY_E) && currentScene == "therapist_office") {
+        TherapistOfficeScene* office = (TherapistOfficeScene*)sceneManager->getCurrentScene();
+        if (office && !office->isPlayingEvent()) office->triggerEvent(0);
+    }
+    if (IsKeyPressed(KEY_E) && currentScene == "office") {
+        static int nextOfficeEvent = 0;
+        OfficeScene* office = (OfficeScene*)sceneManager->getCurrentScene();
+        if (office && !office->isPlayingEvent()) {
+            office->triggerEvent(nextOfficeEvent);
+            nextOfficeEvent = (nextOfficeEvent + 1) % 2;
+        }
+    }
+    if (IsKeyPressed(KEY_E) && currentScene == "school") {
+        SchoolScene* school = (SchoolScene*)sceneManager->getCurrentScene();
+        if (school && !school->isPlayingEvent()) school->triggerEvent(0);
     }
 
     sceneManager->update(dt);
@@ -167,6 +191,18 @@ void UpdateDrawFrame() {
             DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "pizza_parlor") {
             DrawText("PIZZA PARLOR", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "apartment") {
+            DrawText("APARTMENT", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "therapist_office") {
+            DrawText("THERAPIST'S OFFICE", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "office") {
+            DrawText("DATATEK SOLUTIONS", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("E: Trigger event (cycles)  7: Scene Select  ESC: Exit", GAME_W - 380, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "school") {
+            DrawText("SCHOOL PICKUP", 14, 8, 18, {180, 180, 255, 255});
             DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "scene_select") {
             DrawText("SCENE SELECT", 14, 8, 18, {180, 180, 255, 255});
@@ -229,6 +265,10 @@ int main() {
     sceneManager->registerScene("gotchi", new GotchiScene());
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
     sceneManager->registerScene("pizza_parlor", new PizzaParlorScene(dialog));
+    sceneManager->registerScene("apartment", new ApartmentScene(dialog));
+    sceneManager->registerScene("therapist_office", new TherapistOfficeScene(dialog));
+    sceneManager->registerScene("office", new OfficeScene(dialog));
+    sceneManager->registerScene("school", new SchoolScene(dialog));
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
 
 #ifdef HEXA_SHOT_TOOL
