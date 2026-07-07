@@ -55,7 +55,7 @@ public:
     // Properties
     void setBackgroundColor(Color color);
     Color getBackgroundColor() const;
-    
+
     Vector2 getSize() const;
     float getWidth() const;
     float getHeight() const;

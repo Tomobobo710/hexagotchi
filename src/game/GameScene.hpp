@@ -13,11 +13,13 @@ public:
     float groundY = 560.0f;
 
     GameScene();
+    ~GameScene();
 
     void init() override;
     void draw() override;
     void update(float deltaTime) override;
 
+private:
     // Pause functionality
     void togglePause() override;
     bool isPaused() const override { return paused; }

@@ -10,6 +10,12 @@
 #include <cmath>
 
 GameScene::GameScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
+}
+
+GameScene::~GameScene() {
+}
+
+void GameScene::init() {
     // Set up callbacks for the pause menu
     pauseMenu = std::unique_ptr<PauseMenuOverlay>(new PauseMenuOverlay(*this));
     pauseMenu->onResume = [this]() {
@@ -36,9 +42,7 @@ GameScene::GameScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
     pauseMenu->onExitSelected = [this]() {
         onExitSelected();
     };
-}
 
-void GameScene::init() {
     PlayerActor* player = new PlayerActor({300.0f, 480.0f}, groundY);
     player->setInputHandler(getInputHandler());
     addActor(player);
@@ -95,6 +99,7 @@ void GameScene::draw() {
     Scene::draw();
 
     BeginMode2D(cam);
+
     for (SceneActor* a : getAllActors()) {
         if (a->getTag() == "gem") {
             Vector2 p = a->getPosition();

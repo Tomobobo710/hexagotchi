@@ -40,6 +40,7 @@ public:
     
     // Following actor
     void followActor(SceneActor* actor, float smoothSpeed = CAMERA_FOLLOW_SPEED);
+    void followPosition(Vector2 pos, float smoothSpeed = CAMERA_FOLLOW_SPEED);
     void stopFollowing();
     bool isFollowing() const;
     

@@ -5,8 +5,8 @@ RL   = raylib/src
 
 SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp)
 INCLUDES    = -I src/engine -I src/game -I src/effects -I $(RL) -I glfw/include -I rres/src
-CXXFLAGS    = -std=c++11 $(INCLUDES)
-LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm
+CXXFLAGS    = -std=c++14 $(INCLUDES)
+LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -pthread -lm -ldl -lX11 -lXrandr -lXinerama -lXi -lXcursor
 
 WEBINCLUDES = -I src/engine -I src/game -I src/effects -I $(RL) -I rres/src
 WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)

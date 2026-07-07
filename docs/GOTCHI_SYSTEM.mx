@@ -1,0 +1,590 @@
+# Gotchi System Documentation
+
+## Overview
+
+The Gotchi system is a digital pet simulation engine that tracks 100 distinct stats across 6 categories and manages 100 unique mood states. The system is built around the `Gotchi` class which extends `SceneActor` and integrates stats, mood, and AI-driven behavior in a tick-based lifecycle.
+
+---
+
+## High-Level System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Gotchi (SceneActor)                         │
+├─────────────────────────────────────────────────────────────────────┤
+│  Core Components:                                                   │
+│  • GotchiStats  (100 stats across 6 categories)                    │
+│  • GotchiMood   (100 mood states with overlays)                    │
+│  • SceneActor   (base class for rendering, physics, animation)     │
+├─────────────────────────────────────────────────────────────────────┤
+│  Lifecycle:                                                         │
+│  1. init()      - Initialize stats and mood                        │
+│  2. update()    - Main game loop (60fps)                           │
+│  3. draw()      - Render with debug overlays                       │
+├─────────────────────────────────────────────────────────────────────┤
+│  Tick System:                                                       │
+│  • Base tick rate: 1.0 second (GOTCHI_TICK_RATE)                   │
+│  • Stats update on each tick                                       │
+│  • Mood recalculated each tick                                     │
+│  • Actions have duration timers                                    │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Core Systems
+
+### 1. Gotchi Class
+
+**Purpose**: Main pet entity that orchestrates all systems.
+
+**Key Properties**:
+| Property | Type | Description |
+|----------|------|-------------|
+| `stats_` | GotchiStats | 100 stats tracking vital, emotional, physical, social, environmental, and skill metrics |
+| `mood_` | GotchiMood | Current mood and temporary mood overlays |
+| `active_` | bool | Whether the gotchi is active in the scene |
+| `sleeping_` | bool | Whether the gotchi is currently sleeping |
+| `dead_` | bool | Whether the gotchi has died |
+| `tickTimer_` | float | Accumulator for tick-based updates |
+| `currentAction_` | string | Current animation/action state |
+| `actionTimer_` | float | Timer for action completion |
+
+**Default Values**:
+- Width/Height: 64x64 pixels
+- Move Speed: 50 pixels/second
+- Wander Speed: 20 pixels/second
+- Tick Rate: 1.0 second
+- Initial Mood: MOOD_00_HAPPY
+- Initial Health: 100.0
+- Initial Hunger: 0.0 (0% = full)
+- Initial Energy: 100.0
+
+### 2. GotchiStats Class
+
+**Purpose**: Track and manage all 100 stats with normalization and clamping.
+
+**Stat Categories**:
+
+#### Core Vital Stats (10) - enum CoreStat
+| Stat | Range | Default | Description |
+|------|-------|---------|-------------|
+| HEALTH | 0-100 | 100 | Overall health status |
+| HUNGER | 0-100 | 0 | Hunger level (0=full, 100=starving) |
+| THIRST | 0-100 | 0 | Thirst level (0=hydrated, 100=dehydrated) |
+| ENERGY | 0-100 | 100 | Energy reserves |
+| SLEEP | 0-100 | 0 | Sleep need (0=rested, 100=exhausted) |
+| HYGIENE | 0-100 | 100 | Cleanliness |
+| VITALITY | 0-100 | 100 | General life force |
+| COMFORT | 0-100 | 50 | Physical comfort |
+| PAIN | 0-100 | 0 | Pain level |
+| STAMINA | 0-100 | 100 | Physical endurance |
+
+#### Secondary Stats (30) - enum SecondaryStat
+Includes convenience aliases for common stats:
+- `FITALITY` (alias for vitality/health)
+- `FOOD_LEVEL` (alias for hunger)
+- `HYDRATION` (alias for thirst)
+- `SLEEP_DEBT` (alias for sleep)
+- `CLEANLINESS` (alias for hygiene)
+
+Categories:
+- Physical attributes: WEIGHT, SIZE, SPEED, JUMP, CLIMB, SWIM, FLY
+- Condition: FITNESS, GROWTH, AGE, RESILIENCE, TOUGHNESS
+- Status: BURDEN, EXPOSURE, DISEASE, IMMUNITY, FERTILITY, STAGE
+
+#### Emotional Stats (20) - enum EmotionalStat
+| Stat | Range | Default | Description |
+|------|-------|---------|-------------|
+| HAPPINESS | 0-100 | 80 | Overall joy |
+| EXCITEMENT | 0-100 | 30 | Arousal level |
+| SATISFACTION | 0-100 | 60 | Contentment |
+| BOREDOM | 0-100 | 0 | Stimulation need |
+| ANXIETY | 0-100 | 0 | Worry level |
+| FEAR | 0-100 | 0 | Fear response |
+| ANGER | 0-100 | 0 | Anger level |
+| SADNESS | 0-100 | 0 | Sadness level |
+| LOVE | 0-100 | 50 | Affection |
+| FRIENDSHIP | 0-100 | 0 | Social connection |
+| TRUST | 0-100 | 70 | Trust level |
+| CONFIDENCE | 0-100 | 60 | Self-assurance |
+| HOPE | 0-100 | 80 | Optimism |
+| CURIOSITY | 0-100 | 40 | Desire to explore |
+| CREATIVITY | 0-100 | 30 | Creative drive |
+| FOCUS | 0-100 | 60 | Attention span |
+| PATIENCE | 0-100 | 70 | Tolerance |
+| GRATITUDE | 0-100 | 80 | Thankfulness |
+| PEACE | 0-100 | 80 | Inner calm |
+| JOY | 0-100 | 70 | Pure happiness |
+
+#### Physical Stats (20) - enum PhysicalStat
+| Stat | Range | Default | Description |
+|------|-------|---------|-------------|
+| STRENGTH | 0-100 | 50 | Physical power |
+| AGILITY | 0-100 | 50 | Quickness |
+| ENDURANCE | 0-100 | 50 | Long-duration capability |
+| REFLEX | 0-100 | 50 | Reaction speed |
+| BALANCE | 0-100 | 50 | Stability |
+| COORDINATION | 0-100 | 50 | Motor skills |
+| DEXTERITY | 0-100 | 50 | Manual skill |
+| VISION | 0-100 | 100 | Sight acuity |
+| HEARING | 0-100 | 100 | Hearing acuity |
+| SMELL | 0-100 | 80 | Scent detection |
+| TASTE | 0-100 | 80 | Taste sensitivity |
+| TOUCH | 0-100 | 80 | Tactile sensitivity |
+| HEALTHY_FUR | 0-100 | 100 | Coat/skin condition |
+| HEALTHY_EYES | 0-100 | 100 | Eye health |
+| HEALTHY_TEETH | 0-100 | 100 | Dental health |
+| HEALTHY_CLAWS | 0-100 | 80 | Nail/claw condition |
+| POSTURE | 0-100 | 80 | Body alignment |
+| MOVEMENT_EFFICIENCY | 0-100 | 80 | Energy use per distance |
+| THERMOREGULATION | 0-100 | 80 | Temperature control |
+| METABOLISM | 0-100 | 80 | Food conversion rate |
+
+#### Social Stats (10) - enum SocialStat
+| Stat | Range | Default | Description |
+|------|-------|---------|-------------|
+| POPULARITY | 0-100 | 50 | Liked by others |
+| FRIENDS | 0-100 | 0 | Number of friends |
+| ALLIANCES | 0-100 | 0 | Support network |
+| LEADERSHIP | 0-100 | 50 | Influence over others |
+| CHARISMA | 0-100 | 50 | Charm ability |
+| COMMUNICATION | 0-100 | 60 | Expression ability |
+| EMPATHY | 0-100 | 70 | Understanding others |
+| COOPERATION | 0-100 | 60 | Teamwork ability |
+| RESPECT | 0-100 | 50 | Earned regard |
+| REPUTATION | 0-100 | 50 | Overall perception |
+
+#### Environmental Stats (10) - enum EnvironmentalStat
+| Stat | Range | Default | Description |
+|------|-------|---------|-------------|
+| FAMILIARITY | 0-100 | 50 | Knowledge of area |
+| SAFETY | 0-100 | 70 | Perceived safety |
+| TERRITORY | 0-100 | 0 | Owned space |
+| HOME | 0-100 | 60 | Shelter quality |
+| RESOURCE_ACCESS | 0-100 | 80 | Available resources |
+| CLIMATE_COMPFORT | 0-100 | 70 | Weather tolerance |
+| LIGHT_LEVEL | 0-100 | 50 | Light preference |
+| NOISE_LEVEL | 0-100 | 50 | Sound tolerance |
+| SOCIAL_SPACE | 0-100 | 60 | Crowd tolerance |
+| ISOLATION | 0-100 | 50 | Solitude preference |
+
+#### Skill Stats (10) - enum SkillStat
+| Stat | Range | Default | Description |
+|------|-------|---------|-------------|
+| LEARNING | 0-100 | 40 | Knowledge acquisition |
+| MEMORY | 0-100 | 40 | Recall ability |
+| PROBLEM_SOLVING | 0-100 | 30 | Logic capability |
+| INNOVATION | 0-100 | 30 | Creativity application |
+| TECHNIQUE | 0-100 | 30 | Method proficiency |
+| ADAPTATION | 0-100 | 40 | Change response |
+| SURVIVAL | 0-100 | 50 | Survival knowledge |
+| FORAGING | 0-100 | 40 | Food finding |
+| BUILDING | 0-100 | 30 | Structure creation |
+| COMBAT | 0-100 | 20 | Fighting ability |
+
+---
+
+### 3. GotchiMood Class
+
+**Purpose**: Manage 100 mood states and temporary mood overlays.
+
+**Mood Categories**:
+
+#### Primary Survival/Emotional Moods (0-9)
+| Mood | Index | Description | Trigger |
+|------|-------|-------------|---------|
+| MOOD_00_HAPPY | 0 | Content and playful | Balanced stats |
+| MOOD_01_EXCITED | 1 | Energetic and active | High energy, high excitement |
+| MOOD_02_SATISFIED | 2 | Peaceful and relaxed | Low needs, content |
+| MOOD_03_BORED | 3 | Unstimulated | Low excitement, low satisfaction |
+| MOOD_04_HUNGRY | 4 | Needs food | High food level (hunger) |
+| MOOD_05_THIRSTY | 5 | Needs drink | High hydration need |
+| MOOD_06_SLEEPY | 6 | Needs rest | High sleep debt, low energy |
+| MOOD_07_SICK | 7 | Ill | Low health, high disease |
+| MOOD_08_SAD | 8 | Upset | Low happiness |
+| MOOD_09_ANGRY | 9 | Frustrated | High hunger/sick, low satisfaction |
+
+#### Extended Moods (10-99)
+**Positive/Emotional (10-29)**: JOYFUL(10), CONTENT(11), RELIEVED(12), CALM(13), PEACEFUL(14), SERENE(15), OPTIMISTIC(16), HOPEFUL(17), CURIOUS(18), INTERESTED(19), FOCUSED(20), DETERMINED(21), PROUD(22), SUCCESSFUL(23), GRATEFUL(24), LOVED(25), SAFE(26), SECURE(27), TRUSTING(28), AFFECTIONATE(29), LOVING(30)
+
+**Activity-Based (30-39)**: PLAYFUL(31), EXPLORING(32), ADVENTUROUS(33), CREATING(34), LEARNING(35), ACHIEVING(36), COMPETITIVE(37), COLLABORATIVE(38), TEACHING(39), HELPING(40)
+
+**Positive/State (40-59)**: GIVING(41), GENEROUS(42), ABUNDANT(43), PROSPEROUS(44), HEALTHY(45), FIT(46), ENERGETIC(47), VIBRANT(48), ALIVE(49), SPIRITED(50), CHARMING(51), BEAUTIFUL(52), GLORIOUS(53), MAGNIFICENT(54), WONDERFUL(55), AMAZING(56), INCREDIBLE(57), EXTRAORDINARY(58), SUPERB(59), FANTASTIC(60), AWESOME(61), MIRACULOUS(62), DIVINE(63), ETHEREAL(64), SPIRITUAL(65)
+
+**Intellectual (65-74)**: MINDFUL(66), WISE(67), KNOWLEDGEABLE(68), INTELLIGENT(69), CLEVER(70), SKILLFUL(71), EXPERT(72), MASTER(73), GRANDMASTER(74)
+
+**Legendary (75-99)**: LEGENDARY(75), MYTHICAL(76), EPIC(77), HEROIC(78), VALIANT(79), NOBLE(80), VIRTUOUS(81), RIGHTEOUS(82), FAIR(83), JUST(84), BALANCED(85), HARMONIOUS(86), SYNCED(87), ALIGNED(88), CONNECTED(89), UNITED(90), ONE(91), WHOLE(92), COMPLETE(93), FULL(94), BLOOMING(95), THRIVING(96), GROWING(97), EVOLVING(98), TRANSFORMING(99)
+
+**Mood Properties**:
+| Property | Type | Description |
+|----------|------|-------------|
+| name | string | Display name |
+| description | string | Human-readable description |
+| tint | Color | Color overlay for rendering |
+| priority | float | How strongly this mood drives behavior |
+| requiresAction | bool | Whether player intervention is needed |
+| actionNeeded | string | What action the gotchi needs |
+| energyImpact | float | Effect on energy drain rate |
+| socialImpact | float | Effect on desire for interaction |
+
+---
+
+## Interaction Methods
+
+### Gotchi Interaction Functions
+
+| Function | Parameters | Effects |
+|----------|------------|---------|
+| `interact()` | None | +15 Happiness, +20 Excitement, +1 Friendship, sets "play" action (2s) |
+| `feed()` | None | -30 Hunger, +10 Energy, sets "eat" action (3s) |
+| `play()` | None | +25 Excitement, +20 Happiness, +1 Agility, sets "play" action (4s) |
+| `clean()` | None | Sets Cleanliness to 100, sets "idle" action (1s) |
+| `heal()` | None | Sets Health to 100, +5 Happiness |
+| `sleep()` | None | Sets sleeping_ = true, "sleep" action |
+| `wake()` | None | Sets sleeping_ = false, clears overlays |
+| `setTargetPosition(v)` | Vector2 | Sets target for movement, sets "move" action |
+| `moveToTarget(dt)` | float | Moves toward target position |
+| `wander(dt)` | float | Sets random wander direction |
+
+---
+
+## Tick Life Cycle
+
+### The Gotchi Tick Lifecycle (1.0 second intervals)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Gotchi::update(float deltaTime)                      │
+│                    Called at 60 FPS (or game speed)                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. Dead Check                                                          │
+│     └─ if (dead_) return;  // Exit early if dead                       │
+│                                                                         │
+│  2. Timing Updates                                                      │
+│     ├─ tickTimer_ += deltaTime                                          │
+│     └─ lastUpdate_ += deltaTime                                         │
+│                                                                         │
+│  3. SceneActor Base Update                                              │
+│     └─ SceneActor::update(deltaTime)  // Physics, collision, etc.      │
+│                                                                         │
+│  4. TICK BOUNDARY CHECK (tickTimer_ >= 1.0s)                           │
+│     ├─ Calculate ticks elapsed                                          │
+│     └─ Reset tickTimer_ for remainder                                   │
+│                                                                         │
+│     ┌───────────────────────────────────────────────────────────────┐   │
+│     │                    updateStats(float ticks)                   │   │
+│     │  Core Vital Stats Drain (per tick):                           │   │
+│     │    • Food Level:    +5.0  (hunger increases)                  │   │
+│     │    • Hydration:     +3.0  (thirst increases)                  │   │
+│     │    • Sleep Debt:    +2.0  (sleep need increases)              │   │
+│     │    • Energy:        -3.0  (drains naturally)                  │   │
+│     │    • Cleanliness:   -2.0  (gets dirty slowly)                 │   │
+│     │                                                               │   │
+│     │  Emotional Stats Decay:                                       │   │
+│     │    • Happiness:     -1.0  (natural decay)                     │   │
+│     │    • Excitement:    -0.5  (calms down)                        │   │
+│     │                                                               │   │
+│     │  Natural Recovery (non-sleeping):                             │   │
+│     │    • Energy:        +0.5  (slow recovery)                     │   │
+│     │    • Vitality:      +0.2  (slow healing)                      │   │
+│     │                                                               │   │
+│     │  Natural Recovery (SLEEPING):                                 │   │
+│     │    • Energy:        +5.0  (5x faster recovery)                │   │
+│     │    • Sleep Debt:    -8.0  (8x faster recovery)                │   │
+│     │    • Happiness:     +1.0  (sleep makes happy)                 │   │
+│     │                                                               │   │
+│     │  Health Impact Calculations:                                  │   │
+│     │    • Hunger > 80:     -2.0 health/tick                        │   │
+│     │    • Thirst > 80:     -2.0 health/tick                        │   │
+│     │    • Sleep Debt > 80: -1.5 health/tick                        │   │
+│     │    • Dirty > 70:      -1.0 health/tick                        │   │
+│     │    • Happiness < 20:  -1.0 health/tick                        │   │
+│     │                                                               │   │
+│     │  Health Cap:                                                   │   │
+│     │    • Max health clamped to 100                                │   │
+│     │    • Death trigger at health <= 0                             │   │
+│     │                                                               │   │
+│     │  Stat Clamping:                                                │   │
+│     │    • All stats normalized to 0-100 range                      │   │
+│     └───────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  5. MOOD UPDATE                                                       │
+│     └─ mood_.updateMood(deltaTime, stats_)                             │
+│                                                                         │
+│     ┌───────────────────────────────────────────────────────────────┐   │
+│     │              GotchiMood::updateMood()                         │   │
+│     │  Score each primary mood based on stats:                      │   │
+│     │    • Hunger Score:   food_level * 30                          │   │
+│     │    • Thirst Score:   hydration * 25                           │   │
+│     │    • Sleep Score:    sleep_debt * 30                          │   │
+│     │    • Energy Score:   (energy > 0.7) ? (energy-0.7)*30 : 0     │   │
+│     │    • Hygiene Score:  (1-hygiene) * 20                         │   │
+│     │    • Happy Score:    happiness * 40                           │   │
+│     │    • Sad Score:      (1-happiness) * 25                       │   │
+│     │    • Excited Score:  excitement * 30                          │   │
+│     │    • Bored Score:    (1-satisfaction) * 30                    │   │
+│     │    • Lonely Score:   (1-friends) * 15                         │   │
+│     │    • Sick Score:     (1-health) * 35                          │   │
+│     │                                                               │   │
+│     │  Find dominant mood (highest score > 10)                      │   │
+│     │  Default: SATISFIED if no strong needs                        │   │
+│     └───────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  6. MOOD OVERLAYS PROCESSING                                          │
+│     └─ mood_.processMoodOverlays(deltaTime)                            │
+│                                                                         │
+│     ┌───────────────────────────────────────────────────────────────┐   │
+│     │              GotchiMood::processMoodOverlays()                │   │
+│     │  1. Decay all overlay durations by deltaTime                  │   │
+│     │  2. Remove expired overlays                                   │   │
+│     │  3. Update overlayTimer to most recent overlay                │   │
+│     └───────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  7. ACTION TIMER UPDATE                                               │
+│     ├─ actionTimer_ -= deltaTime                                        │
+│     └─ if (actionTimer_ <= 0) {                                         │
+│           if (!sleeping_ && currentAction_ != "idle") {                 │
+│               setAction("idle");  // Return to idle                      │
+│           }                                                              │
+│         }                                                                │
+│                                                                         │
+│  8. DEBUG OUTPUT (if enabled)                                         │
+│     └─ Every 5 ticks, print:                                           │
+│        "[Gotchi] Tick N | Mood: X | Hunger: Y | Energy: Z"             │
+│                                                                         │
+│  9. ANIMATION UPDATE                                                  │
+│     └─ updateAnimation(deltaTime)  // Called from SceneActor            │
+│                                                                         │
+│  10. WANDER LOGIC (if not sleeping, idle action)                      │
+│      ├─ wanderTimer_ -= deltaTime                                       │
+│      └─ if (wanderTimer_ <= 0) {                                        │
+│            wander(deltaTime);  // Pick random direction                 │
+│            wanderTimer_ = 2.0 to 3.5 seconds                           │
+│         }                                                                │
+│                                                                         │
+│  11. TARGET MOVEMENT (if target set)                                  │
+│      └─ if (targetPosition_ != {0,0}) {                                │
+│            moveToTarget(deltaTime);                                     │
+│         }                                                                │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Animation States
+
+### Action Types
+
+| Action | Duration | Animation Speed | Loop | Description |
+|--------|----------|-----------------|------|-------------|
+| idle | infinite | 0.2s/frame | yes | Default standing state |
+| move | continuous | 0.1s/frame | yes | Walking/running animation |
+| eat | 3.0s | 0.15s/frame | no | Eating animation (non-looping) |
+| sleep | infinite | 0.3s/frame | yes | Sleeping animation |
+| play | actionTimer | 0.1s/frame | no | Playful animation (duration varies) |
+| sad | continuous | 0.25s/frame | yes | Sad/depressed animation |
+| happy | continuous | 0.15s/frame | yes | Happy/joyful animation |
+
+### Animation Frame Files (Expected Format)
+```
+animations/gotchi/
+├── idle_00.png
+├── idle_01.png
+├── move_00.png
+├── move_01.png
+├── eat_00.png
+├── eat_01.png
+├── sleep_00.png
+├── sleep_01.png
+├── play_00.png
+├── play_01.png
+├── sad_00.png
+├── sad_01.png
+├── happy_00.png
+├── happy_01.png
+```
+
+---
+
+## Debug Overlay
+
+When `debugMode_` is enabled, the following debug information is rendered:
+
+### Debug Visual Elements
+```
+  [Health Bar: 60px green]
+  [Hunger Bar: 60px red (inverted: 100=hungry)]
+  [Energy Bar: 60px yellow]
+  [Gotchi sprite at position]
+```
+
+### Debug Console Output
+Every 5 ticks (5 seconds):
+```
+[Gotchi] Tick 5 | Mood: Happy | Hunger: 15 | Energy: 92
+[Gotchi] Tick 10 | Mood: Satisfied | Hunger: 45 | Energy: 85
+```
+
+On key events:
+```
+[Gotchi] Initialized at (400, 300)
+[Gotchi] Stats reset. Current mood: Happy
+[Gotchi] Interacted! Happiness increased.
+[Gotchi] Fed! Hunger reduced.
+[Gotchi] Going to sleep...
+[Gotchi] Woke up!
+[Gotchi] Has died!
+```
+
+---
+
+## Death Conditions
+
+A Gotchi dies when health reaches 0 or below. Death can be caused by:
+
+| Cause | Condition | Health Drain Rate |
+|-------|-----------|-------------------|
+| Starvation | Food Level > 80 (hungry) | 2.0/tick |
+| Dehydration | Hydration > 80 (thirsty) | 2.0/tick |
+| Exhaustion | Sleep Debt > 80 | 1.5/tick |
+| Filth | Cleanliness > 70 (dirty) | 1.0/tick |
+| Depression | Happiness < 20 | 1.0/tick |
+
+**Total possible health drain**: Up to 7.5/tick if all conditions are met simultaneously
+
+**Recovery from near-death**: Requires immediate intervention:
+- `feed()` - reduces food level
+- `heal()` - immediately restores health
+- `sleep()` - allows natural recovery (5x faster energy recovery)
+
+---
+
+## Serialization Format
+
+### Save Data Structure (Proposed)
+```json
+{
+  "position": {
+    "x": 400.0,
+    "y": 300.0
+  },
+  "active": true,
+  "sleeping": false,
+  "dead": false,
+  "tickTimer": 0.5,
+  "lastUpdate": 1250.0,
+  "currentAction": "idle",
+  "actionTimer": 0.0,
+  "stats": {
+    "secondary": [50, 50, ...],
+    "emotional": [80, 30, ...],
+    "physical": [50, 50, ...],
+    "social": [50, 0, ...],
+    "environmental": [50, 70, ...],
+    "skill": [40, 40, ...]
+  },
+  "mood": {
+    "current": 0,
+    "overlays": [
+      {"mood": 31, "duration": 5.0}
+    ]
+  },
+  "wanderTimer": 2.5
+}
+```
+
+---
+
+## Statistical Relationships
+
+### Mood-Stat Correlations
+
+| Mood | Primary Triggers | Secondary Influences |
+|------|-----------------|---------------------|
+| HUNGRY | FOOD_LEVEL > 70 | LOW ENERGY, LOW HAPPINESS |
+| SLEEPY | SLEEP_DEBT > 60 | LOW ENERGY, LOW HAPPINESS |
+| SICK | FITNESS < 50 | LOW ENERGY, LOW HAPPINESS |
+| BORED | SATISFACTION < 30 | LOW EXCITEMENT, LOW FRIENDSHIP |
+| SAD | HAPPINESS < 30 | LOW LOVE, LOW PEACE |
+| EXCITED | EXCITEMENT > 70 | HIGH ENERGY, HIGH HAPPINESS |
+| HAPPY | HAPPINESS > 70 | LOW HUNGER, LOW SLEEP_DEBT |
+| CALM | SATISFACTION > 60 | LOW ANXIETY, LOW ANGER |
+
+### Action Effects Matrix
+
+| Action | Hunger | Energy | Happiness | Excitement | Health |
+|--------|--------|--------|-----------|------------|--------|
+| feed | -30 | +10 | +10 | 0 | 0 |
+| play | 0 | -10 | +20 | +25 | +1 |
+| interact | 0 | 0 | +15 | +20 | 0 |
+| clean | 0 | 0 | +10 | 0 | +5 |
+| heal | 0 | 0 | +5 | 0 | +100 |
+| sleep | 0 | +5/tick | +1/tick | 0 | +0.2/tick |
+
+---
+
+## System Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| GOTCHI_WIDTH | 64.0f | Sprite width in pixels |
+| GOTCHI_HEIGHT | 64.0f | Sprite height in pixels |
+| GOTCHI_MOVE_SPEED | 50.0f | Movement speed (pixels/second) |
+| GOTCHI_WANDER_SPEED | 20.0f | Wander movement speed |
+| GOTCHI_TICK_RATE | 1.0f | Base tick interval (seconds) |
+| WANDER_MIN_TIME | 2.0f | Minimum wander interval |
+| WANDER_MAX_TIME | 3.5f | Maximum wander interval |
+
+---
+
+## Thread Safety Notes
+
+- Gotchi operates on main game thread
+- No mutex protection for stats (assumes single-threaded game loop)
+- Serialization should occur between ticks to avoid partial updates
+
+---
+
+## Performance Considerations
+
+1. **Tick Optimization**: Stats are only calculated once per tick, not per frame
+2. **Mood Caching**: `moodCache` stores previously calculated mood properties
+3. **Overlay Management**: Expired overlays are removed during processMoodOverlays()
+4. **Animation Frames**: Loaded once at init, reused from texture arrays
+
+---
+
+## Future Extensibility
+
+### Planned Features (Not Yet Implemented)
+1. **Multi-Gotchi Social System**: Gotchis can interact with each other
+2. **Environment Integration**: Temperature, weather, time of day effects
+3. **Growth System**: Life stages (baby, adolescent, adult, elder)
+4. **Reproduction**: Mating system with genetic inheritance
+5. **Skill Learning**: Stats improve with repeated actions
+6. **Inventory System**: Items affect stats differently
+7. **Disease System**: Random illness with symptoms
+
+### API Expansion Points
+- Add new stat categories (extend enum)
+- Add new mood states (extend enum)
+- Add new actions (extend setAction())
+- Add custom event handlers (extension hooks)
+
+---
+
+## Summary
+
+The Gotchi system is a comprehensive digital pet engine with:
+- **100 tracked stats** across 6 categories (vital, secondary, emotional, physical, social, environmental, skill)
+- **100 mood states** with temporary overlay support
+- **Tick-based lifecycle** with configurable update rate
+- **AI-driven behavior** (wandering, action management)
+- **Physics integration** via SceneActor base class
+- **Animation system** with 7 action types
+- **Debug mode** for development and testing
+
+The system balances survival mechanics (hunger, thirst, sleep, health) with emotional well-being (happiness, excitement, satisfaction), creating a rich simulation where the player must attend to multiple needs simultaneously to keep their digital pet thriving.

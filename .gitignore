@@ -50,3 +50,6 @@ Makefile
 *.md
 !README.md
 !BUILD_INSTRUCTIONS.md
+
+# Asset bundle
+assets.rres

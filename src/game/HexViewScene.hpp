@@ -1,19 +1,16 @@
-#ifndef BOSS_SCENE_HPP
-#define BOSS_SCENE_HPP
+#ifndef HEX_VIEW_SCENE_HPP
+#define HEX_VIEW_SCENE_HPP
 
 #include "Scene.hpp"
+#include "HexWorld.hpp"
 #include <memory>
 
 class PauseMenuOverlay;
 
-class BossScene : public Scene {
+class HexViewScene : public Scene {
 public:
-    float bossPhase = 0.0f;
-    float groundY = 520.0f;
-    bool landedLastFrame = true;
-
-    BossScene();
-    ~BossScene();
+    HexViewScene();
+    ~HexViewScene();
 
     void init() override;
     void draw() override;
@@ -24,13 +21,11 @@ private:
     void togglePause() override;
     bool isPaused() const override { return paused; }
 
-    // Accessor for pause menu
-    PauseMenuOverlay* getPauseMenu() const { return pauseMenu.get(); }
-
-    // Callbacks for pause menu
+    // Callback for pause menu
     void onExitSelected();  // Request exit
 
 private:
+    HexWorld* world;
     std::unique_ptr<PauseMenuOverlay> pauseMenu;
 };
 

@@ -49,7 +49,8 @@ void SceneCamera::rotateTo(float targetAngle, float duration) {
     targetRotation = targetAngle; rotateDuration = duration; rotateTimer = 0.0f;
 }
 
-void SceneCamera::followActor(SceneActor* actor, float smoothSpeed) { followTarget = actor; followSpeed = smoothSpeed; }
+void SceneCamera::followActor(SceneActor* actor, float smoothSpeed) { followTarget = actor; followSpeed = smoothSpeed; targetPosition = actor->getPosition(); }
+void SceneCamera::followPosition(Vector2 pos, float smoothSpeed) { followTarget = nullptr; targetPosition = pos; position = pos; followSpeed = smoothSpeed; }
 void SceneCamera::stopFollowing() { followTarget = nullptr; }
 bool SceneCamera::isFollowing() const { return followTarget != nullptr; }
 
@@ -89,12 +90,17 @@ Camera2D SceneCamera::getRaylibCamera() const {
 }
 
 void SceneCamera::updateFollow(float deltaTime) {
-    if (!followTarget) return;
-    Vector2 targetPos = followTarget->getPosition();
-    targetPos.x += lookaheadOffset.x;
-    targetPos.y += lookaheadOffset.y;
-    position.x = lerp(position.x, targetPos.x, followSpeed * deltaTime);
-    position.y = lerp(position.y, targetPos.y, followSpeed * deltaTime);
+    if (followTarget) {
+        Vector2 targetPos = followTarget->getPosition();
+        targetPos.x += lookaheadOffset.x;
+        targetPos.y += lookaheadOffset.y;
+        position.x = lerp(position.x, targetPos.x, followSpeed * deltaTime);
+        position.y = lerp(position.y, targetPos.y, followSpeed * deltaTime);
+    } else if (targetPosition.x != position.x || targetPosition.y != position.y) {
+        // Smoothly follow a position (not an actor)
+        position.x = lerp(position.x, targetPosition.x, followSpeed * deltaTime);
+        position.y = lerp(position.y, targetPosition.y, followSpeed * deltaTime);
+    }
 }
 
 void SceneCamera::updateShake(float deltaTime) {
