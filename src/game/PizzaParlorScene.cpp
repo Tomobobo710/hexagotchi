@@ -1,0 +1,263 @@
+#include "PizzaParlorScene.hpp"
+#include "GameConstants.hpp"
+#include <cstdlib>
+#include <cmath>
+
+static const Color GARY_COLOR    = {139, 172, 15, 255};
+static const Color WIFE_COLOR    = {200, 60, 90, 255};
+static const Color POKEMON_COLOR = {250, 200, 40, 255};
+
+// Ambient-only lines the Pokemon shouts unprompted, popped through the same
+// shared DialogBox as scripted events. Its entire personality is its own name.
+static const char* POKEMON_QUIPS[] = {
+    "Ronzer!",
+    "Ronzer Ronzer!",
+    "RONZER.",
+    "Ronzer?",
+    "Ron... zer!",
+};
+static const float POKEMON_QUIP_DURATION = 1.8f;
+
+PizzaParlorScene::PizzaParlorScene(DialogBox* sharedDialog)
+    : Scene(1024.0f, 576.0f, {30, 20, 20, 255}), dialog(sharedDialog) {
+}
+
+void PizzaParlorScene::init() {
+    getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
+
+    // Actors are invisible bounds/position holders -- drawGary/drawWife/
+    // drawPokemon render the actual silhouettes on top, keyed by tag (same
+    // pattern BossScene uses for its boss shape).
+    gary = new SceneActor({160.0f, 380.0f}, 48.0f, 64.0f);
+    gary->setTag("gary");
+    gary->setVisible(false);
+    addActor(gary);
+
+    wife = new SceneActor({520.0f, 360.0f}, 48.0f, 72.0f);
+    wife->setTag("wife");
+    wife->setVisible(false);
+    addActor(wife);
+
+    pokemon = new SceneActor({620.0f, 400.0f}, 40.0f, 40.0f);
+    pokemon->setTag("pokemon");
+    pokemon->setVisible(false);
+    addActor(pokemon);
+
+    nextQuipTime = 3.0f + (float)(rand() % 400) / 100.0f;
+
+    // --- Event 0: the wife needling Gary while the Pokemon heckles from the sideline ---
+    events.push_back({
+        { "Gary",    "Oh -- hey. I didn't know you two ate here too.",
+          GARY_COLOR, 0, false },
+        { "Karen",   "We come here every Tuesday, Gary. We've come here every\nTuesday for six years.",
+          WIFE_COLOR, 1, false },
+        { "Ronzer",  "Ronzer!", POKEMON_COLOR, 2, false },
+        { "Gary",    "Right. Tuesdays. I knew that.",
+          GARY_COLOR, 0, false },
+        { "Karen",   "Did you get my email about Zap's recital?",
+          WIFE_COLOR, 1, false },
+        { "Gary",    "I -- yeah, I'm looking into it. Work's been --",
+          GARY_COLOR, 0, false },
+        { "Karen",   "You're a digital pet, Gary. What work.",
+          WIFE_COLOR, 1, true },
+        { "Ronzer",  "RONZER RONZER RONZER.", POKEMON_COLOR, 2, false },
+        { "Gary",    "...I have a job. I sit on a yoga ball.",
+          GARY_COLOR, 0, false },
+        { "Karen",   "Ronzer got a promotion at the gym he doesn't even work at.\nThey just gave it to him.",
+          WIFE_COLOR, 1, false },
+        { "Ronzer",  "Ronzer.", POKEMON_COLOR, 2, false },
+        { "Gary",    "That's not -- that isn't how promotions --",
+          GARY_COLOR, 0, false },
+        { "Karen",   "Get the pizza to go next time, Gary. It's for the kids.",
+          WIFE_COLOR, 1, false },
+        { "Gary",    "It's always been for the kids.",
+          GARY_COLOR, 0, false },
+    });
+}
+
+void PizzaParlorScene::update(float deltaTime) {
+    Scene::update(deltaTime);
+
+    if (activeEvent < 0) {
+        // --- Ambient idle: gentle bob/sway per character, slow camera drift ---
+        garyBobTimer += deltaTime * 2.0f;
+        wifeTapTimer += deltaTime * 3.0f;
+        pokemonHopTimer += deltaTime * 4.0f;
+
+        gary->setPosition({160.0f, 380.0f + sinf(garyBobTimer) * 4.0f});
+        wife->setPosition({520.0f, 360.0f + sinf(wifeTapTimer) * 2.0f});
+        pokemon->setPosition({620.0f, 400.0f - fabsf(sinf(pokemonHopTimer)) * 14.0f});
+
+        // Ambient quip popup, shown via the shared DialogBox
+        if (quipTimer > 0.0f) {
+            quipTimer -= deltaTime;
+            if (quipTimer <= 0.0f) dialog->hide();
+        } else {
+            ambientTimer += deltaTime;
+            if (ambientTimer >= nextQuipTime) {
+                ambientTimer = 0.0f;
+                nextQuipTime = 4.0f + (float)(rand() % 500) / 100.0f;
+
+                int idx = rand() % (sizeof(POKEMON_QUIPS) / sizeof(POKEMON_QUIPS[0]));
+                dialog->setSpeakerName("Ronzer");
+                dialog->setSpeakerColor(POKEMON_COLOR);
+                dialog->setText(POKEMON_QUIPS[idx]);
+                dialog->show();
+                quipTimer = POKEMON_QUIP_DURATION;
+            }
+        }
+
+        // Slow establishing drift across the whole set
+        float t = (float)GetTime() * 0.05f;
+        getCamera()->setPosition(512.0f + sinf(t) * 60.0f, 288.0f);
+        getCamera()->setZoom(1.0f);
+    }
+
+    if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
+        SceneInputHandler* ih = getInputHandler();
+        if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
+            advanceLine();
+        }
+    }
+}
+
+void PizzaParlorScene::draw() {
+    Scene::draw();
+
+    Camera2D cam = getCamera()->getRaylibCamera();
+    BeginMode2D(cam);
+    drawGary(gary->getPosition());
+    drawWife(wife->getPosition());
+    drawPokemon(pokemon->getPosition());
+    EndMode2D();
+}
+
+void PizzaParlorScene::cleanup() {
+    Scene::cleanup();
+}
+
+void PizzaParlorScene::triggerEvent(int index) {
+    if (activeEvent >= 0) return;
+    if (index < 0 || index >= (int)events.size()) return;
+
+    quipTimer = 0.0f;
+    activeEvent = index;
+    lineIndex = 0;
+    playLine(events[activeEvent][lineIndex]);
+}
+
+bool PizzaParlorScene::isPlayingEvent() const {
+    return activeEvent >= 0;
+}
+
+void PizzaParlorScene::advanceLine() {
+    if (activeEvent < 0) return;
+
+    lineIndex++;
+    auto& seq = events[activeEvent];
+    if (lineIndex >= (int)seq.size()) {
+        endEvent();
+        return;
+    }
+    playLine(seq[lineIndex]);
+}
+
+void PizzaParlorScene::playLine(const PizzaLine& line) {
+    dialog->setSpeakerName(line.speaker);
+    dialog->setSpeakerColor(line.speakerColor);
+    dialog->setText(line.text);
+    dialog->show();
+    focusCameraOn(line.focusActor, line.shake);
+}
+
+void PizzaParlorScene::endEvent() {
+    activeEvent = -1;
+    lineIndex = 0;
+    dialog->hide();
+    getCamera()->zoomTo(1.0f, 0.6f);
+}
+
+void PizzaParlorScene::focusCameraOn(int actorIndex, bool shake) {
+    SceneActor* target = nullptr;
+    if (actorIndex == 0) target = gary;
+    else if (actorIndex == 1) target = wife;
+    else if (actorIndex == 2) target = pokemon;
+
+    if (target) {
+        Vector2 pos = target->getCenter();
+        getCamera()->setPosition(pos.x, pos.y - 40.0f);
+        getCamera()->zoomTo(1.4f, 0.5f);
+    }
+
+    if (shake) {
+        getCamera()->shake(6.0f, 0.35f);
+    }
+}
+
+// --- Character silhouettes -----------------------------------------------
+// All shape-only placeholders. Distinct silhouettes so the cast reads apart
+// even before real art lands: Gary is a slouched blob, Karen is sharp and
+// upright, Ronzer is a round creature with ears -- nothing here is final art
+// direction, just enough shape language to tell them apart at a glance.
+
+void PizzaParlorScene::drawGary(Vector2 pos) {
+    float cx = pos.x + 24.0f;
+    float cy = pos.y + 32.0f;
+
+    // Slouched round body -- low energy, deflated posture
+    DrawEllipse((int)cx, (int)(cy + 20), 26, 30, GARY_COLOR);
+    // Head, tilted down slightly
+    DrawCircle((int)cx, (int)(cy - 14), 20, GARY_COLOR);
+    // Droopy tired eyes
+    Color darkGary = {70, 90, 5, 255};
+    DrawEllipse((int)(cx - 8), (int)(cy - 14), 4, 2, darkGary);
+    DrawEllipse((int)(cx + 8), (int)(cy - 14), 4, 2, darkGary);
+    // Sad mouth
+    DrawLineEx({cx - 7, cy - 5}, {cx + 7, cy - 3}, 2.0f, darkGary);
+    // Limp little arms
+    DrawLineEx({cx - 24, cy + 8}, {cx - 32, cy + 26}, 5.0f, GARY_COLOR);
+    DrawLineEx({cx + 24, cy + 8}, {cx + 32, cy + 26}, 5.0f, GARY_COLOR);
+}
+
+void PizzaParlorScene::drawWife(Vector2 pos) {
+    float cx = pos.x + 24.0f;
+    float cy = pos.y + 36.0f;
+
+    // Sharp, upright silhouette -- angular shoulders, arms crossed
+    Color darkWife = {110, 20, 40, 255};
+    // Body: trapezoid via triangle-ish rectangle for sharp shoulders
+    DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, WIFE_COLOR);
+    DrawRectangle((int)(cx - 16), (int)(cy - 4), 32, 20, WIFE_COLOR);
+    // Head, held high
+    DrawCircle((int)cx, (int)(cy - 26), 16, WIFE_COLOR);
+    // Narrowed, unimpressed eyes
+    DrawRectangle((int)(cx - 10), (int)(cy - 28), 6, 2, darkWife);
+    DrawRectangle((int)(cx + 4), (int)(cy - 28), 6, 2, darkWife);
+    // Flat, unimpressed mouth
+    DrawLineEx({cx - 6, cy - 18}, {cx + 6, cy - 18}, 2.0f, darkWife);
+    // Arms crossed (two diagonal bars over the chest)
+    DrawLineEx({cx - 16, cy + 2}, {cx + 12, cy + 12}, 6.0f, darkWife);
+    DrawLineEx({cx + 16, cy + 2}, {cx - 12, cy + 12}, 6.0f, darkWife);
+}
+
+void PizzaParlorScene::drawPokemon(Vector2 pos) {
+    float cx = pos.x + 20.0f;
+    float cy = pos.y + 24.0f;
+
+    // Round, bouncy little creature -- pointed ears, big excited eyes
+    Color darkMon = {160, 120, 10, 255};
+    DrawCircle((int)cx, (int)cy, 18, POKEMON_COLOR);
+    // Ears
+    DrawTriangle({cx - 14, cy - 10}, {cx - 20, cy - 28}, {cx - 6, cy - 16}, POKEMON_COLOR);
+    DrawTriangle({cx + 14, cy - 10}, {cx + 20, cy - 28}, {cx + 6, cy - 16}, POKEMON_COLOR);
+    // Big round eyes
+    DrawCircle((int)(cx - 7), (int)(cy - 2), 5, darkMon);
+    DrawCircle((int)(cx + 7), (int)(cy - 2), 5, darkMon);
+    DrawCircle((int)(cx - 6), (int)(cy - 3), 2, WHITE);
+    DrawCircle((int)(cx + 8), (int)(cy - 3), 2, WHITE);
+    // Open, shouting mouth
+    DrawCircle((int)cx, (int)(cy + 8), 5, darkMon);
+    // Tiny stub feet
+    DrawEllipse((int)(cx - 8), (int)(cy + 18), 6, 4, POKEMON_COLOR);
+    DrawEllipse((int)(cx + 8), (int)(cy + 18), 6, 4, POKEMON_COLOR);
+}
