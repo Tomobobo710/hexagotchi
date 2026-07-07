@@ -2,6 +2,7 @@
 #define GAME_SCENE_HPP
 
 #include "Scene.hpp"
+#include "HexWorld.hpp"
 
 class GameScene : public Scene {
 public:
@@ -9,10 +10,14 @@ public:
     float groundY = 560.0f;
 
     GameScene();
+    ~GameScene();
 
     void init() override;
     void draw() override;
     void update(float deltaTime) override;
+
+private:
+    HexWorld* world;
 };
 
 #endif

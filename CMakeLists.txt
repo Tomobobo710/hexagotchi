@@ -22,7 +22,7 @@ if(RBUILD_DESKTOP)
     include_directories(src/engine src/game src/effects raylib/src glfw/include)
 
     # Source files
-    file(GLOB ENGINE_SRCS "src/engine/*.cpp")
+    file(GLOB ENGINE_SRCS "src/engine/*.cpp" "src/engine/*/*.cpp")
     file(GLOB GAME_SRCS "src/game/*.cpp")
     file(GLOB EFFECTS_SRCS "src/effects/*.cpp")
     set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS})
