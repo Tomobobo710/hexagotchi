@@ -478,7 +478,7 @@ void Gotchi::updateAnimation(float deltaTime) {
     // This is called from Gotchi::update()
 }
 
-bool Gotchi::loadAnimationFrames(const std::string& basePath, int count) {
+bool Gotchi::loadAnimationFrames(const std::string& basePath) {
     animIdle_.clear();
     animMove_.clear();
     animEat_.clear();
@@ -487,13 +487,20 @@ bool Gotchi::loadAnimationFrames(const std::string& basePath, int count) {
     animSad_.clear();
     animHappy_.clear();
 
-    // Load animation frames from files
-    // Expected format: basePath_idle_00.png, basePath_idle_01.png, etc.
-    // Returns true if any frames loaded
+    // Load animation frames using SpriteLoader (which uses AssetPack)
+    // Expected format: basePath_action_00.png, basePath_action_01.png, etc.
+    // Returns true if at least idle frames were loaded
 
-    // Placeholder - would load actual animation frames here
-    // This is where you'd call SpriteLoader::loadFrames(basePath, count)
-    return false;
+    animIdle_ = SpriteLoader::loadFrames(basePath, "idle");
+    animMove_ = SpriteLoader::loadFrames(basePath, "move");
+    animEat_ = SpriteLoader::loadFrames(basePath, "eat");
+    animSleep_ = SpriteLoader::loadFrames(basePath, "sleep");
+    animPlay_ = SpriteLoader::loadFrames(basePath, "play");
+    animSad_ = SpriteLoader::loadFrames(basePath, "sad");
+    animHappy_ = SpriteLoader::loadFrames(basePath, "happy");
+
+    // Return true if at least idle frames were loaded
+    return !animIdle_.empty();
 }
 
 void Gotchi::unloadAnimations() {

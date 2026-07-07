@@ -6,6 +6,7 @@
 #include "game/InputTestScene.hpp"
 #include "game/HexViewScene.hpp"
 #include "game/SpriteTestScene.hpp"
+#include "game/GotchiScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
@@ -85,8 +86,8 @@ void UpdateDrawFrame() {
         lastScene = currentScene;
     }
 
-    // Hide dialog on input test and hexboard scenes
-    if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test") {
+    // Hide dialog on input test, hexboard, and gotchi scenes
+    if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" || currentScene == "gotchi") {
         dialog->hide();
     }
 
@@ -100,6 +101,8 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("sprite_test", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_FIVE) && currentScene != "hexboard")
         sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_EIGHT) && currentScene != "gotchi")
+        sceneManager->switchScene("gotchi", TransitionEffect::FADE, 0.5f);
 
     if (IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
         if (!dialog->isFinished()) {
@@ -136,17 +139,20 @@ void UpdateDrawFrame() {
         DrawRectangle(0, 0, GAME_W, 32, {0, 0, 0, 160});
         if (currentScene == "hexboard") {
             DrawText("HEXBOARD", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "input_test") {
             DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "sprite_test") {
             // SpriteTestScene draws its own "SPRITE TEST" title, skip the overlay title here.
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "gotchi") {
+            DrawText("GOTCHI", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -183,6 +189,7 @@ int main() {
     sceneManager->registerScene("boss", new BossScene());
     sceneManager->registerScene("hexboard", new HexViewScene());
     sceneManager->registerScene("input_test", new InputTestScene());
+    sceneManager->registerScene("gotchi", new GotchiScene());
     sceneManager->switchSceneImmediate("hexboard");
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
 #ifdef HEXA_SHOT_TOOL

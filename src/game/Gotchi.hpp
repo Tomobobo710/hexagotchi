@@ -57,6 +57,10 @@ public:
     void setAction(const std::string& action);
     void updateAnimation(float deltaTime);
 
+    // Texture loading helpers - public for scene initialization
+    bool loadAnimationFrames(const std::string& basePath);
+    void unloadAnimations();
+
     // Tick-based updates (private)
     void updateStats(float ticks);
 
@@ -99,10 +103,6 @@ private:
     std::vector<Texture2D> animPlay_;
     std::vector<Texture2D> animSad_;
     std::vector<Texture2D> animHappy_;
-
-    // Texture loading helpers
-    bool loadAnimationFrames(const std::string& basePath, int count);
-    void unloadAnimations();
 };
 
 #endif // GOTCHI_HPP
