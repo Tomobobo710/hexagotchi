@@ -182,8 +182,11 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PizzaParlorScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/ApartmentScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/OfficeScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
-        ${CMAKE_SOURCE_DIR}/src/game/SpriteLoader.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp
