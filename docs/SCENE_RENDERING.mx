@@ -1,0 +1,801 @@
+# Scene Rendering System Documentation
+
+## Overview
+
+The Hexagotchi rendering system is built around a modular scene architecture where each scene manages its own actors, effects, and rendering logic. The system uses Raylib for 2D rendering with a camera system, layer-based actor sorting, and scene transition effects.
+
+---
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             Game Rendering Pipeline                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. UpdateDrawFrame() [main.cpp]                                            │
+│     ├─ SyncMouseToGameSpace()  ← Mouse coordinate correction                │
+│     ├─ sceneManager->update(dt)                                             │
+│     ├─ dialog->update(dt)                                                   │
+│     └─ BeginTextureMode(gameTarget)                                         │
+│           ├─ sceneManager->draw()                                           │
+│           ├─ dialog->draw()                                                 │
+│           └─ EndTextureMode()                                               │
+│                                                                              │
+│  2. Letterbox Scaling (main.cpp)                                            │
+│     └─ DrawTexturePro(gameTarget, srcRect, destRect, rotation, WHITE)      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Scene System
+
+### Scene Base Class (`src/engine/Scene.hpp/.cpp`)
+
+All scenes inherit from the `Scene` base class which provides:
+
+| Feature | Description |
+|---------|-------------|
+| **Lifecycle** | `init()`, `update(deltaTime)`, `draw()`, `cleanup()` |
+| **Actor Management** | `addActor()`, `removeActor()`, `findActorByTag()` |
+| **Camera** | `getCamera()`, `createCamera()` |
+| **Effects** | `addEffect()` for background/foreground visual effects |
+| **Input** | `getInputHandler()` for keyboard/mouse input |
+| **State** | `setPaused()`, `togglePause()` |
+
+### Scene Constants
+
+```cpp
+const Color SCENE_DEFAULT_BG = RAYWHITE;        // Default background color
+const float SCENE_DEFAULT_WIDTH = 1920.0f;      // Default scene width
+const float SCENE_DEFAULT_HEIGHT = 1080.0f;     // Default scene height
+```
+
+### Scene Size by Type
+
+| Scene Type | Width | Height | Background |
+|------------|-------|--------|------------|
+| Game/Boss Scenes | 4800/2400 | 900 | Dark blue gradient |
+| Gotchi/Pet Scenes | 720 | 720 | Dark purple |
+| Narrative Scenes | 1024 | 576 | Varies by scene |
+| Debug/Test Scenes | 720 | 720 | Varies |
+
+---
+
+## Rendering Pipeline
+
+### Main Loop (`UpdateDrawFrame()` in main.cpp)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   UpdateDrawFrame() - Main Game Loop                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. Sync Mouse Coordinates                                                │
+│     ├─ GetLetterboxRect() - Calculate scaled drawing area               │
+│     └─ SetMouseOffset/SetMouseScale() - Adjust for letterboxing         │
+│                                                                         │
+│  2. Scene Management                                                      │
+│     ├─ Check scene transitions and update dialogIndex                   │
+│     ├─ Handle scene-specific dialog display rules                       │
+│     └─ Process input triggers for scene switching                       │
+│                                                                         │
+│  3. Update Phase                                                          │
+│     ├─ sceneManager->update(dt) - Update current scene                  │
+│     ├─ dialog->update(dt) - Update dialog box state                     │
+│                                                                         │
+│  4. Render to Offscreen Texture (gameTarget)                             │
+│     ├─ ClearBackground(BLACK)                                           │
+│     ├─ sceneManager->draw() - Render scene                              │
+│     ├─ dialog->draw() - Render dialog overlay                           │
+│     └─ Draw scene-specific overlay labels (top-left corner)             │
+│                                                                         │
+│  5. Letterbox Scaling to Window                                          │
+│     ├─ GetLetterboxRect() - Calculate destination rectangle             │
+│     └─ DrawTexturePro() - Draw gameTarget to window with scaling        │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Scene Drawing Order (`Scene::draw()`)
+
+```cpp
+void Scene::draw() {
+    // 1. Clear background
+    ClearBackground(backgroundColor);
+
+    // 2. Draw background effects (rendered first, behind actors)
+    for (auto effect : effects) {
+        effect->drawBackground();
+        rlDisableDepthTest();
+    }
+
+    // 3. Draw actors in 2D camera mode (sorted by layer)
+    if (camera) BeginMode2D(camera->getRaylibCamera());
+    for (auto actor : actors) {
+        if (actor->isVisible()) actor->draw();
+    }
+    if (camera) EndMode2D();
+
+    // 4. Draw foreground effects (rendered last, on top of actors)
+    for (auto effect : effects) {
+        effect->drawForeground();
+        rlDisableDepthTest();
+    }
+}
+```
+
+### Actor Layer System
+
+```cpp
+const int ACTOR_LAYER_BACKGROUND = 0;   // Farthest back
+const int ACTOR_LAYER_MIDGROUND = 1;    // Mid layer
+const int ACTOR_LAYER_FOREGROUND = 2;   // In front
+const int ACTOR_LAYER_UI = 3;           // Topmost (UI elements)
+```
+
+Actors are automatically sorted by layer during `addActor()` and `processRemovals()`.
+
+---
+
+## SceneActor System
+
+### SceneActor Base Class (`src/engine/SceneActor.hpp/.cpp`)
+
+The base class for all renderable entities provides:
+
+| Feature | Description |
+|---------|-------------|
+| **Transform** | Position, rotation, scale, velocity |
+| **Physics** | Friction, gravity, collision detection |
+| **Animation** | Sprite sheets and frame lists |
+| **Clickability** | Hover/press states with callbacks |
+| **Layers** | Z-order control via layer property |
+| **Tags** | String-based identification |
+
+### SceneActor Constants
+
+```cpp
+const float ACTOR_DEFAULT_FRICTION = 0.98f;
+const float ACTOR_GRAVITY = 300.0f;
+const Color ACTOR_HOVER_TINT = {255, 255, 255, 60};   // 25% white on hover
+const Color ACTOR_PRESSED_TINT = {0, 0, 0, 70};        // ~27% black on press
+```
+
+### SceneActor Rendering
+
+Each actor's `draw()` method is responsible for rendering itself. Common patterns:
+
+#### Simple Rectangle Drawing
+```cpp
+void draw() override {
+    DrawRectangle((int)position.x, (int)position.y, (int)width, (int)height, color);
+}
+```
+
+#### Sprite with Animation
+```cpp
+// In init():
+actor->setAnimation(frameWidth, frameHeight, frameCount, frameDuration, loop);
+
+// draw() uses texture automatically when animation is set
+```
+
+#### Custom Shape Drawing
+```cpp
+void draw() override {
+    Vector2 p = getPosition();
+    DrawCircle((int)p.x, (int)p.y, radius, color);
+    DrawCircleLines((int)p.x, (int)p.y, radius + 5, outlineColor);
+}
+```
+
+---
+
+## Camera System
+
+### SceneCamera Class (`src/engine/SceneCamera.hpp/.cpp`)
+
+Features:
+
+| Feature | Description |
+|---------|-------------|
+| **Position** | Follow actors or positions with smooth lerp |
+| **Zoom** | Dynamic zoom with duration-based transitions |
+| **Rotation** | Camera rotation with smooth transitions |
+| **Lookahead** | Camera looks ahead in direction of movement |
+| **Shake** | Screen shake effect with decay |
+| **Boundaries** | Clamp camera to world bounds |
+
+### Camera Constants
+
+```cpp
+const float CAMERA_DEFAULT_ZOOM = 1.0f;
+const float CAMERA_MIN_ZOOM = 0.5f;
+const float CAMERA_MAX_ZOOM = 5.0f;
+const float CAMERA_FOLLOW_SPEED = 5.0f;
+const float CAMERA_SHAKE_DAMPING = 0.95f;
+const float CAMERA_LOOKAHEAD_DISTANCE = 100.0f;
+```
+
+### Camera Usage Example
+
+```cpp
+// Follow player with custom speed
+getCamera()->followActor(player, 4.0f);
+
+// Dynamic zoom based on player velocity
+float targetZoom = 1.0f - (playerVelocityY / 420.0f) * 0.25f;
+getCamera()->zoomTo(targetZoom, 0.1f);
+
+// Screen shake on landing
+getCamera()->shake(4.0f, 0.15f);
+
+// Camera boundaries
+getCamera()->setBoundary(0, -200, 4800.0f, 900.0f);
+```
+
+---
+
+## Effects System
+
+### SceneEffect Base Class (`src/engine/SceneEffect.hpp`)
+
+Effects are rendered outside the 2D camera mode, allowing them to:
+- Render in world space (parallax starfield)
+- Render in 3D space (moon with lighting)
+- Render in screen space (overlays)
+
+### StarfieldEffect (`src/effects/StarfieldEffect.cpp`)
+
+A parallax background effect with two layers:
+
+| Layer | Star Count | Parallax Factor | Rendering |
+|-------|-----------|-----------------|-----------|
+| Background stars | 200 | 0.1x | Single pixels |
+| Mid stars | 80 | 0.25x | Small circles (1.2px radius) |
+
+```cpp
+StarfieldEffect::drawBackground() {
+    float camX = camera->getRaylibCamera().target.x;
+
+    // Distant stars (slow parallax)
+    for (auto& s : stars) {
+        float sx = fmod(s.x - camX * 0.1f + 4800.0f, 4800.0f);
+        DrawPixel((int)sx, (int)s.y, {180, 180, 220, 120});
+    }
+
+    // Mid stars (faster parallax)
+    for (auto& s : midStars) {
+        float sx = fmod(s.x - camX * 0.25f + 4800.0f, 4800.0f);
+        DrawCircle((int)sx, (int)s.y, 1.2f, {220, 220, 255, 180});
+    }
+}
+```
+
+### MoonEffect (`src/effects/MoonEffect.cpp`)
+
+A 3D-rendered moon with:
+
+- **Shader-based lighting**: Custom GLSL shaders for WebGL and desktop OpenGL
+- **Directional light**: Simulates sunlight from a moving source
+- **Animated rotation**: The moon slowly rotates
+- **Day/Night cycle**: Light position follows sine wave motion
+
+```cpp
+void MoonEffect::drawBackground() {
+    Camera3D cam3d = {
+        .position = {0.0f, 0.0f, 10.0f},
+        .target = {0.0f, 0.0f, 0.0f},
+        .up = {0.0f, 1.0f, 0.0f},
+        .fovy = 10.0f,
+        .projection = CAMERA_PERSPECTIVE
+    };
+    BeginMode3D(cam3d);
+        DrawModelEx(model, {0.8f, 0.7f, 0.0f},
+                    {0.0f, 1.0f, 0.3f}, rotation,
+                    {1.0f, 1.0f, 1.0f}, {220, 220, 180, 255});
+    EndMode3D();
+}
+```
+
+---
+
+## Dialog Box System
+
+### DialogBox Class (`src/engine/DialogBox.hpp/.cpp`)
+
+A shared dialogue system used across narrative scenes.
+
+**Key Features**:
+- Character reveal animation (typing effect)
+- Option selection with keyboard navigation
+- Fade in/out transitions
+- Portrait display (optional texture or silhouette)
+- Text wrapping for multi-line dialogue
+
+**Position**: Anchored at bottom of screen (y = GAME_H - 20)
+
+**Dimensions**: 680px wide × 160px high
+
+### DialogBox Rendering
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                     Dialog Box Layout                              │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ┌────────────────────────────────────────────────────────────┐   │
+│  │  Speaker Name (colored text)                                │   │
+│  │  ┌──────┐                                                   │   │
+│  │  │Portrait│   Dialogue Text (wraps to fit width)          │   │
+│  │  │(120x│   ┌───────────────────────────────────────┐      │   │
+│  │  │ 120) │   │This is the main dialogue text that    │      │   │
+│  │  │      │   │wraps across multiple lines based on   │      │   │
+│  │  │      │   │the dialog width.                      │      │   │
+│  │  └──────┘   └───────────────────────────────────────┘      │   │
+│  │                                                              │   │
+│  │  [Options - if present]                                      │   │
+│  │  > Option 1 (selected)                                      │   │
+│  │    Option 2                                                 │   │
+│  └────────────────────────────────────────────────────────────┘   │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Scene Manager
+
+### SceneManager Class (`src/engine/SceneManager.hpp/.cpp`)
+
+Manages multiple named scenes and transitions between them.
+
+### Scene Transition Effects
+
+```cpp
+enum class TransitionEffect {
+    NONE,        // Instant switch
+    FADE,        // Black fade in/out
+    SLIDE_LEFT,  // New scene slides in from right
+    SLIDE_RIGHT, // New scene slides in from left
+    SLIDE_UP,    // New scene slides in from bottom
+    SLIDE_DOWN   // New scene slides in from top
+};
+```
+
+### Transition State Machine
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                  SceneManager Transition Logic                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  switchScene(sceneName, effect, duration)                          │
+│     └─> transitioning = true                                       │
+│     └─> transitionTimer = 0                                        │
+│     └─> nextScene = scene                                          │
+│                                                                      │
+│  update(deltaTime)                                                   │
+│     └─> updateTransition(deltaTime)                                │
+│                                                                      │
+│  updateTransition()                                                  │
+│     ├─> timer < halfDuration: currentScene still visible           │
+│     ├─> timer >= halfDuration:                                      │
+│     │     ├─> currentScene->cleanup()                              │
+│     │     ├─> currentScene = nextScene                             │
+│     │     └─> currentScene->init()                                 │
+│     └─> timer >= duration:                                          │
+│           ├─> transitioning = false                                │
+│           └─> nextScene = nullptr                                  │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Scene Catalog
+
+### Core Gameplay Scenes
+
+#### 1. GameScene (`src/game/GameScene.cpp`)
+
+**Purpose**: Overworld platformer level
+
+**Dimensions**: 4800×900 pixels
+
+**Actors**:
+- `player` - PlayerActor with physics and animation
+- `ground` - Base platform at y=440
+- `platform` - 14 floating platforms at various heights
+- `enemy` - 7 static enemies (bobbing animation)
+- `gem` - 8 collectible gems (pulsing animation)
+
+**Rendering Features**:
+- Custom gem rendering with pulsing rings
+- Enemy bobbing using sine wave
+- Platform highlight lines
+- Starfield and Moon effects
+
+**Camera Behavior**:
+- Follows player with 4.0 speed
+- Zooms based on vertical velocity (0.72x-1.0x)
+- Screen shake on landing
+- Lookahead enabled
+
+**Pause Menu**: Custom `PauseMenuOverlay` with Resume/Controls/Exit
+
+---
+
+#### 2. BossScene (`src/game/BossScene.cpp`)
+
+**Purpose**: Boss arena with platforming challenges
+
+**Dimensions**: 2400×900 pixels
+
+**Actors**:
+- `player` - PlayerActor
+- `ground` - Dark purple platform
+- `boss` - 90×110 enemy with animated boss shape
+- `platform` - 4 pillars at x=500,800,1400,1700
+
+**Rendering Features**:
+- Concentric circles animation in background
+- Boss pulsing aura effect
+- Eye blinking animation
+- Mouth bar animation
+- Pillar side highlights
+
+**Camera Behavior**:
+- Follows player with 2.5 speed
+- Zooms to 0.75x during jumps
+- Shake on landing
+- No lookahead
+
+**Pause Menu**: Same as GameScene
+
+---
+
+#### 3. HexViewScene (`src/game/HexViewScene.cpp`)
+
+**Purpose**: Hex grid world map display
+
+**Dimensions**: 4800×900 pixels
+
+**Hex Grid**:
+- 32 hexes wide × 18 hexes tall
+- 64px hex size
+- Biomes: Ocean, Sand, Grass, Dirt, Ice, Swamp, Lava
+
+**Rendering**:
+- Custom `HexTile` class with vertex-based hex shapes
+- Biome-specific textures from assets
+- Camera centered at (1536, 960) zoomed at 0.8x
+
+**Pause Menu**: Same as GameScene
+
+---
+
+### Gotchi (Pet) Scenes
+
+#### 4. GotchiScene (`src/game/GotchiScene.cpp`)
+
+**Purpose**: Pet status display UI
+
+**Dimensions**: 720×720 pixels
+
+**UI Layout**:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        GOTCHI SCENE                              │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌────────────┬─────────────────────────────┬──────────────────┐ │
+│  │ VITAL      │  CURRENT MOOD             │  EMOTIONAL       │ │
+│  │ STATS      │  [Mood Name]              │  Happiness       │ │
+│  │ - Health   │  [Mood Color Box]         │  Excitement      │ │
+│  │ - Hunger   │  Mood Drivers:            │  Satisfaction    │ │
+│  │ - Energy   │    * Happiness            │  Love/Affection  │ │
+│  │ - Thirst   │    * Excitement           │  Friends         │ │
+│  │ - Sleep    │    * Satisfaction         │                  │ │
+│  │ - Hygiene  │    * Energy               │  SOCIAL          │ │
+│  └────────────┤    * Health               │  Popularity      │ │
+│               └───────────────────────────┤  Confidence      │ │
+│                                             └──────────────────┘ │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ STATUS: [SLEEPING/HAPPY/NEEDS ATTENTION]                   │  │
+│  │ STAT SUMMARY: Health: 85 | Hunger: 12 | Energy: 76        │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ [RUNNING]  Time: 05:23  Frame: 312  Ticks: 158            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│                        [Gotchi Sprite]                           │
+│                        (Center Screen)                           │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Gotchi Actor**:
+- 4× scale (64×64 source → 256×256 display)
+- Animation frames from `gotchis/001/<action>_NN.png`
+- Actions: idle, walk, attack, bounce, blink, hurt, die
+
+---
+
+### Narrative/World Scenes (Shared DialogBox)
+
+All narrative scenes use the shared `DialogBox` for dialogue and have similar structure:
+
+#### 5. PizzaParlorScene (`src/game/PizzaParlorScene.cpp`)
+
+**Setting**: Pizza restaurant with Gary, his wife Karen, and Ronzer the Pokemon
+
+**Dimensions**: 1024×576
+
+**Actors**:
+- `gary` - Slouched silhouette at (160, 380)
+- `wife` - Sharp silhouette at (520, 360)
+- `pokemon` - Round creature at (620, 400)
+
+**Rendering**:
+- All actors draw via custom silhouette functions (`drawGary()`, `drawWife()`, `drawPokemon()`)
+- Ambient bobbing animations for idle state
+- Camera drifts slowly left/right during idle
+
+**Event System**:
+- 13 dialogue lines triggered by `triggerEvent(0)`
+- Camera focuses on speaking actor with zoom (1.4x)
+- Screen shake on dramatic lines
+
+---
+
+#### 6. ApartmentScene (`src/game/ApartmentScene.cpp`)
+
+**Setting**: Gary's apartment - Monday morning scene
+
+**Dimensions**: 1024×576
+
+**Set Dressing**:
+- Bed (frame + sheet)
+- Window with dim morning light
+- Kitchen counter with broken coffee machine
+- Bathroom mirror
+
+**Actors**:
+- `gary` - Sunken silhouette for exhaustion
+
+**Event System**:
+- 8 dialogue lines covering alarm, mirror, Karen's text, coffee
+
+---
+
+#### 7. TherapistOfficeScene (`src/game/TherapistOfficeScene.cpp`)
+
+**Setting**: Therapy session - "The Last Session" episode
+
+**Dimensions**: 1024×576
+
+**Set Dressing**:
+- Bookshelf behind therapist
+- Window with daylight
+- Side table with tissues
+- Rug beneath chairs
+
+**Actors**:
+- `gary` - Seated silhouette fidgeting
+- `therapist` - Composed silhouette with notepad
+
+**Event System**:
+- 9 dialogue lines ending with copay hike
+
+---
+
+#### 8. OfficeScene (`src/game/OfficeScene.cpp`)
+
+**Setting**: Datatek Solutions - Performance review and "promotion"
+
+**Dimensions**: 1024×576
+
+**Set Dressing**:
+- Hot-desk workspace rows
+- Glass-walled boss office
+- Motivational poster
+
+**Actors**:
+- `gary` - Balanced on yoga ball
+- `boss` - Sharp-suited silhouette (only in events)
+
+**Event System**:
+- 2 events (Performance Review, The Promotion)
+- Each with 6-7 dialogue lines
+
+---
+
+#### 9. SchoolScene (`src/game/SchoolScene.cpp`)
+
+**Setting**: School pickup - Karen and Zap incident
+
+**Dimensions**: 1024×576
+
+**Set Dressing**:
+- Grass ground
+- School building with windows
+- Flagpole
+- Pickup bench
+
+**Actors**:
+- `gary` - Waiting silhouette
+- `karen` - Impatient silhouette
+- `zap` - Small child silhouette with missing tooth
+
+**Event System**:
+- 1 event with 11 dialogue lines
+- Tooth fairy money moment
+
+---
+
+### Utility/Debug Scenes
+
+#### 10. InputTestScene (`src/game/InputTestScene.cpp`)
+
+**Purpose**: Input handler debugging and key rebinding
+
+**Dimensions**: 720×720
+
+**Features**:
+- Action queries (move_left, jump, etc.)
+- Raw key state display
+- Mouse position tracking
+- Action binding display and rebinding UI
+- Button interaction demo
+
+**Rebinding UI**:
+- Toggle with R key
+- Cycle through actions
+- Capture new key press
+
+---
+
+#### 11. SpriteTestScene (`src/game/SpriteTestScene.cpp`)
+
+**Purpose**: Animation frame testing with real Gotchi art
+
+**Dimensions**: 720×720
+
+**Features**:
+- Display Gotchi animations from assets.rres
+- A/D keys to cycle between actions
+- Click gotchi to cycle
+- Frame counter display
+- Action list highlighting
+
+**Actions Displayed**: idle, walk, attack, bounce, blink, hurt, die
+
+---
+
+#### 12. SceneSelectScene (`src/game/SceneSelectScene.cpp`)
+
+**Purpose**: Hub for selecting world scenes
+
+**Dimensions**: 720×720 (GAME_W × GAME_H)
+
+**UI**:
+- "GARY'S WORLD" title
+- 5 scene buttons:
+  - PIZZA PARLOR
+  - APARTMENT
+  - THERAPIST'S OFFICE
+  - DATATEK SOLUTIONS (OFFICE)
+  - SCHOOL PICKUP
+
+**Button Implementation**: Custom `Button` class with hover/press states
+
+---
+
+## Input System
+
+### SceneInputHandler (`src/engine/SceneInputHandler.hpp/.cpp`)
+
+**Action Mappings**:
+
+```cpp
+"move_left"    → KEY_A
+"move_right"   → KEY_D
+"move_up"      → KEY_W
+"move_down"    → KEY_S
+"jump"         → KEY_SPACE
+"interact"     → KEY_E
+"pause"        → KEY_P
+"accept"       → KEY_ENTER
+"cancel"       → KEY_ESCAPE
+```
+
+**Input States**:
+- Pressed (P) - Single frame on key down
+- Held (H) - Every frame while key is down
+- Released (R) - Single frame on key up
+
+### Input in Scenes
+
+```cpp
+// Check action state
+if (ih->isActionPressed("jump")) {
+    // Jump logic
+}
+
+// Get raw key state
+if (ih->isKeyHeld(KEY_LEFT_SHIFT)) {
+    // Sprint logic
+}
+
+// Get mouse position
+Vector2 mouseWorld = ih->getMouseWorldPosition();
+```
+
+---
+
+## Asset System
+
+### AssetPack (`src/engine/AssetPack.hpp/.cpp`)
+
+**Format**: `assets.rres` - Packed resource file
+
+**Loading Patterns**:
+
+```cpp
+// Single texture
+Texture2D tex = AssetPack::loadTexture("gotchis/001/idle_00.png");
+
+// Multiple frames (numbered sequence)
+std::vector<Texture2D> frames = AssetPack::loadFrames("gotchis/001", "idle");
+
+// Unload
+AssetPack::unloadFrames(frames);
+```
+
+**Asset Keys** (relative to assets.rres root):
+- `"gotchis/001/idle_00.png"`
+- `"gotchis/001/walk_00.png"`
+- `"ui/buttons/menu_button.png"`
+
+---
+
+## Key Bindings (Keyboard)
+
+| Key | Scene | Function |
+|-----|-------|----------|
+| 1 | Any | Switch to GameScene |
+| 2 | Any | Switch to BossScene |
+| 3 | Any | Switch to InputTestScene |
+| 4 | Any | Switch to SpriteTestScene |
+| 5 | Any | Switch to HexViewScene |
+| 7 | Any | Switch to SceneSelectScene |
+| 8 | Any | Switch to GotchiScene |
+| 0 | Game/Boss | Toggle pause menu |
+| SPACE | Game/Boss | Skip dialog or advance |
+| H | Game/Boss | Replay dialog from start |
+| E | Narrative scenes | Trigger next event |
+| R | InputTest | Toggle key rebinding mode |
+| ESC | All | Exit game |
+
+---
+
+## Summary
+
+The Hexagotchi rendering system provides:
+
+1. **Scene-based architecture** - 12 distinct scenes with custom rendering
+2. **Actor system** - Layered rendering with physics and animation
+3. **Camera system** - Follow, zoom, shake, and lookahead
+4. **Effect system** - Parallax stars and 3D moon with shaders
+5. **Transition effects** - Fade and slide transitions between scenes
+6. **Dialog system** - Shared dialogue box with typing reveal and options
+7. **Input system** - Action mapping with rebinding support
+8. **Asset packing** - Single rres file for all resources
+
+The system balances simplicity (base Scene/SceneActor classes) with flexibility (custom draw() methods per scene) to support both gameplay and narrative scenes.
