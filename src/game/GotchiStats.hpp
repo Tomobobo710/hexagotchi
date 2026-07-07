@@ -232,7 +232,7 @@ private:
     // Storage for 100 stats as floats
     // Using separate arrays by category for organization
     std::array<float, 10> coreStats_;
-    std::array<float, 20> secondaryStats_;
+    std::array<float, 30> secondaryStats_;  // Increased from 20 to 30 for convenience aliases
     std::array<float, 20> emotionalStats_;
     std::array<float, 20> physicalStats_;
     std::array<float, 10> socialStats_;
