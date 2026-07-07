@@ -147,6 +147,7 @@ void GameScene::update(float deltaTime) {
         return;
     }
 
+    PlayerActor* player = (PlayerActor*)findActorByTag("player");
     if (!player) return;
 
     player->onSurface = false;
