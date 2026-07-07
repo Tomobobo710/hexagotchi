@@ -2,7 +2,7 @@
 #include "GameConstants.hpp"
 #include <cmath>
 
-static const Color GARY_COLOR     = {139, 172, 15, 255};
+static const Color TOM_COLOR     = {139, 172, 15, 255};
 static const Color KAREN_COLOR    = {200, 60, 90, 255};
 static const Color ZAP_COLOR      = {41, 128, 185, 255};   // matches JS ZAP color scheme (blue kid)
 static const Color NARRATOR_COLOR = {150, 150, 170, 255};
@@ -14,10 +14,10 @@ SchoolScene::SchoolScene(DialogBox* sharedDialog)
 void SchoolScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
 
-    gary = new SceneActor({440.0f, 400.0f}, 48.0f, 64.0f);
-    gary->setTag("gary");
-    gary->setVisible(false);
-    addActor(gary);
+    tom = new SceneActor({440.0f, 400.0f}, 48.0f, 64.0f);
+    tom->setTag("tom");
+    tom->setVisible(false);
+    addActor(tom);
 
     karen = new SceneActor({620.0f, 380.0f}, 48.0f, 72.0f);
     karen->setTag("karen");
@@ -30,33 +30,33 @@ void SchoolScene::init() {
     addActor(zap);
 
     // Ported from the JS prototype's "The School Pickup Incident" episode
-    // almost line-for-line -- Karen needling Gary for being late, Zap's lost
-    // tooth, the tooth fairy inflation joke, ending on Gary quietly giving up
+    // almost line-for-line -- Karen needling Tom for being late, Zap's lost
+    // tooth, the tooth fairy inflation joke, ending on Tom quietly giving up
     // his last $5.
     events.push_back({
-        { "Narrator", "Gary arrives at Zap's school.\n3:35 PM. Pickup was at 3:30.",
+        { "Narrator", "Tom arrives at Zap's school.\n3:35 PM. Pickup was at 3:30.",
           NARRATOR_COLOR, -1, false },
         { "Karen", "You're late.",
           KAREN_COLOR, 1, false },
-        { "Gary",  "I'm FIVE minutes late Karen,\nI drove the whole way here.",
-          GARY_COLOR, 0, false },
+        { "Tom",  "I'm FIVE minutes late Karen,\nI drove the whole way here.",
+          TOM_COLOR, 0, false },
         { "Karen", "Zap waited.\nBy himself.\nAgain.",
           KAREN_COLOR, 1, false },
-        { "Gary",  "There are TEACHERS here,\nhe wasn't ALONE --",
-          GARY_COLOR, 0, true },
+        { "Tom",  "There are TEACHERS here,\nhe wasn't ALONE --",
+          TOM_COLOR, 0, true },
         { "Zap",   "Hi Dad! I lost a tooth!",
           ZAP_COLOR, 2, false },
-        { "Gary",  "Oh buddy! Which one?",
-          GARY_COLOR, 0, false },
+        { "Tom",  "Oh buddy! Which one?",
+          TOM_COLOR, 0, false },
         { "Zap",   "This one! Mom says the fairy\ngives five dollars now.",
           ZAP_COLOR, 2, false },
-        { "Gary",  "...Five dollars.",
-          GARY_COLOR, 0, false },
-        { "Karen", "Inflation, Gary.",
+        { "Tom",  "...Five dollars.",
+          TOM_COLOR, 0, false },
+        { "Karen", "Inflation, Tom.",
           KAREN_COLOR, 1, false },
-        { "Gary",  "I know what inflation IS Karen.\nI AM experiencing it.",
-          GARY_COLOR, 0, true },
-        { "Narrator", "Gary gives Zap the tooth fairy money.\nIt is his last $5 bill.\nHe does not tell Zap this.",
+        { "Tom",  "I know what inflation IS Karen.\nI AM experiencing it.",
+          TOM_COLOR, 0, true },
+        { "Narrator", "Tom gives Zap the tooth fairy money.\nIt is his last $5 bill.\nHe does not tell Zap this.",
           NARRATOR_COLOR, -1, false },
     });
 }
@@ -65,10 +65,10 @@ void SchoolScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
     if (activeEvent < 0) {
-        // Ambient: Gary alone waiting outside, Karen and Zap only appear
+        // Ambient: Tom alone waiting outside, Karen and Zap only appear
         // during the scripted pickup itself.
-        garyWaitTimer += deltaTime * 1.5f;
-        gary->setPosition({440.0f, 400.0f + sinf(garyWaitTimer) * 3.0f});
+        tomWaitTimer += deltaTime * 1.5f;
+        tom->setPosition({440.0f, 400.0f + sinf(tomWaitTimer) * 3.0f});
 
         getCamera()->setPosition(480.0f, 320.0f);
         getCamera()->setZoom(1.0f);
@@ -88,7 +88,7 @@ void SchoolScene::draw() {
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
     drawSchoolYard();
-    drawGary(gary->getPosition());
+    drawTom(tom->getPosition());
     if (activeEvent >= 0) {
         drawKaren(karen->getPosition());
         drawZap(zap->getPosition());
@@ -142,7 +142,7 @@ void SchoolScene::endEvent() {
 
 void SchoolScene::focusCameraOn(int actorIndex, bool shake) {
     SceneActor* target = nullptr;
-    if (actorIndex == 0) target = gary;
+    if (actorIndex == 0) target = tom;
     else if (actorIndex == 1) target = karen;
     else if (actorIndex == 2) target = zap;
 
@@ -184,26 +184,26 @@ void SchoolScene::drawSchoolYard() {
     Color flag = {180, 60, 60, 255};
     DrawTriangle({96, 155}, {96, 195}, {150, 175}, flag);
 
-    // Pickup-line bench where Gary waits
+    // Pickup-line bench where Tom waits
     Color bench = {110, 80, 55, 255};
     DrawRectangle(360, 440, 140, 14, bench);
     DrawRectangle(370, 454, 10, 30, bench);
     DrawRectangle(480, 454, 10, 30, bench);
 }
 
-void SchoolScene::drawGary(Vector2 pos) {
+void SchoolScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
 
-    DrawEllipse((int)cx, (int)(cy + 20), 26, 30, GARY_COLOR);
-    DrawCircle((int)cx, (int)(cy - 14), 20, GARY_COLOR);
+    DrawEllipse((int)cx, (int)(cy + 20), 26, 30, TOM_COLOR);
+    DrawCircle((int)cx, (int)(cy - 14), 20, TOM_COLOR);
 
-    Color darkGary = {70, 90, 5, 255};
-    DrawEllipse((int)(cx - 8), (int)(cy - 14), 4, 2, darkGary);
-    DrawEllipse((int)(cx + 8), (int)(cy - 14), 4, 2, darkGary);
-    DrawLineEx({cx - 7, cy - 5}, {cx + 7, cy - 3}, 2.0f, darkGary);
-    DrawLineEx({cx - 24, cy + 8}, {cx - 32, cy + 26}, 5.0f, GARY_COLOR);
-    DrawLineEx({cx + 24, cy + 8}, {cx + 32, cy + 26}, 5.0f, GARY_COLOR);
+    Color darkTom = {70, 90, 5, 255};
+    DrawEllipse((int)(cx - 8), (int)(cy - 14), 4, 2, darkTom);
+    DrawEllipse((int)(cx + 8), (int)(cy - 14), 4, 2, darkTom);
+    DrawLineEx({cx - 7, cy - 5}, {cx + 7, cy - 3}, 2.0f, darkTom);
+    DrawLineEx({cx - 24, cy + 8}, {cx - 32, cy + 26}, 5.0f, TOM_COLOR);
+    DrawLineEx({cx + 24, cy + 8}, {cx + 32, cy + 26}, 5.0f, TOM_COLOR);
 }
 
 void SchoolScene::drawKaren(Vector2 pos) {
@@ -227,7 +227,7 @@ void SchoolScene::drawZap(Vector2 pos) {
     float cx = pos.x + 14.0f;
     float cy = pos.y + 18.0f;
 
-    // Small, energetic kid silhouette -- half Gary's height, bright and bouncy
+    // Small, energetic kid silhouette -- half Tom's height, bright and bouncy
     Color darkZap = {20, 70, 100, 255};
     DrawEllipse((int)cx, (int)(cy + 12), 14, 16, ZAP_COLOR);
     DrawCircle((int)cx, (int)(cy - 8), 12, ZAP_COLOR);

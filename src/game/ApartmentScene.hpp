@@ -18,9 +18,9 @@ struct ApartmentLine {
     bool shake;
 };
 
-// Gary alone in his apartment -- the other recurring "check in on the
+// Tom alone in his apartment -- the other recurring "check in on the
 // gotchi's world" location, ported from the JS prototype's "Monday Morning"
-// intro episode. Ambient mode is just Gary being pathetic by himself with
+// intro episode. Ambient mode is just Tom being pathetic by himself with
 // no one else around; the scripted event is the ported episode almost
 // line-for-line (alarm, mirror, Karen's text, the broken coffee machine).
 class ApartmentScene : public Scene {
@@ -36,12 +36,12 @@ public:
     bool isPlayingEvent() const;
 
 private:
-    SceneActor* gary = nullptr;
+    SceneActor* tom = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     // --- Ambient behavior ---
-    float garySlumpTimer = 0.0f;
+    float tomSlumpTimer = 0.0f;
 
     // --- Event playback ---
     std::vector<std::vector<ApartmentLine>> events;
@@ -53,7 +53,7 @@ private:
     void endEvent();
     void focusCameraOn(int actorIndex, bool shake);
 
-    void drawGary(Vector2 pos);
+    void drawTom(Vector2 pos);
     void drawApartment();
 };
 

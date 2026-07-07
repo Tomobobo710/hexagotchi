@@ -16,6 +16,8 @@ struct PizzaLine {
     Color speakerColor;
     int focusActor;   // index into `actors[]` the camera should favor, or -1 for none
     bool shake;        // punch-in beat: small camera shake when this line shows
+    int portraitActor;  // which actor's portrait set to draw, or -1 for none (defaults to focusActor via playLine)
+    int emotion;         // 0 = sad, 1 = mid, 2 = happy -- index into that actor's portrait set
 };
 
 // Recurring "check in on the gotchi's world" hangout location. Most visits
@@ -42,17 +44,22 @@ public:
     bool isPlayingEvent() const;
 
 private:
-    SceneActor* gary    = nullptr;
+    SceneActor* tom    = nullptr;
     SceneActor* wife     = nullptr;
     SceneActor* pokemon  = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
+    // Portraits per actor per emotion: [0]=Tom, [1]=wife/Karen, [2]=pokemon/Ronzer,
+    // each with [0]=sad, [1]=mid, [2]=happy. Ronzer only has a happy portrait,
+    // so its sad/mid slots reuse the happy texture.
+    Texture2D portraits[3][3] = {};
+
     // --- Ambient behavior ---
     float ambientTimer = 0.0f;
     float nextQuipTime = 0.0f;
     float quipTimer = 0.0f;
-    float garyBobTimer = 0.0f;
+    float tomBobTimer = 0.0f;
     float wifeTapTimer = 0.0f;
     float pokemonHopTimer = 0.0f;
 
@@ -67,7 +74,7 @@ private:
     void focusCameraOn(int actorIndex, bool shake);
 
     // Per-character silhouette drawing (shapes only -- no art yet)
-    void drawGary(Vector2 pos);
+    void drawTom(Vector2 pos);
     void drawWife(Vector2 pos);
     void drawPokemon(Vector2 pos);
 };

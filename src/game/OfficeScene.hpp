@@ -10,12 +10,12 @@ struct OfficeLine {
     std::string speaker;
     std::string text;
     Color speakerColor;
-    int focusActor;   // 0 = Gary, 1 = Boss, -1 = none
+    int focusActor;   // 0 = Tom, 1 = Boss, -1 = none
     bool shake;
 };
 
 // Datatek Solutions -- ported from the JS prototype's "Performance Review"
-// and "The Promotion (Sort Of)" episodes. Ambient mode is Gary alone at his
+// and "The Promotion (Sort Of)" episodes. Ambient mode is Tom alone at his
 // (nonexistent) desk, i.e. a yoga ball; the two scripted events cover both
 // office beats and are selected by index like the other world-scenes.
 class OfficeScene : public Scene {
@@ -31,12 +31,12 @@ public:
     bool isPlayingEvent() const;
 
 private:
-    SceneActor* gary = nullptr;
+    SceneActor* tom = nullptr;
     SceneActor* boss  = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
-    float garyWobbleTimer = 0.0f;
+    float tomWobbleTimer = 0.0f;
 
     std::vector<std::vector<OfficeLine>> events;
     int activeEvent = -1;
@@ -47,7 +47,7 @@ private:
     void endEvent();
     void focusCameraOn(int actorIndex, bool shake);
 
-    void drawGary(Vector2 pos);
+    void drawTom(Vector2 pos);
     void drawBoss(Vector2 pos);
     void drawOffice();
 };

@@ -2,7 +2,7 @@
 #include "GameConstants.hpp"
 #include <cmath>
 
-static const Color GARY_COLOR     = {139, 172, 15, 255};
+static const Color TOM_COLOR     = {139, 172, 15, 255};
 static const Color BOSS_COLOR     = {142, 68, 173, 255};   // matches JS BOSS: '#8e44ad'
 static const Color NARRATOR_COLOR = {150, 150, 170, 255};
 
@@ -13,10 +13,10 @@ OfficeScene::OfficeScene(DialogBox* sharedDialog)
 void OfficeScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
 
-    gary = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
-    gary->setTag("gary");
-    gary->setVisible(false);
-    addActor(gary);
+    tom = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
+    tom->setTag("tom");
+    tom->setVisible(false);
+    addActor(tom);
 
     boss = new SceneActor({650.0f, 380.0f}, 50.0f, 76.0f);
     boss->setTag("boss");
@@ -25,51 +25,51 @@ void OfficeScene::init() {
 
     // --- Event 0: "Performance Review", ported almost line-for-line ---
     events.push_back({
-        { "Narrator", "Gary arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
+        { "Narrator", "Tom arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
           NARRATOR_COLOR, -1, false },
-        { "Boss",  "Gary. My office.\nBring the Hendricks file.",
+        { "Boss",  "Tom. My office.\nBring the Hendricks file.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "...What's the Hendricks file.",
-          GARY_COLOR, 0, false },
+        { "Tom",  "...What's the Hendricks file.",
+          TOM_COLOR, 0, false },
         { "Boss",  "The one I emailed you about.\nFive times.\nAlso on the physical memo.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "I don't have a desk.\nYou took my desk.",
-          GARY_COLOR, 0, true },
-        { "Boss",  "We hot-desk now Gary.\nIt's a flex workspace environment.",
+        { "Tom",  "I don't have a desk.\nYou took my desk.",
+          TOM_COLOR, 0, true },
+        { "Boss",  "We hot-desk now Tom.\nIt's a flex workspace environment.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "I sit on a yoga ball.\nI am 34 years old.",
-          GARY_COLOR, 0, false },
-        { "Narrator", "The review goes poorly.\nGary does not receive the 3% raise.\nHe receives a 'verbal commendation'.",
+        { "Tom",  "I sit on a yoga ball.\nI am 34 years old.",
+          TOM_COLOR, 0, false },
+        { "Narrator", "The review goes poorly.\nTom does not receive the 3% raise.\nHe receives a 'verbal commendation'.",
           NARRATOR_COLOR, -1, false },
-        { "Gary",  "A verbal commendation.\nI have $11 in my account.\nA verbal commendation.",
-          GARY_COLOR, 0, true },
+        { "Tom",  "A verbal commendation.\nI have $11 in my account.\nA verbal commendation.",
+          TOM_COLOR, 0, true },
     });
 
     // --- Event 1: "The Promotion (Sort Of)", ported almost line-for-line ---
     events.push_back({
-        { "Narrator", "Gary's boss calls him in.\nThis time it's different.",
+        { "Narrator", "Tom's boss calls him in.\nThis time it's different.",
           NARRATOR_COLOR, -1, false },
-        { "Boss",  "Gary we're expanding your role.\nCongratulations.",
+        { "Boss",  "Tom we're expanding your role.\nCongratulations.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "...A raise?",
-          GARY_COLOR, 0, false },
+        { "Tom",  "...A raise?",
+          TOM_COLOR, 0, false },
         { "Boss",  "More responsibility!\nYou'll now manage the Henderson account\nAND the Brickford account.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "Okay and the raise --",
-          GARY_COLOR, 0, false },
+        { "Tom",  "Okay and the raise --",
+          TOM_COLOR, 0, false },
         { "Boss",  "We're calling it a 'growth opportunity'.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "So no raise.",
-          GARY_COLOR, 0, false },
+        { "Tom",  "So no raise.",
+          TOM_COLOR, 0, false },
         { "Boss",  "We're also moving your start time to 8:30.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "Earlier?!",
-          GARY_COLOR, 0, true },
-        { "Boss",  "It's the flex workspace, Gary.\nThe ball yoga spot is first come, first served now.",
+        { "Tom",  "Earlier?!",
+          TOM_COLOR, 0, true },
+        { "Boss",  "It's the flex workspace, Tom.\nThe ball yoga spot is first come, first served now.",
           BOSS_COLOR, 1, false },
-        { "Gary",  "I... cannot process this\nright now.",
-          GARY_COLOR, 0, false },
-        { "Narrator", "Gary processes it on his commute home.\nHe misses his exit.\nTwice.",
+        { "Tom",  "I... cannot process this\nright now.",
+          TOM_COLOR, 0, false },
+        { "Narrator", "Tom processes it on his commute home.\nHe misses his exit.\nTwice.",
           NARRATOR_COLOR, -1, false },
     });
 }
@@ -78,10 +78,10 @@ void OfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
     if (activeEvent < 0) {
-        // Ambient: Gary balancing/wobbling on the yoga ball, boss absent
+        // Ambient: Tom balancing/wobbling on the yoga ball, boss absent
         // (only appears during the scripted events, called into "his office").
-        garyWobbleTimer += deltaTime * 3.0f;
-        gary->setPosition({420.0f, 400.0f + sinf(garyWobbleTimer) * 6.0f});
+        tomWobbleTimer += deltaTime * 3.0f;
+        tom->setPosition({420.0f, 400.0f + sinf(tomWobbleTimer) * 6.0f});
 
         getCamera()->setPosition(460.0f, 320.0f);
         getCamera()->setZoom(1.0f);
@@ -101,7 +101,7 @@ void OfficeScene::draw() {
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
     drawOffice();
-    drawGary(gary->getPosition());
+    drawTom(tom->getPosition());
     if (activeEvent >= 0) drawBoss(boss->getPosition());
     EndMode2D();
 }
@@ -152,7 +152,7 @@ void OfficeScene::endEvent() {
 
 void OfficeScene::focusCameraOn(int actorIndex, bool shake) {
     SceneActor* target = nullptr;
-    if (actorIndex == 0) target = gary;
+    if (actorIndex == 0) target = tom;
     else if (actorIndex == 1) target = boss;
 
     if (target) {
@@ -195,7 +195,7 @@ void OfficeScene::drawOffice() {
     DrawRectangle(68, 308, 84, 114, posterBg);
 }
 
-void OfficeScene::drawGary(Vector2 pos) {
+void OfficeScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
 
@@ -203,24 +203,24 @@ void OfficeScene::drawGary(Vector2 pos) {
     Color ballColor = {200, 80, 80, 200};
     DrawCircle((int)cx, (int)(cy + 46), 22, ballColor);
 
-    DrawEllipse((int)cx, (int)(cy + 18), 26, 28, GARY_COLOR);
-    DrawCircle((int)cx, (int)(cy - 16), 20, GARY_COLOR);
+    DrawEllipse((int)cx, (int)(cy + 18), 26, 28, TOM_COLOR);
+    DrawCircle((int)cx, (int)(cy - 16), 20, TOM_COLOR);
 
-    Color darkGary = {70, 90, 5, 255};
-    DrawEllipse((int)(cx - 8), (int)(cy - 16), 4, 2, darkGary);
-    DrawEllipse((int)(cx + 8), (int)(cy - 16), 4, 2, darkGary);
-    DrawLineEx({cx - 7, cy - 7}, {cx + 7, cy - 5}, 2.0f, darkGary);
+    Color darkTom = {70, 90, 5, 255};
+    DrawEllipse((int)(cx - 8), (int)(cy - 16), 4, 2, darkTom);
+    DrawEllipse((int)(cx + 8), (int)(cy - 16), 4, 2, darkTom);
+    DrawLineEx({cx - 7, cy - 7}, {cx + 7, cy - 5}, 2.0f, darkTom);
 
     // Arms out slightly for balance
-    DrawLineEx({cx - 24, cy}, {cx - 34, cy + 10}, 5.0f, GARY_COLOR);
-    DrawLineEx({cx + 24, cy}, {cx + 34, cy + 10}, 5.0f, GARY_COLOR);
+    DrawLineEx({cx - 24, cy}, {cx - 34, cy + 10}, 5.0f, TOM_COLOR);
+    DrawLineEx({cx + 24, cy}, {cx + 34, cy + 10}, 5.0f, TOM_COLOR);
 }
 
 void OfficeScene::drawBoss(Vector2 pos) {
     float cx = pos.x + 25.0f;
     float cy = pos.y + 38.0f;
 
-    // Sharp-suited, imposing -- taller and boxier than Gary
+    // Sharp-suited, imposing -- taller and boxier than Tom
     Color darkBoss = {90, 40, 110, 255};
     DrawRectangle((int)(cx - 20), (int)(cy - 6), 40, 52, BOSS_COLOR);
     DrawCircle((int)cx, (int)(cy - 30), 18, BOSS_COLOR);

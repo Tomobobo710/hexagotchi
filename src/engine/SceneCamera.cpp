@@ -50,7 +50,7 @@ void SceneCamera::rotateTo(float targetAngle, float duration) {
 }
 
 void SceneCamera::followActor(SceneActor* actor, float smoothSpeed) { followTarget = actor; followSpeed = smoothSpeed; targetPosition = actor->getPosition(); }
-void SceneCamera::followPosition(Vector2 pos, float smoothSpeed) { followTarget = nullptr; targetPosition = pos; position = pos; followSpeed = smoothSpeed; }
+void SceneCamera::followPosition(Vector2 pos, float smoothSpeed) { followTarget = nullptr; targetPosition = pos; followSpeed = smoothSpeed; }
 void SceneCamera::stopFollowing() { followTarget = nullptr; }
 bool SceneCamera::isFollowing() const { return followTarget != nullptr; }
 

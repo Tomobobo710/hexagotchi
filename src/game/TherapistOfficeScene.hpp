@@ -10,11 +10,11 @@ struct TherapistLine {
     std::string speaker;
     std::string text;
     Color speakerColor;
-    int focusActor;   // 0 = Gary, 1 = Therapist, -1 = none
+    int focusActor;   // 0 = Tom, 1 = Therapist, -1 = none
     bool shake;
 };
 
-// Gary's therapist's office -- ported from the JS prototype's "The Last
+// Tom's therapist's office -- ported from the JS prototype's "The Last
 // Session" episode. Ambient mode is just the two of them sitting quietly;
 // the scripted event is the ported session almost line-for-line (the
 // digital-pet metaphor breakdown, ending on the copay hike).
@@ -31,12 +31,12 @@ public:
     bool isPlayingEvent() const;
 
 private:
-    SceneActor* gary      = nullptr;
+    SceneActor* tom      = nullptr;
     SceneActor* therapist  = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
-    float garyFidgetTimer = 0.0f;
+    float tomFidgetTimer = 0.0f;
     float therapistNodTimer = 0.0f;
 
     std::vector<std::vector<TherapistLine>> events;
@@ -48,7 +48,7 @@ private:
     void endEvent();
     void focusCameraOn(int actorIndex, bool shake);
 
-    void drawGary(Vector2 pos);
+    void drawTom(Vector2 pos);
     void drawTherapist(Vector2 pos);
     void drawOffice();
 };

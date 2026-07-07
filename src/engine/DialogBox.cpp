@@ -5,6 +5,8 @@
 DialogBox::DialogBox(Vector2 pos, float w, float h)
     : position(pos), width(w), height(h), anchorPoint("center"),
       speakerName(""), speakerColor(YELLOW), portraitColor({80, 80, 120, 255}),
+      portraitGradientTop({80, 80, 120, 255}), portraitGradientBottom({80, 80, 120, 255}),
+      portraitUseGradient(false),
       portraitTexture({0}),
       currentCharIndex(0), charAccumulator(0.0f), selectedOptionIndex(0),
       textColor(WHITE), backgroundColor({10, 10, 30, 220}),
@@ -57,10 +59,17 @@ void DialogBox::draw() {
     float portraitX = drawPos.x + DIALOG_PORTRAIT_PADDING;
     float portraitY = drawPos.y + (height - DIALOG_PORTRAIT_SIZE) / 2.0f;
 
-    // Portrait background
-    Color portraitBg = portraitColor;
-    portraitBg.a = alpha;
-    DrawRectangle((int)portraitX, (int)portraitY, (int)DIALOG_PORTRAIT_SIZE, (int)DIALOG_PORTRAIT_SIZE, portraitBg);
+    // Portrait background -- per-speaker gradient behind real art (falls back
+    // to a flat portraitColor tile when no gradient's been set for this line).
+    if (portraitUseGradient) {
+        Color topC = portraitGradientTop, botC = portraitGradientBottom;
+        topC.a = alpha; botC.a = alpha;
+        DrawRectangleGradientV((int)portraitX, (int)portraitY, (int)DIALOG_PORTRAIT_SIZE, (int)DIALOG_PORTRAIT_SIZE, topC, botC);
+    } else {
+        Color portraitBg = portraitColor;
+        portraitBg.a = alpha;
+        DrawRectangle((int)portraitX, (int)portraitY, (int)DIALOG_PORTRAIT_SIZE, (int)DIALOG_PORTRAIT_SIZE, portraitBg);
+    }
 
     // Portrait border
     DrawRectangleLines((int)portraitX, (int)portraitY, (int)DIALOG_PORTRAIT_SIZE, (int)DIALOG_PORTRAIT_SIZE, accent);
@@ -103,7 +112,7 @@ void DialogBox::draw() {
 
     // --- Text area ---
     float textX = getTextAreaX() + drawPos.x;
-    float textY = drawPos.y + padding;
+    float textY = drawPos.y + padding + 10.0f;
 
     Color textWithAlpha = textColor;
     textWithAlpha.a = alpha;
@@ -152,7 +161,12 @@ void DialogBox::draw() {
 
 void DialogBox::setSpeakerName(const std::string& name) { speakerName = name; }
 void DialogBox::setSpeakerColor(Color c) { speakerColor = c; }
-void DialogBox::setPortraitColor(Color c) { portraitColor = c; }
+void DialogBox::setPortraitColor(Color c) { portraitColor = c; portraitUseGradient = false; }
+void DialogBox::setPortraitGradient(Color top, Color bottom) {
+    portraitGradientTop = top;
+    portraitGradientBottom = bottom;
+    portraitUseGradient = true;
+}
 void DialogBox::setPortraitTexture(Texture2D tex) { portraitTexture = tex; }
 void DialogBox::clearPortraitTexture() { portraitTexture = {0}; }
 

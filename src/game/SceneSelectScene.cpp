@@ -47,8 +47,8 @@ void SceneSelectScene::update(float deltaTime) {
 void SceneSelectScene::draw() {
     Scene::draw();
 
-    int titleWidth = MeasureText("GARY'S WORLD", 32);
-    DrawText("GARY'S WORLD", (int)((float)GAME_W / 2.0f - titleWidth / 2.0f), 60, 32, {220, 220, 240, 255});
+    int titleWidth = MeasureText("TOM'S WORLD", 32);
+    DrawText("TOM'S WORLD", (int)((float)GAME_W / 2.0f - titleWidth / 2.0f), 60, 32, {220, 220, 240, 255});
 
     const char* subtitle = "Select a scene to check in on him";
     int subWidth = MeasureText(subtitle, 14);

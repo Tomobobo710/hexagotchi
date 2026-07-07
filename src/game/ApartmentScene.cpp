@@ -2,7 +2,7 @@
 #include "GameConstants.hpp"
 #include <cmath>
 
-static const Color GARY_COLOR      = {139, 172, 15, 255};
+static const Color TOM_COLOR      = {139, 172, 15, 255};
 static const Color NARRATOR_COLOR  = {150, 150, 170, 255};
 static const Color PHONE_COLOR     = {230, 160, 60, 255};
 
@@ -13,10 +13,10 @@ ApartmentScene::ApartmentScene(DialogBox* sharedDialog)
 void ApartmentScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
 
-    gary = new SceneActor({470.0f, 380.0f}, 48.0f, 64.0f);
-    gary->setTag("gary");
-    gary->setVisible(false);
-    addActor(gary);
+    tom = new SceneActor({470.0f, 380.0f}, 48.0f, 64.0f);
+    tom->setTag("tom");
+    tom->setVisible(false);
+    addActor(tom);
 
     // Ported from the JS prototype's "Monday Morning" intro episode --
     // same beats (alarm, mirror, Karen's text, broken coffee machine),
@@ -24,22 +24,22 @@ void ApartmentScene::init() {
     // plays through a "KAREN (TEXT)" speaker, matching the original's PHONE
     // insert convention.
     events.push_back({
-        { "Gary", "Ugh. 6:47 AM. Already late.",
-          GARY_COLOR, 0, false },
-        { "Gary", "The alarm has been going off for 40 minutes.\nI just... couldn't.",
-          GARY_COLOR, 0, false },
-        { "Narrator", "Gary shuffles to the bathroom.\nHe stares at himself in the mirror for 90 seconds.",
+        { "Tom", "Ugh. 6:47 AM. Already late.",
+          TOM_COLOR, 0, false },
+        { "Tom", "The alarm has been going off for 40 minutes.\nI just... couldn't.",
+          TOM_COLOR, 0, false },
+        { "Narrator", "Tom shuffles to the bathroom.\nHe stares at himself in the mirror for 90 seconds.",
           NARRATOR_COLOR, -1, false },
-        { "Gary", "I am a digital being.\nI do not have pores.\nWhy do I look like this.",
-          GARY_COLOR, 0, false },
-        { "Karen (text)", "'You were supposed to have the kids\nlast weekend. GARY.'",
+        { "Tom", "I am a digital being.\nI do not have pores.\nWhy do I look like this.",
+          TOM_COLOR, 0, false },
+        { "Karen (text)", "'You were supposed to have the kids\nlast weekend. TOM.'",
           PHONE_COLOR, 0, true },
-        { "Gary", "I KNOW Karen.\nI HAD THE KIDS.\nBloop ate my only good spatula.",
-          GARY_COLOR, 0, false },
-        { "Narrator", "Gary makes coffee.\nThe machine is broken.\nHe stares at it.",
+        { "Tom", "I KNOW Karen.\nI HAD THE KIDS.\nBloop ate my only good spatula.",
+          TOM_COLOR, 0, false },
+        { "Narrator", "Tom makes coffee.\nThe machine is broken.\nHe stares at it.",
           NARRATOR_COLOR, -1, false },
-        { "Gary", "I need to go back out there soon.\nAct happy. Be a good pet.\n...I just need one minute.",
-          GARY_COLOR, 0, false },
+        { "Tom", "I need to go back out there soon.\nAct happy. Be a good pet.\n...I just need one minute.",
+          TOM_COLOR, 0, false },
     });
 }
 
@@ -49,8 +49,8 @@ void ApartmentScene::update(float deltaTime) {
     if (activeEvent < 0) {
         // Ambient: slow slumped sway, nothing else in the room moving --
         // this is meant to feel emptier and quieter than the pizza parlor.
-        garySlumpTimer += deltaTime * 1.2f;
-        gary->setPosition({470.0f, 380.0f + sinf(garySlumpTimer) * 3.0f});
+        tomSlumpTimer += deltaTime * 1.2f;
+        tom->setPosition({470.0f, 380.0f + sinf(tomSlumpTimer) * 3.0f});
 
         getCamera()->setPosition(512.0f, 288.0f);
         getCamera()->setZoom(1.0f);
@@ -70,7 +70,7 @@ void ApartmentScene::draw() {
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
     drawApartment();
-    drawGary(gary->getPosition());
+    drawTom(tom->getPosition());
     EndMode2D();
 }
 
@@ -120,7 +120,7 @@ void ApartmentScene::endEvent() {
 
 void ApartmentScene::focusCameraOn(int actorIndex, bool shake) {
     if (actorIndex == 0) {
-        Vector2 pos = gary->getCenter();
+        Vector2 pos = tom->getCenter();
         getCamera()->setPosition(pos.x, pos.y - 30.0f);
         getCamera()->zoomTo(1.3f, 0.5f);
     }
@@ -162,22 +162,22 @@ void ApartmentScene::drawApartment() {
     DrawRectangle(408, 68, 74, 114, mirrorGlass);
 }
 
-void ApartmentScene::drawGary(Vector2 pos) {
+void ApartmentScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
 
     // Same slouched silhouette as the pizza parlor for continuity, just
     // drawn a little more sunken/tired here.
-    DrawEllipse((int)cx, (int)(cy + 22), 26, 28, GARY_COLOR);
-    DrawCircle((int)cx, (int)(cy - 12), 20, GARY_COLOR);
+    DrawEllipse((int)cx, (int)(cy + 22), 26, 28, TOM_COLOR);
+    DrawCircle((int)cx, (int)(cy - 12), 20, TOM_COLOR);
 
-    Color darkGary = {70, 90, 5, 255};
+    Color darkTom = {70, 90, 5, 255};
     // Half-lidded eyes -- flatter than the pizza parlor version
-    DrawRectangle((int)(cx - 12), (int)(cy - 14), 8, 3, darkGary);
-    DrawRectangle((int)(cx + 4), (int)(cy - 14), 8, 3, darkGary);
+    DrawRectangle((int)(cx - 12), (int)(cy - 14), 8, 3, darkTom);
+    DrawRectangle((int)(cx + 4), (int)(cy - 14), 8, 3, darkTom);
     // Flat, exhausted mouth
-    DrawLineEx({cx - 6, cy - 3}, {cx + 6, cy - 3}, 2.0f, darkGary);
+    DrawLineEx({cx - 6, cy - 3}, {cx + 6, cy - 3}, 2.0f, darkTom);
     // Arms hanging straight down, not even lifted
-    DrawLineEx({cx - 22, cy + 10}, {cx - 26, cy + 30}, 5.0f, GARY_COLOR);
-    DrawLineEx({cx + 22, cy + 10}, {cx + 26, cy + 30}, 5.0f, GARY_COLOR);
+    DrawLineEx({cx - 22, cy + 10}, {cx - 26, cy + 30}, 5.0f, TOM_COLOR);
+    DrawLineEx({cx + 22, cy + 10}, {cx + 26, cy + 30}, 5.0f, TOM_COLOR);
 }

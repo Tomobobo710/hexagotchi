@@ -11,7 +11,7 @@ const Color DIALOG_BG_COLOR = {0, 0, 0, 200};
 const Color DIALOG_BORDER_COLOR = WHITE;
 const Color DIALOG_TEXT_COLOR = WHITE;
 const Color DIALOG_SELECTED_COLOR = YELLOW;
-const int DIALOG_DEFAULT_FONT_SIZE = 20;
+const int DIALOG_DEFAULT_FONT_SIZE = 30;
 const float DIALOG_DEFAULT_PADDING = 15.0f;
 const float DIALOG_DEFAULT_BORDER = 2.0f;
 const float DIALOG_CHAR_REVEAL_SPEED = 50.0f;  // Slower reveal for readability
@@ -31,6 +31,7 @@ public:
     void setSpeakerName(const std::string& name);
     void setSpeakerColor(Color color);
     void setPortraitColor(Color color);
+    void setPortraitGradient(Color top, Color bottom);
 
     // Optional portrait image. Caller loads/unloads the Texture2D (same
     // convention as SceneActor::setTexture / Button::setTexture). When set,
@@ -83,6 +84,9 @@ protected:
     std::string speakerName;
     Color speakerColor;
     Color portraitColor;
+    Color portraitGradientTop;
+    Color portraitGradientBottom;
+    bool portraitUseGradient;
     Texture2D portraitTexture;
     std::vector<std::string> options;
     std::vector<std::string> wrappedTextLines;

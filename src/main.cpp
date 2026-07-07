@@ -90,7 +90,7 @@ void UpdateDrawFrame() {
         dialogIndex = 0;
         if (currentScene == "game") showDialog(gameDialogs, 0);
         if (currentScene == "boss") showDialog(bossDialogs, 0);
-        // The Gary world-scenes (pizza_parlor/apartment/etc.) drive the shared
+        // The Tom world-scenes (pizza_parlor/apartment/etc.) drive the shared
         // dialog box themselves via triggerEvent()/DialogBox::show() -- only
         // force-hide it once, on the frame we transition in, so a stale
         // game/boss line doesn't linger. Do NOT hide it every frame here or

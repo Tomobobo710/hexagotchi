@@ -2,7 +2,7 @@
 #include "GameConstants.hpp"
 #include <cmath>
 
-static const Color GARY_COLOR      = {139, 172, 15, 255};
+static const Color TOM_COLOR      = {139, 172, 15, 255};
 static const Color THERAPIST_COLOR = {22, 160, 133, 255};   // matches JS THERAPIST: '#16a085'
 static const Color NARRATOR_COLOR  = {150, 150, 170, 255};
 
@@ -13,10 +13,10 @@ TherapistOfficeScene::TherapistOfficeScene(DialogBox* sharedDialog)
 void TherapistOfficeScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
 
-    gary = new SceneActor({380.0f, 400.0f}, 48.0f, 64.0f);
-    gary->setTag("gary");
-    gary->setVisible(false);
-    addActor(gary);
+    tom = new SceneActor({380.0f, 400.0f}, 48.0f, 64.0f);
+    tom->setTag("tom");
+    tom->setVisible(false);
+    addActor(tom);
 
     therapist = new SceneActor({620.0f, 390.0f}, 48.0f, 72.0f);
     therapist->setTag("therapist");
@@ -28,28 +28,28 @@ void TherapistOfficeScene::init() {
     // copay hike. NARRATOR lines have no speaking actor, matching how the
     // apartment scene handles them.
     events.push_back({
-        { "Narrator",  "Gary's last covered therapy session.\nHe has been saving the hard stuff for today.",
+        { "Narrator",  "Tom's last covered therapy session.\nHe has been saving the hard stuff for today.",
           NARRATOR_COLOR, -1, false },
-        { "Therapist", "So Gary, how have you been\nprocessing the divorce?",
+        { "Therapist", "So Tom, how have you been\nprocessing the divorce?",
           THERAPIST_COLOR, 1, false },
-        { "Gary",      "I... okay so you know how I'm\nsometimes a digital pet?",
-          GARY_COLOR, 0, false },
+        { "Tom",      "I... okay so you know how I'm\nsometimes a digital pet?",
+          TOM_COLOR, 0, false },
         { "Therapist", "We've talked about this metaphor.",
           THERAPIST_COLOR, 1, false },
-        { "Gary",      "It's not a metaphor.\nSomebody watches me.\nI have to poop in front of them.",
-          GARY_COLOR, 0, false },
-        { "Therapist", "...Gary.",
+        { "Tom",      "It's not a metaphor.\nSomebody watches me.\nI have to poop in front of them.",
+          TOM_COLOR, 0, false },
+        { "Therapist", "...Tom.",
           THERAPIST_COLOR, 1, false },
-        { "Gary",      "I have to perform happiness.\nOn demand.\nWhile they press little buttons at me.",
-          GARY_COLOR, 0, false },
-        { "Therapist", "I think that IS a metaphor Gary.\nFor work maybe? For the marriage?",
+        { "Tom",      "I have to perform happiness.\nOn demand.\nWhile they press little buttons at me.",
+          TOM_COLOR, 0, false },
+        { "Therapist", "I think that IS a metaphor Tom.\nFor work maybe? For the marriage?",
           THERAPIST_COLOR, 1, false },
-        { "Gary",      "Last week they made me eat\nthree meals in a row.\nI was not hungry.",
-          GARY_COLOR, 0, true },
+        { "Tom",      "Last week they made me eat\nthree meals in a row.\nI was not hungry.",
+          TOM_COLOR, 0, true },
         { "Therapist", "...Your copay has increased\nto $200 starting next session.",
           THERAPIST_COLOR, 1, true },
-        { "Gary",      "Of course it has.",
-          GARY_COLOR, 0, false },
+        { "Tom",      "Of course it has.",
+          TOM_COLOR, 0, false },
     });
 }
 
@@ -57,12 +57,12 @@ void TherapistOfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
     if (activeEvent < 0) {
-        // Ambient: both sitting, small idle motion -- Gary fidgets slightly
+        // Ambient: both sitting, small idle motion -- Tom fidgets slightly
         // more than the therapist, who stays composed/still.
-        garyFidgetTimer += deltaTime * 2.5f;
+        tomFidgetTimer += deltaTime * 2.5f;
         therapistNodTimer += deltaTime * 0.8f;
 
-        gary->setPosition({380.0f, 400.0f + sinf(garyFidgetTimer) * 3.0f});
+        tom->setPosition({380.0f, 400.0f + sinf(tomFidgetTimer) * 3.0f});
         therapist->setPosition({620.0f, 390.0f + sinf(therapistNodTimer) * 1.5f});
 
         getCamera()->setPosition(512.0f, 288.0f);
@@ -83,7 +83,7 @@ void TherapistOfficeScene::draw() {
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
     drawOffice();
-    drawGary(gary->getPosition());
+    drawTom(tom->getPosition());
     drawTherapist(therapist->getPosition());
     EndMode2D();
 }
@@ -134,7 +134,7 @@ void TherapistOfficeScene::endEvent() {
 
 void TherapistOfficeScene::focusCameraOn(int actorIndex, bool shake) {
     SceneActor* target = nullptr;
-    if (actorIndex == 0) target = gary;
+    if (actorIndex == 0) target = tom;
     else if (actorIndex == 1) target = therapist;
 
     if (target) {
@@ -182,20 +182,20 @@ void TherapistOfficeScene::drawOffice() {
     DrawEllipse(512, 470, 260, 60, rug);
 }
 
-void TherapistOfficeScene::drawGary(Vector2 pos) {
+void TherapistOfficeScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
 
     // Same slouched silhouette, seated -- lower/wider than standing poses
-    DrawEllipse((int)cx, (int)(cy + 24), 28, 26, GARY_COLOR);
-    DrawCircle((int)cx, (int)(cy - 10), 20, GARY_COLOR);
+    DrawEllipse((int)cx, (int)(cy + 24), 28, 26, TOM_COLOR);
+    DrawCircle((int)cx, (int)(cy - 10), 20, TOM_COLOR);
 
-    Color darkGary = {70, 90, 5, 255};
-    DrawEllipse((int)(cx - 8), (int)(cy - 12), 4, 2, darkGary);
-    DrawEllipse((int)(cx + 8), (int)(cy - 12), 4, 2, darkGary);
-    DrawLineEx({cx - 6, cy - 2}, {cx + 6, cy}, 2.0f, darkGary);
+    Color darkTom = {70, 90, 5, 255};
+    DrawEllipse((int)(cx - 8), (int)(cy - 12), 4, 2, darkTom);
+    DrawEllipse((int)(cx + 8), (int)(cy - 12), 4, 2, darkTom);
+    DrawLineEx({cx - 6, cy - 2}, {cx + 6, cy}, 2.0f, darkTom);
     // Hands folded in lap
-    DrawEllipse((int)cx, (int)(cy + 20), 10, 6, darkGary);
+    DrawEllipse((int)cx, (int)(cy + 20), 10, 6, darkTom);
 }
 
 void TherapistOfficeScene::drawTherapist(Vector2 pos) {
