@@ -4,6 +4,7 @@
 #include "game/GameScene.hpp"
 #include "game/BossScene.hpp"
 #include "game/InputTestScene.hpp"
+#include "game/HexBoard.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
@@ -54,8 +55,8 @@ void UpdateDrawFrame() {
         lastScene = currentScene;
     }
 
-    // Hide dialog on input test scene
-    if (currentScene == "input_test") {
+    // Hide dialog on input test and hexboard scenes
+    if (currentScene == "input_test" || currentScene == "hexboard") {
         dialog->hide();
     }
 
@@ -63,7 +64,9 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("game", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_TWO) && currentScene != "boss")
         sceneManager->switchScene("boss", TransitionEffect::FADE, 0.5f);
-    if (IsKeyPressed(KEY_THREE) && currentScene != "input_test")
+    if (IsKeyPressed(KEY_THREE) && currentScene != "hexboard")
+        sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_FOUR) && currentScene != "input_test")
         sceneManager->switchScene("input_test", TransitionEffect::FADE, 0.5f);
 
     if (IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
@@ -91,13 +94,16 @@ void UpdateDrawFrame() {
         sceneManager->draw();
         dialog->draw();
         DrawRectangle(0, 0, GAME_W, 32, {0, 0, 0, 160});
-        if (currentScene == "input_test") {
+        if (currentScene == "hexboard") {
+            DrawText("HEXBOARD", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("1: World  2: Boss  3: Hexboard  4: Input Test  ESC: Exit", GAME_W - 310, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "input_test") {
             DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input Test  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Hexboard  4: Input Test  ESC: Exit", GAME_W - 310, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  H: Dialog  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Hexboard  H: Dialog  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -121,8 +127,9 @@ int main() {
     sceneManager = new SceneManager();
     sceneManager->registerScene("game", new GameScene());
     sceneManager->registerScene("boss", new BossScene());
+    sceneManager->registerScene("hexboard", new HexBoard());
     sceneManager->registerScene("input_test", new InputTestScene());
-    sceneManager->switchSceneImmediate("game");
+    sceneManager->switchSceneImmediate("hexboard");
 
     dialog = new DialogBox(
         {(float)GAME_W / 2.0f, (float)GAME_H - 20.0f},
