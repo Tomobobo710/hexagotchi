@@ -8,16 +8,18 @@
 # TakeScreenshot() so the PNG comes straight from the real framebuffer.
 #
 # Usage:
-#   tools/screenshot.sh <scene> [out.png]
+#   tools/screenshot.sh <scene> [out.png] [wait_frames]
 #   tools/screenshot.sh input_test
 #   tools/screenshot.sh boss build/devtools/boss.png
+#   tools/screenshot.sh input_test build/devtools/anim2.png 45   # let more frames pass first
 #
 # Registered scene names (see src/main.cpp): game, boss, input_test
 set -e
 cd "$(dirname "$0")/.."
 
-SCENE="${1:?usage: tools/screenshot.sh <scene> [out.png]}"
+SCENE="${1:?usage: tools/screenshot.sh <scene> [out.png] [wait_frames]}"
 OUT="${2:-shot.png}"
+WAIT_FRAMES="${3:-30}"
 
 GPP=/c/devkitPro/msys2/usr/bin/g++.exe
 G=/c/devkitPro/msys2/usr/lib/gcc/x86_64-pc-cygwin/15.2.0
@@ -36,13 +38,15 @@ done
 
 timeout 120 $GPP "$OBJ"/*.o -o "$DEVOUT/game_devtool.exe" $LD
 
-rm -f "$DEVOUT/shot.png"
-(cd "$DEVOUT" && HEXA_SHOT="$SCENE" timeout 30 ./game_devtool.exe) >/dev/null 2>&1 || true
+# Run from repo root (not $DEVOUT) so relative asset paths like
+# assets/gotchis/001/... resolve the same way they do for the real game.exe.
+rm -f shot.png
+HEXA_SHOT="$SCENE" HEXA_SHOT_FRAMES="$WAIT_FRAMES" timeout 30 "./$DEVOUT/game_devtool.exe" >/dev/null 2>&1 || true
 
-if [ ! -f "$DEVOUT/shot.png" ]; then
+if [ ! -f shot.png ]; then
     echo "no screenshot produced (scene '$SCENE' may not exist)" >&2
     exit 1
 fi
 
-mv "$DEVOUT/shot.png" "$OUT"
+mv shot.png "$OUT"
 echo "$OUT"

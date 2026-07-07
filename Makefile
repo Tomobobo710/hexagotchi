@@ -10,7 +10,7 @@ LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lw
 
 WEBINCLUDES = -I src/engine -I src/game -I src/effects -I $(RL)
 WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)
-WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++11
+WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++11 --preload-file assets@assets
 
 DESKTOP_OUT = build/desktop
 WEB_OUT     = build/web

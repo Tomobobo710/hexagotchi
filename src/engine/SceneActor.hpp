@@ -4,6 +4,8 @@
 #include "raylib.h"
 #include <string>
 #include <cmath>
+#include <vector>
+#include <functional>
 
 // Actor constants
 const float ACTOR_DEFAULT_FRICTION = 0.98f;
@@ -12,6 +14,10 @@ const int ACTOR_LAYER_BACKGROUND = 0;
 const int ACTOR_LAYER_MIDGROUND = 1;
 const int ACTOR_LAYER_FOREGROUND = 2;
 const int ACTOR_LAYER_UI = 3;
+
+// Clickable overlay tint colors (drawn as a tint rect over the actor's bounds)
+const Color ACTOR_HOVER_TINT = {255, 255, 255, 60};
+const Color ACTOR_PRESSED_TINT = {0, 0, 0, 70};
 
 class SceneActor {
 public:
@@ -74,10 +80,48 @@ public:
     void setTexture(Texture2D tex);
     void setColor(Color col);
     Color getColor() const;
-    
+
+    // Sprite-sheet animation. The texture is treated as a horizontal strip of
+    // equal-size frames. Once set, draw() shows the current frame instead of
+    // the whole texture; call update() each frame to advance it.
+    void setAnimation(int frameWidth, int frameHeight, int frameCount,
+                       float frameDuration, bool loop = true);
+
+    // Frame-list animation: each frame is its own already-loaded Texture2D
+    // (e.g. one PNG per frame, as with assets/gotchis/*/<action>_NN.png), in
+    // display order. Caller owns/unloads the textures, same convention as
+    // setTexture(). Use SpriteLoader::loadFrames() to build the vector from a
+    // numbered-file naming convention.
+    void setAnimationFrames(const std::vector<Texture2D>& frames,
+                             float frameDuration, bool loop = true);
+
+    void clearAnimation();  // Revert to drawing the whole texture, no animation
+    void play();
+    void pause();
+    void stop();  // Pause and reset to frame 0
+    void setFrame(int frame);
+    int getFrame() const;
+    bool isAnimating() const;
+    bool isAnimationFinished() const;  // True once a non-looping animation completes
+
     // Utility
     float distanceTo(const SceneActor* other) const;
-    
+
+    // Clickability. When enabled, Scene::update() hit-tests this actor's
+    // bounds against the mouse each frame (in world space, so it accounts for
+    // camera position/zoom) and fires onClick on a press-and-release both
+    // over the actor -- same semantics as Button. draw() shows a subtle tint
+    // overlay on hover/press unless disabled with setShowClickFeedback(false).
+    void setClickable(bool clickable);
+    bool isClickable() const;
+    void setOnClick(std::function<void()> callback);
+    void setShowClickFeedback(bool show);
+    bool isHovered() const;
+    bool isPressed() const;
+
+    // Called by Scene::update() -- not intended to be called directly.
+    void updateClickState(bool hoveredNow, bool pressedEdge, bool releasedEdge);
+
 protected:
     // Transform
     Vector2 position;
@@ -93,12 +137,32 @@ protected:
     // Rendering
     Texture2D texture;
     Color color;
-    
+
+    // Sprite-sheet animation
+    int frameWidth;
+    int frameHeight;
+    int frameCount;
+    float frameDuration;
+    bool animLoop;
+    int currentFrame;
+    float frameTimer;
+    bool animPlaying;
+    bool animating;      // A sprite sheet or frame list is set (vs. a plain static texture)
+    bool animIsFrameList; // True: draw from animFrames; false: slice `texture` as a strip
+    std::vector<Texture2D> animFrames;
+
     // State
     bool active;
     bool visible;
     std::string tag;
     int layer;
+
+    // Clickability
+    bool clickable;
+    bool hovered;
+    bool pressed;
+    bool showClickFeedback;
+    std::function<void()> onClick;
 };
 
 #endif // SCENE_ACTOR_HPP

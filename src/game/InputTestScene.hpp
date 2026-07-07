@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "Button.hpp"
+#include "SceneActor.hpp"
 
 class InputTestScene : public Scene {
 public:
@@ -29,6 +30,10 @@ private:
     Texture2D spriteButtonTexture;
     Texture2D spriteButtonHoverTexture;
     int spriteClickCount = 0;
+
+    // Animated SceneActor demo
+    SceneActor* animatedActor = nullptr;
+    Texture2D animStripTexture;
 };
 
 #endif
