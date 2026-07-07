@@ -85,9 +85,19 @@ void Scene::update(float deltaTime) {
     // Update effects
     for (auto effect : effects) effect->update(deltaTime);
 
+    // Mouse state for clickable actors, computed once per frame in world
+    // space so it accounts for camera position/zoom.
+    Vector2 mouseWorldPos = inputHandler.getMouseWorldPosition();
+    bool mousePressedEdge = inputHandler.isMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool mouseReleasedEdge = inputHandler.isMouseButtonReleased(MOUSE_BUTTON_LEFT);
+
     // Update all active actors
     for (auto actor : actors) {
         if (actor->isActive()) {
+            if (actor->isClickable()) {
+                bool hoveredNow = CheckCollisionPointRec(mouseWorldPos, actor->getBounds());
+                actor->updateClickState(hoveredNow, mousePressedEdge, mouseReleasedEdge);
+            }
             actor->update(deltaTime);
         }
     }

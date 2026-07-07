@@ -4,6 +4,7 @@
 #include "game/GameScene.hpp"
 #include "game/BossScene.hpp"
 #include "game/InputTestScene.hpp"
+#include "game/SpriteTestScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
@@ -55,8 +56,8 @@ void UpdateDrawFrame() {
         lastScene = currentScene;
     }
 
-    // Hide dialog on input test scene
-    if (currentScene == "input_test") {
+    // Hide dialog on standalone debug scenes
+    if (currentScene == "input_test" || currentScene == "sprite_test") {
         dialog->hide();
     }
 
@@ -66,6 +67,8 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("boss", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_THREE) && currentScene != "input_test")
         sceneManager->switchScene("input_test", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_FOUR) && currentScene != "sprite_test")
+        sceneManager->switchScene("sprite_test", TransitionEffect::FADE, 0.5f);
 
     if (IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
         if (!dialog->isFinished()) {
@@ -94,7 +97,10 @@ void UpdateDrawFrame() {
         DrawRectangle(0, 0, GAME_W, 32, {0, 0, 0, 160});
         if (currentScene == "input_test") {
             DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input Test  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "sprite_test") {
+            // SpriteTestScene draws its own "SPRITE TEST" title, skip the overlay title here.
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
@@ -118,6 +124,9 @@ int main() {
     // env var, renders a few frames, saves a PNG, and exits. Absent entirely
     // from normal builds.
     const char* shotScene = getenv("HEXA_SHOT");
+    const char* shotFramesEnv = getenv("HEXA_SHOT_FRAMES");
+    int shotWaitFrames = shotFramesEnv ? atoi(shotFramesEnv) : 30;
+    if (shotWaitFrames <= 0) shotWaitFrames = 30;
 #endif
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
@@ -131,6 +140,7 @@ int main() {
     sceneManager->registerScene("game", new GameScene());
     sceneManager->registerScene("boss", new BossScene());
     sceneManager->registerScene("input_test", new InputTestScene());
+    sceneManager->registerScene("sprite_test", new SpriteTestScene());
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
         (shotScene && shotScene[0]) ? shotScene : "game");
@@ -175,7 +185,7 @@ int main() {
 #ifdef HEXA_SHOT_TOOL
         if (shotScene && shotScene[0]) {
             // Let the scene settle a few frames, then capture and quit.
-            if (++shotFrame == 30) {
+            if (++shotFrame == shotWaitFrames) {
                 TakeScreenshot("shot.png");
                 break;
             }

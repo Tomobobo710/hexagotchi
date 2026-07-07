@@ -3,9 +3,9 @@ build/
 build-web/
 build/web/
 
-# Executables
-game
-game.exe
+# Executables (root only)
+/game
+/game.exe
 
 # Raylib build artifacts
 raylib/src/*.o
