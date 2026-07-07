@@ -143,6 +143,9 @@ void Scene::addEffect(SceneEffect* effect) {
 
 void Scene::setPaused(bool p) {
     paused = p;
+    if (paused) {
+        inputHandler.clearAllInputs();
+    }
 }
 
 bool Scene::isPaused() const {
@@ -208,4 +211,12 @@ void Scene::sortActorsByLayer() {
         [](SceneActor* a, SceneActor* b) {
             return a->getLayer() < b->getLayer();
         });
+}
+
+// Default implementation of togglePause - just sets paused state
+void Scene::togglePause() {
+    paused = !paused;
+    if (paused) {
+        inputHandler.clearAllInputs();
+    }
 }
