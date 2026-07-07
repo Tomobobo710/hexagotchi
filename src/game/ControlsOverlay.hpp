@@ -1,42 +1,55 @@
 #ifndef CONTROLS_OVERLAY_HPP
 #define CONTROLS_OVERLAY_HPP
 
-#include "SceneInputHandler.hpp"
-#include "Button.hpp"
-#include <functional>
+#include "../engine/SceneInputHandler.hpp"
 #include <string>
 #include <vector>
+#include <functional>
 
-// Key-rebinding screen shown from the pause menu. Click an action row to
-// rebind it (press any key to capture), or the Back button to return to the
-// pause menu. Reuses SceneInputHandler's existing rebinding support (the same
-// mapKey/setWaitingForInput/getCapturedKey flow InputTestScene demos).
+// Controls Overlay: Menu for configuring control bindings
+// Embedded within GameScene (not a separate Scene) to preserve game state
 class ControlsOverlay {
 public:
-    explicit ControlsOverlay(SceneInputHandler* input);
+    explicit ControlsOverlay(SceneInputHandler* inputHandler);
 
+    void update(float deltaTime);
+    void draw() const;
+
+    bool isOpen() const { return open_; }
     void open();
     void close();
-    void update(float deltaTime);
-    void draw();
 
+    // Callback when controls are closed (e.g., ESC pressed)
     std::function<void()> onClose;
 
 private:
-    SceneInputHandler* input;
-    Button backButton;
-    std::vector<std::string> actions;
+    SceneInputHandler* inputHandler_;
+    bool open_;
+    int selectedBindingIndex_;
+    float fadeAlpha_;
 
-    bool rebinding = false;
-    std::string rebindingAction;
+    static const int MENU_X;
+    static const int MENU_Y;
+    static const int MENU_WIDTH;
+    static const int MENU_HEIGHT;
+    static const int ITEM_HEIGHT;
 
-    Rectangle rowBounds(int index) const;
-    int rowAt(Vector2 point) const;
+    // State for key binding
+    bool waitingForInput_;
+    std::vector<std::string> actionNames_;
+    std::string statusMessage_;
+    float messageTimer_;
 
-    static const int ROW_START_Y = 90;
-    static const int ROW_HEIGHT = 28;
-    static const int ROW_X = 60;
-    static const int ROW_WIDTH = 600;
+    void updateMenu(float deltaTime);
+    void updateNavigation(float deltaTime);
+    void drawMenu() const;
+    void loadBindings();
+    void saveBindings();
+
+    int getHoveredItem() const;
+    void handleMouseClick();
+    static std::string getBindingDisplayName(int keyCode);  // Returns display name for key code
+    static std::string getKeyName(int keyCode);
 };
 
-#endif // CONTROLS_OVERLAY_HPP
+#endif

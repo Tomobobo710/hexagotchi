@@ -72,8 +72,7 @@ void Scene::init() {
 }
 
 void Scene::update(float deltaTime) {
-    // Always update the input handler, even while paused -- pause menus and
-    // other overlays still need fresh mouse/key edge-detection to work.
+    // Always update input handler, even when paused (needed for pause menu and controls overlay)
     inputHandler.update();
 
     if (paused) return;

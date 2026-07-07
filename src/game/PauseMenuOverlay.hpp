@@ -1,33 +1,56 @@
 #ifndef PAUSE_MENU_OVERLAY_HPP
 #define PAUSE_MENU_OVERLAY_HPP
 
-#include "Scene.hpp"
-#include "Button.hpp"
+#include "../engine/SceneInputHandler.hpp"
+#include <string>
+#include <vector>
 #include <functional>
 
-// Simple pause menu overlay drawn on top of a paused Scene: a dimmed
-// background panel with Resume / Controls / Exit buttons. Owns no game state
-// itself -- GameScene decides what paused/controlsOverlay actually do; this
-// class only presents the menu and reports selections via callbacks.
+// Forward declaration
+class GameScene;
+
+// Pause Menu Overlay: UI overlay for pause menu within GameScene
+// Handles input navigation and drawing without being a full Scene
 class PauseMenuOverlay {
 public:
-    explicit PauseMenuOverlay(Scene& scene);
+    explicit PauseMenuOverlay(GameScene& parent);
 
-    void open();   // Reset button state each time the menu is (re)shown
+    void update(float deltaTime, SceneInputHandler* handler);
+    void draw() const;
+
+    bool isOpen() const { return open_; }
+    void open();
     void close();
-    void update(float deltaTime);
-    void draw();
 
-    std::function<void()> onResume;
-    std::function<void()> onClose;
+    // Callbacks - called by GameScene when menu state changes
+    std::function<void()> onClose;        // Called when menu closed
+    std::function<void()> onResume;       // Called when resuming game
+
+    // Option selection callbacks (for Controls/Exit)
     std::function<void()> onControlsSelected;
     std::function<void()> onExitSelected;
 
 private:
-    Scene& scene;
-    Button resumeButton;
-    Button controlsButton;
-    Button exitButton;
+    GameScene& parent_;
+    bool open_;
+    int selectedOptionIndex_;
+    float fadeAlpha_;
+
+    const std::vector<std::string> menuOptions = {"Resume Game", "Controls", "Exit Game"};
+
+    // Constants
+    static const int MENU_X;
+    static const int MENU_Y;
+    static const int MENU_WIDTH;
+    static const int BUTTON_HEIGHT;
+    static const int FONT_SIZE;
+
+    void updateMenu(float deltaTime, SceneInputHandler* handler);
+    void drawMenu() const;
+
+    // Mouse interaction
+    int getHoveredOption() const;
+    void handleMouseClick(SceneInputHandler* handler);
 };
 
-#endif // PAUSE_MENU_OVERLAY_HPP
+#endif
