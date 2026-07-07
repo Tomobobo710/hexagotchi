@@ -7,6 +7,8 @@
 #include "game/HexViewScene.hpp"
 #include "game/SpriteTestScene.hpp"
 #include "game/GotchiScene.hpp"
+#include "game/PizzaParlorScene.hpp"
+#include "game/SceneSelectScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
@@ -83,11 +85,12 @@ void UpdateDrawFrame() {
         dialogIndex = 0;
         if (currentScene == "game") showDialog(gameDialogs, 0);
         if (currentScene == "boss") showDialog(bossDialogs, 0);
+        if (currentScene == "pizza_parlor" || currentScene == "scene_select") dialog->hide();
         lastScene = currentScene;
     }
 
     // Hide dialog on input test, hexboard, and gotchi scenes
-    if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" || currentScene == "gotchi") {
+    if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" || currentScene == "gotchi" || currentScene == "scene_select") {
         dialog->hide();
     }
 
@@ -103,8 +106,12 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_EIGHT) && currentScene != "gotchi")
         sceneManager->switchScene("gotchi", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_SEVEN) && currentScene != "scene_select")
+        sceneManager->switchScene("scene_select", TransitionEffect::FADE, 0.5f);
 
-    if (IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
+    bool onGameOrBoss = (currentScene == "game" || currentScene == "boss");
+
+    if (onGameOrBoss && IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
         if (!dialog->isFinished()) {
             dialog->skipCharacterReveal();
         } else {
@@ -115,7 +122,7 @@ void UpdateDrawFrame() {
         }
     }
 
-    if (IsKeyPressed(KEY_H)) {
+    if (onGameOrBoss && IsKeyPressed(KEY_H)) {
         dialogIndex = 0;
         auto& seq = (currentScene == "boss") ? bossDialogs : gameDialogs;
         showDialog(seq, 0);
@@ -127,6 +134,13 @@ void UpdateDrawFrame() {
         if (currentSceneObj) {
             currentSceneObj->togglePause();
         }
+    }
+
+    // Debug trigger for the pizza parlor's scripted story beat (normally
+    // invoked by the tomagotchi/stat side, not by a raw key).
+    if (IsKeyPressed(KEY_E) && currentScene == "pizza_parlor") {
+        PizzaParlorScene* pizza = (PizzaParlorScene*)sceneManager->getCurrentScene();
+        if (pizza && !pizza->isPlayingEvent()) pizza->triggerEvent(0);
     }
 
     sceneManager->update(dt);
@@ -149,10 +163,16 @@ void UpdateDrawFrame() {
         } else if (currentScene == "gotchi") {
             DrawText("GOTCHI", 14, 8, 18, {180, 180, 255, 255});
             DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "pizza_parlor") {
+            DrawText("PIZZA PARLOR", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "scene_select") {
+            DrawText("SCENE SELECT", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("Click a scene  1: World  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss 3: Input 4: Sprite 5: Hexboard  7: Scenes 8: Gotchi H: Dialog 0: Menu", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -184,6 +204,11 @@ int main() {
     gameTarget = LoadRenderTexture(GAME_W, GAME_H);
     SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_POINT);
 
+    dialog = new DialogBox(
+        {(float)GAME_W / 2.0f, (float)GAME_H - 20.0f},
+        680.0f, 160.0f
+    );
+
     sceneManager = new SceneManager();
     sceneManager->registerScene("game", new GameScene());
     sceneManager->registerScene("boss", new BossScene());
@@ -192,17 +217,14 @@ int main() {
     sceneManager->registerScene("gotchi", new GotchiScene());
     sceneManager->switchSceneImmediate("hexboard");
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
+    sceneManager->registerScene("pizza_parlor", new PizzaParlorScene(dialog));
+    sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
         (shotScene && shotScene[0]) ? shotScene : "game");
 #else
     sceneManager->switchSceneImmediate("game");
 #endif
-
-    dialog = new DialogBox(
-        {(float)GAME_W / 2.0f, (float)GAME_H - 20.0f},
-        680.0f, 160.0f
-    );
     dialog->setAnchor("bottom");
     dialog->setCharacterRevealSpeed(45.0f);
 

@@ -3,6 +3,9 @@ build/
 build-web/
 build/web/
 
+# Packed asset bundle (generated from assets/ by tools/pack_assets, see Makefile)
+/assets.rres
+
 # Executables (root only)
 /game
 /game.exe
