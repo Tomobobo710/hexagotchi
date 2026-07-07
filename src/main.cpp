@@ -6,6 +6,7 @@
 #include "game/InputTestScene.hpp"
 #include "game/SpriteTestScene.hpp"
 #include "game/PizzaParlorScene.hpp"
+#include "game/SceneSelectScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
@@ -82,12 +83,12 @@ void UpdateDrawFrame() {
         dialogIndex = 0;
         if (currentScene == "game") showDialog(gameDialogs, 0);
         if (currentScene == "boss") showDialog(bossDialogs, 0);
-        if (currentScene == "pizza_parlor") dialog->hide();
+        if (currentScene == "pizza_parlor" || currentScene == "scene_select") dialog->hide();
         lastScene = currentScene;
     }
 
     // Hide dialog on standalone debug scenes
-    if (currentScene == "input_test" || currentScene == "sprite_test") {
+    if (currentScene == "input_test" || currentScene == "sprite_test" || currentScene == "scene_select") {
         dialog->hide();
     }
 
@@ -99,8 +100,8 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("input_test", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_FOUR) && currentScene != "sprite_test")
         sceneManager->switchScene("sprite_test", TransitionEffect::FADE, 0.5f);
-    if (IsKeyPressed(KEY_SEVEN) && currentScene != "pizza_parlor")
-        sceneManager->switchScene("pizza_parlor", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_SEVEN) && currentScene != "scene_select")
+        sceneManager->switchScene("scene_select", TransitionEffect::FADE, 0.5f);
 
     bool onGameOrBoss = (currentScene == "game" || currentScene == "boss");
 
@@ -152,11 +153,14 @@ void UpdateDrawFrame() {
             DrawText("1: World  2: Boss  3: Input  4: Sprite  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "pizza_parlor") {
             DrawText("PIZZA PARLOR", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("E: Trigger event  7: Switch  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "scene_select") {
+            DrawText("SCENE SELECT", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("Click a scene  1: World  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  H: Dialog  0: Menu", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  7: Scenes  H: Dialog  0: Menu", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -199,6 +203,7 @@ int main() {
     sceneManager->registerScene("input_test", new InputTestScene());
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
     sceneManager->registerScene("pizza_parlor", new PizzaParlorScene(dialog));
+    sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
         (shotScene && shotScene[0]) ? shotScene : "game");
