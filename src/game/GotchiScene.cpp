@@ -1,6 +1,5 @@
 #include "GotchiScene.hpp"
 #include "AssetPack.hpp"
-#include "SpriteLoader.hpp"
 #include "GameConstants.hpp"
 #include "GotchiStats.hpp"
 #include "GotchiMood.hpp"

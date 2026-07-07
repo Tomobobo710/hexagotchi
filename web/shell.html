@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="EN-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>hexagotchi</title>
+    <meta name="viewport" content="width=device-width">
+    <style>
+        html, body {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            overflow: hidden; background-color: black;
+        }
+        body {
+            display: flex; align-items: center; justify-content: center;
+        }
+        /* Fixed 720x720 backing buffer (game-jam requirement) -- CSS scales
+           the display size only, image-rendering keeps that scale crisp. */
+        canvas.emscripten {
+            border: 0px none; background-color: black;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            width: 100vmin; height: 100vmin;
+        }
+        #output { display: none; }
+    </style>
+    <script type='text/javascript' src="https://cdn.jsdelivr.net/gh/eligrey/FileSaver.js/dist/FileSaver.min.js"> </script>
+    <script type='text/javascript'>
+        function saveFileFromMEMFSToDisk(memoryFSname, localFSname)
+        {
+            var isSafari = false;
+            var data = FS.readFile(memoryFSname);
+            var blob;
+            if (isSafari) blob = new Blob([data.buffer], { type: "application/octet-stream" });
+            else blob = new Blob([data.buffer], { type: "application/octet-binary" });
+            saveAs(blob, localFSname);
+        }
+    </script>
+    </head>
+    <body>
+        <canvas class=emscripten id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas>
+        <p id="output" />
+        <script>
+            var Module = {
+                print: (function() {
+                    var element = document.getElementById('output');
+                    if (element) element.value = '';
+                    return function(text) {
+                        if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                        console.log(text);
+                        if (element) {
+                          element.value += text + "\n";
+                          element.scrollTop = element.scrollHeight;
+                        }
+                    };
+                })(),
+                canvas: (function() {
+                    return document.getElementById('canvas');
+                })()
+            };
+        </script>
+        {{{ SCRIPT }}}
+    </body>
+</html>

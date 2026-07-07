@@ -90,16 +90,23 @@ void UpdateDrawFrame() {
         dialogIndex = 0;
         if (currentScene == "game") showDialog(gameDialogs, 0);
         if (currentScene == "boss") showDialog(bossDialogs, 0);
+        // The Gary world-scenes (pizza_parlor/apartment/etc.) drive the shared
+        // dialog box themselves via triggerEvent()/DialogBox::show() -- only
+        // force-hide it once, on the frame we transition in, so a stale
+        // game/boss line doesn't linger. Do NOT hide it every frame here or
+        // it fights with the scene's own show() calls and the dialog can
+        // never stay visible (softlock: it disappears the instant it shows).
+        if (currentScene == "pizza_parlor" || currentScene == "apartment" || currentScene == "therapist_office" ||
+            currentScene == "office" || currentScene == "school" || currentScene == "scene_select") {
+            dialog->hide();
+        }
         lastScene = currentScene;
     }
 
-    // Every scene without its own gameDialogs/bossDialogs-style sequence
-    // hides the shared dialog box every frame -- single list, no duplicated
-    // scene-name checks scattered across two separate blocks.
+    // These standalone debug/demo scenes never use the shared dialog box at
+    // all, so it's safe to keep it hidden every frame unconditionally.
     if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" ||
-        currentScene == "gotchi" || currentScene == "pizza_parlor" || currentScene == "apartment" ||
-        currentScene == "therapist_office" || currentScene == "office" || currentScene == "school" ||
-        currentScene == "scene_select") {
+        currentScene == "gotchi") {
         dialog->hide();
     }
 
@@ -245,7 +252,9 @@ int main() {
     AssetPack::setPackFile("/assets.rres");
 #endif
 
+#if !defined(PLATFORM_WEB)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+#endif
     InitWindow(720, 720, "2D Engine Demo");
     SetTargetFPS(60);
 
