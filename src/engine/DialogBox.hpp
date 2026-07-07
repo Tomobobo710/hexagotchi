@@ -31,6 +31,14 @@ public:
     void setSpeakerName(const std::string& name);
     void setSpeakerColor(Color color);
     void setPortraitColor(Color color);
+
+    // Optional portrait image. Caller loads/unloads the Texture2D (same
+    // convention as SceneActor::setTexture / Button::setTexture). When set,
+    // it's drawn stretched to fill the portrait box instead of the default
+    // placeholder silhouette. clearPortraitTexture() reverts to the
+    // silhouette without needing to unload/reset the texture yourself.
+    void setPortraitTexture(Texture2D tex);
+    void clearPortraitTexture();
     void setOptions(const std::vector<std::string>& opts);
     void addOption(const std::string& option);
     void clearOptions();
@@ -75,6 +83,7 @@ protected:
     std::string speakerName;
     Color speakerColor;
     Color portraitColor;
+    Texture2D portraitTexture;
     std::vector<std::string> options;
     std::vector<std::string> wrappedTextLines;
     
