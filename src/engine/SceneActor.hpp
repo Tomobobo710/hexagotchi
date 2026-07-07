@@ -90,8 +90,8 @@ public:
     // Frame-list animation: each frame is its own already-loaded Texture2D
     // (e.g. one PNG per frame, as with assets/gotchis/*/<action>_NN.png), in
     // display order. Caller owns/unloads the textures, same convention as
-    // setTexture(). Use SpriteLoader::loadFrames() to build the vector from a
-    // numbered-file naming convention.
+    // setTexture(). Use AssetPack::loadFrames() to build the vector from a
+    // numbered-file naming convention packed into assets.rres.
     void setAnimationFrames(const std::vector<Texture2D>& frames,
                              float frameDuration, bool loop = true);
 
