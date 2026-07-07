@@ -1,6 +1,7 @@
 #include "SceneManager.hpp"
 #include "DialogBox.hpp"
 #include "GameConstants.hpp"
+#include "AssetPack.hpp"
 #include "game/GameScene.hpp"
 #include "game/BossScene.hpp"
 #include "game/InputTestScene.hpp"
@@ -195,6 +196,13 @@ int main() {
     const char* shotFramesEnv = getenv("HEXA_SHOT_FRAMES");
     int shotWaitFrames = shotFramesEnv ? atoi(shotFramesEnv) : 30;
     if (shotWaitFrames <= 0) shotWaitFrames = 30;
+#endif
+
+#if defined(PLATFORM_WEB)
+    // In web builds, assets.rres is embedded into the virtual filesystem
+    // at the root directory. The AssetPack library uses rres which uses
+    // standard C file I/O, so we need to set the pack file path explicitly.
+    AssetPack::setPackFile("/assets.rres");
 #endif
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);

@@ -158,26 +158,40 @@ if(RBUILD_WEB)
     # List source files explicitly (emcc doesn't expand globs in custom commands)
     set(WEB_SOURCES
         ${CMAKE_SOURCE_DIR}/src/main.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/AssetPack.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/HexTile.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/HexWorld.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Scene.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneActor.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneCamera.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneInputHandler.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneManager.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/TileType.cpp
         ${CMAKE_SOURCE_DIR}/src/game/BossScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ControlsOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GameScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/Gotchi.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiMood.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiStats.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/HexBoard.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/HexViewScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/PizzaParlorScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/SpriteLoader.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp
     )
     add_custom_target(game-web ALL
-        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/raylib/src --shell-file ${CMAKE_SOURCE_DIR}/raylib/src/minshell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS
+        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/raylib/src/minshell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
         DEPENDS raylib-web ${WEB_SOURCES}
-        WORKING_DIRECTORY ${WEB_OUTPUT_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 
     message(STATUS "Web build configured. Run: cmake --build . --target game-web")
