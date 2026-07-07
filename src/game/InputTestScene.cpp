@@ -31,12 +31,30 @@ void InputTestScene::init() {
     spriteButton.setTexture(spriteButtonTexture);
     spriteButton.setHoverTexture(spriteButtonHoverTexture);
     spriteButton.setOnClick([this]() { spriteClickCount++; });
+
+    // Animated SceneActor demo: a 4-frame horizontal strip, each frame a
+    // different colored circle so the frame change is obvious. Stands in for
+    // a real sprite sheet loaded via LoadTexture("path/to/sheet.png").
+    const int frameW = 32, frameH = 32, frames = 4;
+    Image stripImg = GenImageColor(frameW * frames, frameH, BLANK);
+    Color frameColors[frames] = {RED, ORANGE, YELLOW, GREEN};
+    for (int i = 0; i < frames; i++) {
+        ImageDrawCircle(&stripImg, i * frameW + frameW / 2, frameH / 2, frameW / 2 - 2, frameColors[i]);
+    }
+    animStripTexture = LoadTextureFromImage(stripImg);
+    UnloadImage(stripImg);
+
+    animatedActor = new SceneActor({640.0f, 40.0f}, frameW, frameH);
+    animatedActor->setTexture(animStripTexture);
+    animatedActor->setAnimation(frameW, frameH, frames, 0.15f);
+    addActor(animatedActor);
 }
 
 void InputTestScene::cleanup() {
     Scene::cleanup();
     if (spriteButtonTexture.id != 0) UnloadTexture(spriteButtonTexture);
     if (spriteButtonHoverTexture.id != 0) UnloadTexture(spriteButtonHoverTexture);
+    if (animStripTexture.id != 0) UnloadTexture(animStripTexture);
 }
 
 void InputTestScene::draw() {
