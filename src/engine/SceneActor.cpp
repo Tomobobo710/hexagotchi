@@ -3,7 +3,12 @@
 SceneActor::SceneActor(Vector2 pos, float w, float h)
     : position(pos), velocity({0, 0}), scale({1.0f, 1.0f}), rotation(0.0f),
       width(w), height(h), friction(ACTOR_DEFAULT_FRICTION), gravityEnabled(false),
-      texture({0}), color(WHITE), active(true), visible(true), tag(""), layer(ACTOR_LAYER_MIDGROUND) {
+      texture({0}), color(WHITE),
+      frameWidth(0), frameHeight(0), frameCount(1), frameDuration(0.1f),
+      animLoop(true), currentFrame(0), frameTimer(0.0f), animPlaying(true),
+      animating(false), animIsFrameList(false),
+      active(true), visible(true), tag(""), layer(ACTOR_LAYER_MIDGROUND),
+      clickable(false), hovered(false), pressed(false), showClickFeedback(true) {
 }
 
 void SceneActor::update(float deltaTime) {
@@ -11,24 +16,73 @@ void SceneActor::update(float deltaTime) {
     if (gravityEnabled) {
         velocity.y += ACTOR_GRAVITY * deltaTime;
     }
-    
+
     // Apply friction
     velocity.x *= friction;
     velocity.y *= friction;
-    
+
     // Apply velocity
     position.x += velocity.x * deltaTime;
     position.y += velocity.y * deltaTime;
+
+    // Advance sprite-sheet animation
+    if (animating && animPlaying && frameCount > 1) {
+        frameTimer += deltaTime;
+        while (frameTimer >= frameDuration) {
+            frameTimer -= frameDuration;
+            int next = currentFrame + 1;
+            if (next >= frameCount) {
+                if (animLoop) {
+                    currentFrame = 0;
+                } else {
+                    currentFrame = frameCount - 1;
+                    animPlaying = false;
+                    break;
+                }
+            } else {
+                currentFrame = next;
+            }
+        }
+    }
 }
 
 void SceneActor::draw() {
     if (!visible) return;
-    
-    if (texture.id != 0) {
-        DrawTextureV(texture, position, color);
+
+    const Texture2D* drawTexture = &texture;
+    Rectangle src;
+    bool drewSprite = true;
+
+    if (animating && animIsFrameList) {
+        if (animFrames.empty()) {
+            DrawRectangleV(position, {width, height}, color);
+            drewSprite = false;
+        } else {
+            drawTexture = &animFrames[currentFrame];
+            src = {0.0f, 0.0f, (float)drawTexture->width, (float)drawTexture->height};
+        }
+    } else if (animating) {
+        src = {(float)(currentFrame * frameWidth), 0.0f, (float)frameWidth, (float)frameHeight};
+    } else if (texture.id != 0) {
+        src = {0.0f, 0.0f, (float)texture.width, (float)texture.height};
     } else {
         // Draw placeholder rectangle
         DrawRectangleV(position, {width, height}, color);
+        drewSprite = false;
+    }
+
+    if (drewSprite) {
+        Rectangle dest = {position.x, position.y, width * scale.x, height * scale.y};
+        Vector2 origin = {dest.width / 2.0f, dest.height / 2.0f};
+        dest.x += origin.x;
+        dest.y += origin.y;
+        DrawTexturePro(*drawTexture, src, dest, origin, rotation, color);
+    }
+
+    // Clickable hover/press feedback: a translucent tint over the actor's bounds.
+    if (clickable && showClickFeedback && (hovered || pressed)) {
+        Rectangle bounds = getBounds();
+        DrawRectangleRec(bounds, pressed ? ACTOR_PRESSED_TINT : ACTOR_HOVER_TINT);
     }
 }
 
@@ -88,7 +142,7 @@ float SceneActor::getHeight() const {
 }
 
 Rectangle SceneActor::getBounds() const {
-    return Rectangle{position.x, position.y, width, height};
+    return Rectangle{position.x, position.y, width * scale.x, height * scale.y};
 }
 
 bool SceneActor::isCollidingWith(const SceneActor* other) const {
@@ -150,6 +204,7 @@ int SceneActor::getLayer() const {
 
 void SceneActor::setTexture(Texture2D tex) {
     texture = tex;
+    clearAnimation();
 }
 
 void SceneActor::setColor(Color col) {
@@ -158,6 +213,118 @@ void SceneActor::setColor(Color col) {
 
 Color SceneActor::getColor() const {
     return color;
+}
+
+void SceneActor::setAnimation(int fw, int fh, int count, float duration, bool loop) {
+    frameWidth = fw;
+    frameHeight = fh;
+    frameCount = count > 0 ? count : 1;
+    frameDuration = duration;
+    animLoop = loop;
+    currentFrame = 0;
+    frameTimer = 0.0f;
+    animPlaying = true;
+    animating = true;
+    animIsFrameList = false;
+    animFrames.clear();
+}
+
+void SceneActor::setAnimationFrames(const std::vector<Texture2D>& frames, float duration, bool loop) {
+    animFrames = frames;
+    frameCount = (int)animFrames.size() > 0 ? (int)animFrames.size() : 1;
+    frameDuration = duration;
+    animLoop = loop;
+    currentFrame = 0;
+    frameTimer = 0.0f;
+    animPlaying = true;
+    animating = true;
+    animIsFrameList = true;
+}
+
+void SceneActor::clearAnimation() {
+    animating = false;
+    animIsFrameList = false;
+    animFrames.clear();
+    currentFrame = 0;
+    frameTimer = 0.0f;
+    animPlaying = true;
+}
+
+void SceneActor::play() {
+    animPlaying = true;
+}
+
+void SceneActor::pause() {
+    animPlaying = false;
+}
+
+void SceneActor::stop() {
+    animPlaying = false;
+    currentFrame = 0;
+    frameTimer = 0.0f;
+}
+
+void SceneActor::setFrame(int frame) {
+    if (frameCount <= 0) return;
+    currentFrame = (frame % frameCount + frameCount) % frameCount;
+    frameTimer = 0.0f;
+}
+
+int SceneActor::getFrame() const {
+    return currentFrame;
+}
+
+bool SceneActor::isAnimating() const {
+    return animating;
+}
+
+bool SceneActor::isAnimationFinished() const {
+    return animating && !animLoop && !animPlaying && currentFrame == frameCount - 1;
+}
+
+void SceneActor::setClickable(bool c) {
+    clickable = c;
+    if (!clickable) {
+        hovered = false;
+        pressed = false;
+    }
+}
+
+bool SceneActor::isClickable() const {
+    return clickable;
+}
+
+void SceneActor::setOnClick(std::function<void()> callback) {
+    onClick = callback;
+}
+
+void SceneActor::setShowClickFeedback(bool show) {
+    showClickFeedback = show;
+}
+
+bool SceneActor::isHovered() const {
+    return hovered;
+}
+
+bool SceneActor::isPressed() const {
+    return pressed;
+}
+
+void SceneActor::updateClickState(bool hoveredNow, bool pressedEdge, bool releasedEdge) {
+    if (!clickable) return;
+
+    hovered = hoveredNow;
+
+    if (hovered && pressedEdge) {
+        pressed = true;
+    }
+
+    if (releasedEdge) {
+        if (pressed && hovered && onClick) {
+            onClick();
+        }
+        pressed = false;
+    }
 }
 
 float SceneActor::distanceTo(const SceneActor* other) const {

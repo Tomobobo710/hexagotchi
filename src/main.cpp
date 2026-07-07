@@ -5,9 +5,14 @@
 #include "game/BossScene.hpp"
 #include "game/InputTestScene.hpp"
 #include "game/HexBoard.hpp"
+#include "game/SpriteTestScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
+#include <cstdlib>
+
+// Global exit request flag
+bool exitRequested = false;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -56,7 +61,7 @@ void UpdateDrawFrame() {
     }
 
     // Hide dialog on input test and hexboard scenes
-    if (currentScene == "input_test" || currentScene == "hexboard") {
+    if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test") {
         dialog->hide();
     }
 
@@ -68,6 +73,8 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_FOUR) && currentScene != "input_test")
         sceneManager->switchScene("input_test", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_FOUR) && currentScene != "sprite_test")
+        sceneManager->switchScene("sprite_test", TransitionEffect::FADE, 0.5f);
 
     if (IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
         if (!dialog->isFinished()) {
@@ -86,6 +93,14 @@ void UpdateDrawFrame() {
         showDialog(seq, 0);
     }
 
+    // Toggle pause menu with 0 key (only in game and boss scenes)
+    if (IsKeyPressed(KEY_ZERO) && (currentScene == "game" || currentScene == "boss")) {
+        Scene* currentSceneObj = sceneManager->getCurrentScene();
+        if (currentSceneObj) {
+            currentSceneObj->togglePause();
+        }
+    }
+
     sceneManager->update(dt);
     dialog->update(dt);
 
@@ -100,10 +115,14 @@ void UpdateDrawFrame() {
         } else if (currentScene == "input_test") {
             DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
             DrawText("1: World  2: Boss  3: Hexboard  4: Input Test  ESC: Exit", GAME_W - 310, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "sprite_test") {
+            // SpriteTestScene draws its own "SPRITE TEST" title, skip the overlay title here.
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
             DrawText("1: World  2: Boss  3: Hexboard  H: Dialog  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -117,6 +136,17 @@ void UpdateDrawFrame() {
 }
 
 int main() {
+#ifdef HEXA_SHOT_TOOL
+    // Dev tooling only, compiled in solely when built with -DHEXA_SHOT_TOOL
+    // (see tools/screenshot.sh). Starts on the scene named by the HEXA_SHOT
+    // env var, renders a few frames, saves a PNG, and exits. Absent entirely
+    // from normal builds.
+    const char* shotScene = getenv("HEXA_SHOT");
+    const char* shotFramesEnv = getenv("HEXA_SHOT_FRAMES");
+    int shotWaitFrames = shotFramesEnv ? atoi(shotFramesEnv) : 30;
+    if (shotWaitFrames <= 0) shotWaitFrames = 30;
+#endif
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(720, 720, "2D Engine Demo");
     SetTargetFPS(60);
@@ -130,6 +160,13 @@ int main() {
     sceneManager->registerScene("hexboard", new HexBoard());
     sceneManager->registerScene("input_test", new InputTestScene());
     sceneManager->switchSceneImmediate("hexboard");
+    sceneManager->registerScene("sprite_test", new SpriteTestScene());
+#ifdef HEXA_SHOT_TOOL
+    sceneManager->switchSceneImmediate(
+        (shotScene && shotScene[0]) ? shotScene : "game");
+#else
+    sceneManager->switchSceneImmediate("game");
+#endif
 
     dialog = new DialogBox(
         {(float)GAME_W / 2.0f, (float)GAME_H - 20.0f},
@@ -160,8 +197,20 @@ int main() {
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
 #else
-    while (!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE)) {
+#ifdef HEXA_SHOT_TOOL
+    int shotFrame = 0;
+#endif
+    while (!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE) && !exitRequested) {
         UpdateDrawFrame();
+#ifdef HEXA_SHOT_TOOL
+        if (shotScene && shotScene[0]) {
+            // Let the scene settle a few frames, then capture and quit.
+            if (++shotFrame == shotWaitFrames) {
+                TakeScreenshot("shot.png");
+                break;
+            }
+        }
+#endif
     }
     UnloadRenderTexture(gameTarget);
     delete dialog;

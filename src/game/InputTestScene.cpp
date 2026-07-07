@@ -2,7 +2,10 @@
 #include "../effects/StarfieldEffect.hpp"
 
 InputTestScene::InputTestScene()
-    : Scene(720.0f, 720.0f, {18, 18, 30, 255}) {
+    : Scene(720.0f, 720.0f, {18, 18, 30, 255}),
+      testButton({360.0f, 630.0f}, 180.0f, 44.0f, "CLICK ME"),
+      spriteButton({608.0f, 652.0f}, 80.0f, 80.0f),
+      spriteButtonTexture({0}), spriteButtonHoverTexture({0}) {
     rebinding = false;
     rebindingAction = "";
     newKey = -1;
@@ -12,17 +15,56 @@ InputTestScene::InputTestScene()
 void InputTestScene::init() {
     getCamera()->setBoundary(0, 0, 720.0f, 720.0f);
     addEffect(new StarfieldEffect(getCamera()));
+
+    testButton.setOnClick([this]() { clickCount++; });
+
+    // Sprite button demo: procedurally generated placeholder art, standing in
+    // for a real icon/sprite sheet loaded via LoadTexture("path/to/sprite.png").
+    Image normalImg = GenImageGradientRadial(96, 96, 0.3f, {90, 60, 160, 255}, {30, 20, 60, 255});
+    Image hoverImg = GenImageGradientRadial(96, 96, 0.3f, {150, 110, 230, 255}, {60, 40, 110, 255});
+    spriteButtonTexture = LoadTextureFromImage(normalImg);
+    spriteButtonHoverTexture = LoadTextureFromImage(hoverImg);
+    UnloadImage(normalImg);
+    UnloadImage(hoverImg);
+
+    spriteButton.setAnchor("center");
+    spriteButton.setTexture(spriteButtonTexture);
+    spriteButton.setHoverTexture(spriteButtonHoverTexture);
+    spriteButton.setOnClick([this]() { spriteClickCount++; });
+
+    // Animated SceneActor demo: a 4-frame horizontal strip, each frame a
+    // different colored circle so the frame change is obvious. Stands in for
+    // a real sprite sheet loaded via LoadTexture("path/to/sheet.png").
+    const int frameW = 32, frameH = 32, frames = 4;
+    Image stripImg = GenImageColor(frameW * frames, frameH, BLANK);
+    Color frameColors[frames] = {RED, ORANGE, YELLOW, GREEN};
+    for (int i = 0; i < frames; i++) {
+        ImageDrawCircle(&stripImg, i * frameW + frameW / 2, frameH / 2, frameW / 2 - 2, frameColors[i]);
+    }
+    animStripTexture = LoadTextureFromImage(stripImg);
+    UnloadImage(stripImg);
+
+    animatedActor = new SceneActor({640.0f, 40.0f}, frameW, frameH);
+    animatedActor->setTexture(animStripTexture);
+    animatedActor->setAnimation(frameW, frameH, frames, 0.15f);
+    addActor(animatedActor);
+}
+
+void InputTestScene::cleanup() {
+    Scene::cleanup();
+    if (spriteButtonTexture.id != 0) UnloadTexture(spriteButtonTexture);
+    if (spriteButtonHoverTexture.id != 0) UnloadTexture(spriteButtonHoverTexture);
+    if (animStripTexture.id != 0) UnloadTexture(animStripTexture);
 }
 
 void InputTestScene::draw() {
     Scene::draw();
 
     // --- LEFT COLUMN (x: 16-340) ---
+    // Starts below main.cpp's top-left "INPUT TEST" label (drawn at y=8,
+    // 18px font) to avoid overlapping it.
     int lx = 16;
-    int ly = 20;
-
-    DrawText("INPUT HANDLER", lx, ly, 20, {255, 255, 255, 255});
-    ly += 28;
+    int ly = 40;
 
     auto ih = getInputHandler();
 
@@ -107,7 +149,7 @@ void InputTestScene::draw() {
             DrawText("YES", lx + 45, ly, 11, {255, 255, 100, 255});
             ly += 15;
         }
-        if (ly == 20 + 28 + 9*15 + 18 + 10*15 + 8 + 18) {
+        if (ly == 40 + 9*15 + 18 + 10*15 + 8 + 18) {
             // Nothing was printed
             DrawText("(none)", lx, ly, 11, {100, 100, 140, 255});
             ly += 15;
@@ -132,8 +174,10 @@ void InputTestScene::draw() {
     }
 
     // --- RIGHT COLUMN (x: 360-704) ---
+    // Starts below main.cpp's top-right overlay ("1: World  2: Boss  ..."),
+    // which is drawn at y=8 with a 12px font, to avoid overlapping it.
     int rx = 360;
-    int ry = 20;
+    int ry = 40;
 
     // --- Right Column: Mouse ---
     DrawText("MOUSE", rx, ry, 14, {100, 200, 255, 255});
@@ -226,12 +270,24 @@ void InputTestScene::draw() {
         ry += 4;
         DrawText("* bindings changed", rx, ry, 10, {255, 200, 50, 255});
     }
+
+    // --- Button demo ---
+    DrawText("BUTTON", 360, 600, 14, {100, 200, 255, 255});
+    testButton.draw();
+    spriteButton.draw();
+
+    char cbuf[48];
+    snprintf(cbuf, sizeof(cbuf), "Clicks: %d  Sprite: %d", clickCount, spriteClickCount);
+    DrawText(cbuf, 360, 700, 12, {180, 180, 220, 255});
 }
 
 void InputTestScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
     auto ih = getInputHandler();
+
+    testButton.update(ih, deltaTime);
+    spriteButton.update(ih, deltaTime);
 
     // R: toggle rebinding mode
     if (ih && IsKeyPressed(KEY_R)) {

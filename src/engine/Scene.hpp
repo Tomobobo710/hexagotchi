@@ -47,7 +47,10 @@ public:
     
     // State
     void setPaused(bool p);
-    bool isPaused() const;
+    virtual bool isPaused() const;
+
+    // Pause toggle - virtual so subclasses can override
+    virtual void togglePause();
     
     // Properties
     void setBackgroundColor(Color color);

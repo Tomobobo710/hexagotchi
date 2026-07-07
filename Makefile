@@ -1,16 +1,16 @@
 CXX  = g++
-EMCC = emsdk/upstream/emscripten/emcc.py
-EMAR = emsdk/upstream/emscripten/emar.py
+EMCC = emsdk/python/3.13.3_64bit/python.exe emsdk/upstream/emscripten/emcc.py
+EMAR = emsdk/python/3.13.3_64bit/python.exe emsdk/upstream/emscripten/emar.py
 RL   = raylib/src
 
 SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp)
 INCLUDES    = -I src/engine -I src/game -I src/effects -I $(RL) -I glfw/include
-CXXFLAGS    = -std=c++11 $(INCLUDES)
-LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm
+CXXFLAGS    = -std=c++14 $(INCLUDES)
+LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -pthread -lm -ldl -lX11 -lXrandr -lXinerama -lXi -lXcursor
 
 WEBINCLUDES = -I src/engine -I src/game -I src/effects -I $(RL)
 WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)
-WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++11
+WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++11 --preload-file assets@assets
 
 DESKTOP_OUT = build/desktop
 WEB_OUT     = build/web
@@ -36,7 +36,7 @@ $(DESKTOP_OUT)/obj/%.o: src/%.cpp
 # Web
 web: $(RL)/libraylib.web.a
 	mkdir -p $(WEB_OUT)
-	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/game.html $(WEBINCLUDES) $(WEBLINK) --shell-file $(RL)/minshell.html
+	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/index.html $(WEBINCLUDES) $(WEBLINK) --shell-file $(RL)/minshell.html
 
 $(RL)/libraylib.web.a:
 	$(EMCC) -c $(RL)/rcore.c     $(WEBFLAGS) -o $(RL)/rcore.wasm.o

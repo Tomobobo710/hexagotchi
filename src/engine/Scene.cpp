@@ -72,10 +72,10 @@ void Scene::init() {
 }
 
 void Scene::update(float deltaTime) {
-    if (paused) return;
-
-    // Update input handler (must happen before actors read input)
+    // Always update input handler, even when paused (needed for pause menu and controls overlay)
     inputHandler.update();
+
+    if (paused) return;
 
     // Update camera
     if (camera) {
@@ -85,9 +85,19 @@ void Scene::update(float deltaTime) {
     // Update effects
     for (auto effect : effects) effect->update(deltaTime);
 
+    // Mouse state for clickable actors, computed once per frame in world
+    // space so it accounts for camera position/zoom.
+    Vector2 mouseWorldPos = inputHandler.getMouseWorldPosition();
+    bool mousePressedEdge = inputHandler.isMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool mouseReleasedEdge = inputHandler.isMouseButtonReleased(MOUSE_BUTTON_LEFT);
+
     // Update all active actors
     for (auto actor : actors) {
         if (actor->isActive()) {
+            if (actor->isClickable()) {
+                bool hoveredNow = CheckCollisionPointRec(mouseWorldPos, actor->getBounds());
+                actor->updateClickState(hoveredNow, mousePressedEdge, mouseReleasedEdge);
+            }
             actor->update(deltaTime);
         }
     }
@@ -133,6 +143,9 @@ void Scene::addEffect(SceneEffect* effect) {
 
 void Scene::setPaused(bool p) {
     paused = p;
+    if (paused) {
+        inputHandler.clearAllInputs();
+    }
 }
 
 bool Scene::isPaused() const {
@@ -198,4 +211,12 @@ void Scene::sortActorsByLayer() {
         [](SceneActor* a, SceneActor* b) {
             return a->getLayer() < b->getLayer();
         });
+}
+
+// Default implementation of togglePause - just sets paused state
+void Scene::togglePause() {
+    paused = !paused;
+    if (paused) {
+        inputHandler.clearAllInputs();
+    }
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(hexagotchi CXX C)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set essential CMake variables for C compilation and static library creation
@@ -87,14 +87,26 @@ endif()
 # Web/WASM build
 # ============================================
 if(RBUILD_WEB)
-    # Find emscripten
-    find_program(EMSCRIPTEN_EXECUTABLE emcc PATHS "$ENV{HOME}/emsdk/upstream/emscripten" "C:/bazdev/rEngine/emsdk/upstream/emscripten" NO_DEFAULT_PATH)
+    # Find emscripten. Prefer the repo-local emsdk submodule, then $EMSDK / $HOME.
+    find_program(EMSCRIPTEN_EXECUTABLE emcc
+        PATHS
+            "${CMAKE_SOURCE_DIR}/emsdk/upstream/emscripten"
+            "$ENV{EMSDK}/upstream/emscripten"
+            "$ENV{HOME}/emsdk/upstream/emscripten"
+        NO_DEFAULT_PATH)
 
     if(NOT EMSCRIPTEN_EXECUTABLE)
-        message(FATAL_ERROR "Emscripten not found. Set EMSDK environment or run emsdk activate.")
+        message(FATAL_ERROR "Emscripten not found. Expected ./emsdk submodule, or set EMSDK environment / run emsdk activate.")
     endif()
 
     message(STATUS "Found Emscripten: ${EMSCRIPTEN_EXECUTABLE}")
+
+    # emar lives next to emcc; derive it so we don't rely on it being on PATH.
+    get_filename_component(EMSCRIPTEN_BIN_DIR "${EMSCRIPTEN_EXECUTABLE}" DIRECTORY)
+    find_program(EMAR_EXECUTABLE emar PATHS "${EMSCRIPTEN_BIN_DIR}" NO_DEFAULT_PATH)
+    if(NOT EMAR_EXECUTABLE)
+        set(EMAR_EXECUTABLE emar)
+    endif()
 
     # Web output directory
     set(WEB_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/build/web")
@@ -111,7 +123,7 @@ if(RBUILD_WEB)
         COMMAND ${EMSCRIPTEN_EXECUTABLE} -c ${CMAKE_SOURCE_DIR}/raylib/src/rtext.c -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -o ${WEB_OUTPUT_DIR}/rtext.wasm.o
         COMMAND ${EMSCRIPTEN_EXECUTABLE} -c ${CMAKE_SOURCE_DIR}/raylib/src/rmodels.c -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -o ${WEB_OUTPUT_DIR}/rmodels.wasm.o
         COMMAND ${EMSCRIPTEN_EXECUTABLE} -c ${CMAKE_SOURCE_DIR}/raylib/src/raudio.c -Os -DPLATFORM_WEB -o ${WEB_OUTPUT_DIR}/raudio.wasm.o
-        COMMAND emar rcs ${WEB_OUTPUT_DIR}/libraylib.web.a ${WEB_OUTPUT_DIR}/rcore.wasm.o ${WEB_OUTPUT_DIR}/rshapes.wasm.o ${WEB_OUTPUT_DIR}/rtextures.wasm.o ${WEB_OUTPUT_DIR}/rtext.wasm.o ${WEB_OUTPUT_DIR}/rmodels.wasm.o ${WEB_OUTPUT_DIR}/raudio.wasm.o
+        COMMAND ${EMAR_EXECUTABLE} rcs ${WEB_OUTPUT_DIR}/libraylib.web.a ${WEB_OUTPUT_DIR}/rcore.wasm.o ${WEB_OUTPUT_DIR}/rshapes.wasm.o ${WEB_OUTPUT_DIR}/rtextures.wasm.o ${WEB_OUTPUT_DIR}/rtext.wasm.o ${WEB_OUTPUT_DIR}/rmodels.wasm.o ${WEB_OUTPUT_DIR}/raudio.wasm.o
         DEPENDS raylib/src/rcore.c raylib/src/rshapes.c raylib/src/rtextures.c raylib/src/rtext.c raylib/src/rmodels.c raylib/src/raudio.c
         WORKING_DIRECTORY ${WEB_OUTPUT_DIR}
     )
@@ -120,6 +132,7 @@ if(RBUILD_WEB)
     # List source files explicitly (emcc doesn't expand globs in custom commands)
     set(WEB_SOURCES
         ${CMAKE_SOURCE_DIR}/src/main.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Scene.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneActor.cpp
@@ -127,7 +140,10 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/SceneInputHandler.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneManager.cpp
         ${CMAKE_SOURCE_DIR}/src/game/BossScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/ControlsOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GameScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp

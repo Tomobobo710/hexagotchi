@@ -1,14 +1,11 @@
 # Build outputs
 build/
 build-web/
-<<<<<<< Updated upstream
-=======
 build/web/
 
-# Executables
-game
->>>>>>> Stashed changes
-game.exe
+# Executables (root only)
+/game
+/game.exe
 
 # Raylib build artifacts
 raylib/src/*.o
@@ -16,9 +13,11 @@ raylib/src/*.wasm.o
 raylib/src/libraylib.a
 raylib/src/libraylib.web.a
 
-<<<<<<< Updated upstream
 # GLFW build
 glfw/build/
+glfw/CMakeFiles/
+glfw/cmake_install.cmake
+glfw/Makefile
 
 # Emsdk toolchain (downloaded binaries, not the source)
 emsdk/node/
@@ -28,26 +27,9 @@ emsdk/downloads/
 emsdk/total_size.json
 emsdk/.gitignore
 
-# IDE
-=======
-# GLFW build artifacts
-glfw/build/
-glfw/CMakeFiles/
-glfw/cmake_install.cmake
-glfw/Makefile
-
-# Submodule directories are tracked - do not ignore
-
-# IDE files
->>>>>>> Stashed changes
-.vscode/
-.vs/
-
 # Emscripten build artifacts
 emsdk/.emscripten*
 emsdk/upstream/emscripten/cache/
-emsdk/node/
-emsdk/python/
 emsdk/java/
 emsdk/emscripten-*
 
@@ -56,3 +38,12 @@ CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
+
+# IDE
+.vscode/
+.vs/
+
+# Markdown (except docs we want)
+*.md
+!README.md
+!BUILD_INSTRUCTIONS.md
