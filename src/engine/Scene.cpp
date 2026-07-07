@@ -72,10 +72,10 @@ void Scene::init() {
 }
 
 void Scene::update(float deltaTime) {
-    if (paused) return;
-
-    // Update input handler (must happen before actors read input)
+    // Always update input handler, even when paused (needed for pause menu and controls overlay)
     inputHandler.update();
+
+    if (paused) return;
 
     // Update camera
     if (camera) {

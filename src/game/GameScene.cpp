@@ -132,10 +132,23 @@ void GameScene::draw() {
 }
 
 void GameScene::update(float deltaTime) {
-    // Skip physics update while paused or controls overlay is active
-    if (paused || controlsOverlay) {
+    // Always update input handler first (needed for pause menu and controls overlay input)
+    inputHandler.update();
+
+    // Handle pause menu and controls overlay input (before Scene::update which would skip due to paused)
+    if (controlsOverlay) {
+        // Controls overlay takes priority - it handles its own input
+        controlsOverlay->update(deltaTime);
         return;
     }
+
+    if (paused && pauseMenu) {
+        // Pause menu input handling
+        pauseMenu->update(deltaTime, &inputHandler);
+        return;
+    }
+
+    // Normal game update
     Scene::update(deltaTime);
     PlayerActor* player = (PlayerActor*)findActorByTag("player");
     if (!player) return;
