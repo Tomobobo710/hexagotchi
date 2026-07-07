@@ -1,8 +1,11 @@
 #include "SpriteTestScene.hpp"
-#include "SpriteLoader.hpp"
+#include "AssetPack.hpp"
 #include "../effects/StarfieldEffect.hpp"
 
-static const char* GOTCHI_DIR = "assets/gotchis/001";
+// Key relative to assets/ (matches how tools/pack_assets.cpp keys resources
+// inside assets.rres), not a filesystem path -- AssetPack reads packed
+// resources by this key, never touching the assets/ directory directly.
+static const char* GOTCHI_DIR = "gotchis/001";
 static const char* GOTCHI_ACTIONS[] = {"idle", "walk", "attack", "bounce", "blink", "hurt", "die"};
 static const float GOTCHI_FRAME_DURATION = 0.12f;
 static const float GOTCHI_DISPLAY_SCALE = 4.0f;  // Source frames are 64x64; scale up for visibility
@@ -16,7 +19,7 @@ void SpriteTestScene::init() {
     addEffect(new StarfieldEffect(getCamera()));
 
     for (const char* action : GOTCHI_ACTIONS) {
-        std::vector<Texture2D> frames = SpriteLoader::loadFrames(GOTCHI_DIR, action);
+        std::vector<Texture2D> frames = AssetPack::loadFrames(GOTCHI_DIR, action);
         if (!frames.empty()) {
             actionNames.push_back(action);
             animFrames[action] = frames;
@@ -46,7 +49,7 @@ void SpriteTestScene::selectAction(int index) {
 void SpriteTestScene::cleanup() {
     Scene::cleanup();
     for (auto& pair : animFrames) {
-        SpriteLoader::unloadFrames(pair.second);
+        AssetPack::unloadFrames(pair.second);
     }
     animFrames.clear();
 }
@@ -70,7 +73,7 @@ void SpriteTestScene::draw() {
     DrawText(clickBuf, 600, 40, 14, {180, 180, 220, 255});
 
     if (actionNames.empty()) {
-        DrawText("No gotchi frames found under assets/gotchis/001", 16, 40, 14, {255, 120, 120, 255});
+        DrawText("No gotchi frames found in assets.rres (gotchis/001)", 16, 40, 14, {255, 120, 120, 255});
         return;
     }
 

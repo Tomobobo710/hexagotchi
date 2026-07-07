@@ -4,12 +4,13 @@
 #include "game/GameScene.hpp"
 #include "game/BossScene.hpp"
 #include "game/InputTestScene.hpp"
-#include "game/HexBoard.hpp"
+#include "game/HexViewScene.hpp"
 #include "game/SpriteTestScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <cmath>
 
 // Global exit request flag
 bool exitRequested = false;
@@ -33,9 +34,31 @@ static Rectangle GetLetterboxRect() {
     float scaleX = (float)sw / (float)GAME_W;
     float scaleY = (float)sh / (float)GAME_H;
     float scale  = (scaleX < scaleY) ? scaleX : scaleY;
+
+    if (IsIntegerScalingEnabled()) {
+        // Snap down to the nearest whole multiple so every source pixel maps
+        // to an even NxN block -- avoids uneven/aliased pixel-art scaling.
+        float snapped = floorf(scale);
+        scale = (snapped >= 1.0f) ? snapped : scale;  // Don't snap to 0 on tiny windows
+    }
+
     float drawW  = GAME_W * scale;
     float drawH  = GAME_H * scale;
     return { (sw - drawW) * 0.5f, (sh - drawH) * 0.5f, drawW, drawH };
+}
+
+// GetMousePosition() reports raw OS-window pixels, but every button/click
+// check in the game (Button, SceneActor clickables, PauseMenuOverlay,
+// ControlsOverlay) assumes game-space (0..GAME_W, 0..GAME_H) coordinates.
+// Without this correction, mouse hit-testing is offset by the letterbox's
+// scale and centering whenever the window isn't exactly GAME_W x GAME_H --
+// call once per frame, before any scene/UI update.
+static void SyncMouseToGameSpace() {
+    Rectangle dest = GetLetterboxRect();
+    if (dest.width <= 0.0f || dest.height <= 0.0f) return;
+    float scale = dest.width / (float)GAME_W;
+    SetMouseOffset((int)-dest.x, (int)-dest.y);
+    SetMouseScale(1.0f / scale, 1.0f / scale);
 }
 
 void showDialog(std::vector<DialogEntry>& seq, int idx) {
@@ -50,6 +73,8 @@ void showDialog(std::vector<DialogEntry>& seq, int idx) {
 }
 
 void UpdateDrawFrame() {
+    SyncMouseToGameSpace();
+
     float dt = GetFrameTime();
     std::string currentScene = sceneManager->getCurrentSceneName();
 
@@ -69,12 +94,12 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("game", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_TWO) && currentScene != "boss")
         sceneManager->switchScene("boss", TransitionEffect::FADE, 0.5f);
-    if (IsKeyPressed(KEY_THREE) && currentScene != "hexboard")
-        sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
-    if (IsKeyPressed(KEY_FOUR) && currentScene != "input_test")
+    if (IsKeyPressed(KEY_THREE) && currentScene != "input_test")
         sceneManager->switchScene("input_test", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_FOUR) && currentScene != "sprite_test")
         sceneManager->switchScene("sprite_test", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_FIVE) && currentScene != "hexboard")
+        sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
 
     if (IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
         if (!dialog->isFinished()) {
@@ -111,18 +136,17 @@ void UpdateDrawFrame() {
         DrawRectangle(0, 0, GAME_W, 32, {0, 0, 0, 160});
         if (currentScene == "hexboard") {
             DrawText("HEXBOARD", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Hexboard  4: Input Test  ESC: Exit", GAME_W - 310, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "input_test") {
             DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Hexboard  4: Input Test  ESC: Exit", GAME_W - 310, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "sprite_test") {
             // SpriteTestScene draws its own "SPRITE TEST" title, skip the overlay title here.
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Hexboard  H: Dialog  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -152,12 +176,12 @@ int main() {
     SetTargetFPS(60);
 
     gameTarget = LoadRenderTexture(GAME_W, GAME_H);
-    SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_POINT);
 
     sceneManager = new SceneManager();
     sceneManager->registerScene("game", new GameScene());
     sceneManager->registerScene("boss", new BossScene());
-    sceneManager->registerScene("hexboard", new HexBoard());
+    sceneManager->registerScene("hexboard", new HexViewScene());
     sceneManager->registerScene("input_test", new InputTestScene());
     sceneManager->switchSceneImmediate("hexboard");
     sceneManager->registerScene("sprite_test", new SpriteTestScene());

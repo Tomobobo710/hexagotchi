@@ -31,6 +31,8 @@ git config --file .git/config --add submodule.glfw.url https://github.com/glfw/g
 git config --file .git/config --add submodule.glfw.active true
 git config --file .git/config --add submodule.emsdk.url https://github.com/emscripten-core/emsdk.git
 git config --file .git/config --add submodule.emsdk.active true
+git config --file .git/config --add submodule.rres.url https://github.com/raysan5/rres.git
+git config --file .git/config --add submodule.rres.active true
 git submodule update --init --recursive
 ```
 
@@ -111,6 +113,8 @@ git config --file .git/config --add submodule.glfw.url https://github.com/glfw/g
 git config --file .git/config --add submodule.glfw.active true
 git config --file .git/config --add submodule.emsdk.url https://github.com/emscripten-core/emsdk.git
 git config --file .git/config --add submodule.emsdk.active true
+git config --file .git/config --add submodule.rres.url https://github.com/raysan5/rres.git
+git config --file .git/config --add submodule.rres.active true
 git submodule update --init --recursive
 ```
 
@@ -147,7 +151,7 @@ make
 ```bash
 make web
 python -m http.server 8080
-# open http://localhost:8080/build/web/game.html
+# open http://localhost:8080/build/web/ (serves index.html)
 ```
 
 **Desktop (using CMake):**

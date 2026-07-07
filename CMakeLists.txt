@@ -19,7 +19,7 @@ option(RBUILD_WEB "Build WebAssembly target" OFF)
 
 if(RBUILD_DESKTOP)
     # Include directories
-    include_directories(src/engine src/game src/effects raylib/src glfw/include)
+    include_directories(src/engine src/game src/effects raylib/src glfw/include rres/src)
 
     # Source files
     file(GLOB ENGINE_SRCS "src/engine/*.cpp" "src/engine/*/*.cpp")
@@ -70,6 +70,7 @@ if(RBUILD_DESKTOP)
         src/effects
         raylib/src
         glfw/include
+        rres/src
     )
 
     target_link_libraries(game PRIVATE
@@ -77,10 +78,31 @@ if(RBUILD_DESKTOP)
         glfw
     )
 
+    # Statically link MinGW runtime to avoid missing DLLs (Windows only)
+    if(WIN32)
+        set_target_properties(game PROPERTIES
+            LINK_FLAGS "-static-libgcc -static-libstdc++ -static"
+        )
+    else()
+        # On Linux, we can't use -static because libGL is only available as a shared library
+        set_target_properties(game PROPERTIES
+            LINK_FLAGS "-static-libgcc -static-libstdc++"
+        )
+    endif()
+
     # Set output directories for desktop build
     set_target_properties(game PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build/desktop/$<CONFIG>
     )
+
+    # Copy assets.rres to the build output directory on Linux/Windows
+    if(NOT RBUILD_WEB)
+        add_custom_command(TARGET game POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/assets.rres
+            $<TARGET_FILE_DIR:game>/assets.rres
+        )
+    endif()
 endif()
 
 # ============================================

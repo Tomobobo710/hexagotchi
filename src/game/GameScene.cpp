@@ -10,15 +10,14 @@
 #include <cmath>
 
 GameScene::GameScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
-    world = nullptr;
 }
 
 GameScene::~GameScene() {
-    if (world) {
-        delete world;
-    }
+}
+
+void GameScene::init() {
     // Set up callbacks for the pause menu
-    pauseMenu = std::make_unique<PauseMenuOverlay>(*this);
+    pauseMenu = std::unique_ptr<PauseMenuOverlay>(new PauseMenuOverlay(*this));
     pauseMenu->onResume = [this]() {
         // Resume game - close pause menu and resume physics
         paused = false;
@@ -43,17 +42,6 @@ GameScene::~GameScene() {
     pauseMenu->onExitSelected = [this]() {
         onExitSelected();
     };
-}
-
-void GameScene::init() {
-    // Initialize the hex world map
-    HexWorldConfig config;
-    config.width = 32;   // 32 hexes wide
-    config.height = 18;  // 18 hexes tall
-    config.hexSize = 64.0f;
-
-    world = new HexWorld(config);
-    world->generate();
 
     PlayerActor* player = new PlayerActor({300.0f, 480.0f}, groundY);
     player->setInputHandler(getInputHandler());
@@ -111,12 +99,6 @@ void GameScene::draw() {
     Scene::draw();
 
     BeginMode2D(cam);
-    // Draw hex world tiles
-    if (world) {
-        for (HexTile* tile : world->getTiles()) {
-            tile->draw();
-        }
-    }
 
     for (SceneActor* a : getAllActors()) {
         if (a->getTag() == "gem") {
@@ -155,24 +137,21 @@ void GameScene::draw() {
 }
 
 void GameScene::update(float deltaTime) {
-    // Always update input handler first (needed for pause menu and controls overlay input)
-    inputHandler.update();
+    // Scene::update() always refreshes the input handler even while paused
+    // (see Scene::update), so the pause menu / controls overlay get fresh
+    // mouse/key edge-detection for their buttons without any extra polling.
+    Scene::update(deltaTime);
 
-    // Handle pause menu and controls overlay input (before Scene::update which would skip due to paused)
     if (controlsOverlay) {
-        // Controls overlay takes priority - it handles its own input
         controlsOverlay->update(deltaTime);
         return;
     }
 
-    if (paused && pauseMenu) {
-        // Pause menu input handling
-        pauseMenu->update(deltaTime, &inputHandler);
+    if (paused) {
+        if (pauseMenu) pauseMenu->update(deltaTime);
         return;
     }
 
-    // Normal game update
-    Scene::update(deltaTime);
     PlayerActor* player = (PlayerActor*)findActorByTag("player");
     if (!player) return;
 
@@ -249,7 +228,7 @@ void GameScene::onControlsSelected() {
     // This callback is invoked when "Controls" is selected in pause menu
     // Create and show controls overlay within this scene (not a separate scene)
     if (!controlsOverlay && getInputHandler()) {
-        controlsOverlay = std::make_unique<ControlsOverlay>(getInputHandler());
+        controlsOverlay = std::unique_ptr<ControlsOverlay>(new ControlsOverlay(getInputHandler()));
         controlsOverlay->open();
         // When closing controls, return to paused state with menu visible
         controlsOverlay->onClose = [this]() {
