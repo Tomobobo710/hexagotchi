@@ -27,6 +27,9 @@ private:
 private:
     HexWorld* world;
     std::unique_ptr<PauseMenuOverlay> pauseMenu;
+
+    // Camera panning state
+    bool cameraPanning;
 };
 
 #endif
