@@ -10,13 +10,12 @@
 #include <cmath>
 
 GameScene::GameScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
-    world = nullptr;
 }
 
 GameScene::~GameScene() {
-    if (world) {
-        delete world;
-    }
+}
+
+void GameScene::init() {
     // Set up callbacks for the pause menu
     pauseMenu = std::unique_ptr<PauseMenuOverlay>(new PauseMenuOverlay(*this));
     pauseMenu->onResume = [this]() {
@@ -43,17 +42,6 @@ GameScene::~GameScene() {
     pauseMenu->onExitSelected = [this]() {
         onExitSelected();
     };
-}
-
-void GameScene::init() {
-    // Initialize the hex world map
-    HexWorldConfig config;
-    config.width = 32;   // 32 hexes wide
-    config.height = 18;  // 18 hexes tall
-    config.hexSize = 64.0f;
-
-    world = new HexWorld(config);
-    world->generate();
 
     PlayerActor* player = new PlayerActor({300.0f, 480.0f}, groundY);
     player->setInputHandler(getInputHandler());
@@ -111,12 +99,6 @@ void GameScene::draw() {
     Scene::draw();
 
     BeginMode2D(cam);
-    // Draw hex world tiles
-    if (world) {
-        for (HexTile* tile : world->getTiles()) {
-            tile->draw();
-        }
-    }
 
     for (SceneActor* a : getAllActors()) {
         if (a->getTag() == "gem") {

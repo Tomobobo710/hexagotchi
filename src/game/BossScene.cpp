@@ -1,11 +1,33 @@
 #include "BossScene.hpp"
 #include "PlayerActor.hpp"
+#include "PauseMenuOverlay.hpp"
 #include "GameConstants.hpp"
 #include <cmath>
 
-BossScene::BossScene() : Scene(2400.0f, 900.0f, {8, 4, 18, 255}) {}
+BossScene::BossScene() : Scene(2400.0f, 900.0f, {8, 4, 18, 255}) {
+}
+
+BossScene::~BossScene() {
+}
 
 void BossScene::init() {
+    // Set up callbacks for the pause menu
+    pauseMenu = std::unique_ptr<PauseMenuOverlay>(new PauseMenuOverlay(*this));
+    pauseMenu->onResume = [this]() {
+        paused = false;
+        SceneInputHandler* ih = getInputHandler();
+        if (ih) {
+            ih->clearAllInputs();
+        }
+    };
+
+    pauseMenu->onClose = [this]() {
+    };
+
+    pauseMenu->onExitSelected = [this]() {
+        onExitSelected();
+    };
+
     PlayerActor* player = new PlayerActor({300.0f, 440.0f}, groundY);
     addActor(player);
 
@@ -41,6 +63,11 @@ void BossScene::draw() {
 
     Scene::draw();
 
+    // Draw pause menu overlay if paused
+    if (paused && pauseMenu) {
+        pauseMenu->draw();
+    }
+
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
 
@@ -74,6 +101,12 @@ void BossScene::draw() {
 
 void BossScene::update(float deltaTime) {
     Scene::update(deltaTime);
+
+    if (paused) {
+        if (pauseMenu) pauseMenu->update(deltaTime);
+        return;
+    }
+
     bossPhase += deltaTime;
 
     PlayerActor* player = (PlayerActor*)findActorByTag("player");
@@ -107,4 +140,27 @@ void BossScene::update(float deltaTime) {
         getCamera()->zoomTo(1.0f, 0.3f);
     }
     landedLastFrame = onGround;
+}
+
+void BossScene::togglePause() {
+    if (!paused) {
+        paused = true;
+        if (pauseMenu) {
+            pauseMenu->open();
+        }
+    } else {
+        paused = false;
+        if (pauseMenu) {
+            pauseMenu->close();
+            SceneInputHandler* ih = getInputHandler();
+            if (ih) {
+                ih->clearAllInputs();
+            }
+        }
+    }
+}
+
+void BossScene::onExitSelected() {
+    extern bool exitRequested;
+    exitRequested = true;
 }

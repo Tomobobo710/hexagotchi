@@ -2,7 +2,6 @@
 #define GAME_SCENE_HPP
 
 #include "Scene.hpp"
-#include "HexWorld.hpp"
 #include <memory>
 
 class PauseMenuOverlay;
@@ -21,7 +20,6 @@ public:
     void update(float deltaTime) override;
 
 private:
-    HexWorld* world;
     // Pause functionality
     void togglePause() override;
     bool isPaused() const override { return paused; }
