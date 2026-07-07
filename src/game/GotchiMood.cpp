@@ -271,7 +271,7 @@ void GotchiMood::processMoodOverlays(float deltaTime) {
     // Remove expired overlays
     activeOverlays.erase(
         std::remove_if(activeOverlays.begin(), activeOverlays.end(),
-            [](const auto& o) { return o.second <= 0; }),
+            [](const std::pair<GotchiMoodType, float>& o) { return o.second <= 0; }),
         activeOverlays.end()
     );
 

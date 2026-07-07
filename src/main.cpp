@@ -15,7 +15,6 @@
 #include "game/SchoolScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/DialogSequences.hpp"
-#include "engine/AssetPack.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -91,12 +90,16 @@ void UpdateDrawFrame() {
         dialogIndex = 0;
         if (currentScene == "game") showDialog(gameDialogs, 0);
         if (currentScene == "boss") showDialog(bossDialogs, 0);
-        if (currentScene == "pizza_parlor" || currentScene == "apartment" || currentScene == "therapist_office" || currentScene == "office" || currentScene == "school" || currentScene == "scene_select") dialog->hide();
         lastScene = currentScene;
     }
 
-    // Hide dialog on input test, hexboard, and gotchi scenes
-    if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" || currentScene == "gotchi" || currentScene == "scene_select") {
+    // Every scene without its own gameDialogs/bossDialogs-style sequence
+    // hides the shared dialog box every frame -- single list, no duplicated
+    // scene-name checks scattered across two separate blocks.
+    if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" ||
+        currentScene == "gotchi" || currentScene == "pizza_parlor" || currentScene == "apartment" ||
+        currentScene == "therapist_office" || currentScene == "office" || currentScene == "school" ||
+        currentScene == "scene_select") {
         dialog->hide();
     }
 
