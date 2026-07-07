@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <cmath>
 
 // Global exit request flag
 bool exitRequested = false;
@@ -32,9 +33,31 @@ static Rectangle GetLetterboxRect() {
     float scaleX = (float)sw / (float)GAME_W;
     float scaleY = (float)sh / (float)GAME_H;
     float scale  = (scaleX < scaleY) ? scaleX : scaleY;
+
+    if (IsIntegerScalingEnabled()) {
+        // Snap down to the nearest whole multiple so every source pixel maps
+        // to an even NxN block -- avoids uneven/aliased pixel-art scaling.
+        float snapped = floorf(scale);
+        scale = (snapped >= 1.0f) ? snapped : scale;  // Don't snap to 0 on tiny windows
+    }
+
     float drawW  = GAME_W * scale;
     float drawH  = GAME_H * scale;
     return { (sw - drawW) * 0.5f, (sh - drawH) * 0.5f, drawW, drawH };
+}
+
+// GetMousePosition() reports raw OS-window pixels, but every button/click
+// check in the game (Button, SceneActor clickables, PauseMenuOverlay,
+// ControlsOverlay) assumes game-space (0..GAME_W, 0..GAME_H) coordinates.
+// Without this correction, mouse hit-testing is offset by the letterbox's
+// scale and centering whenever the window isn't exactly GAME_W x GAME_H --
+// call once per frame, before any scene/UI update.
+static void SyncMouseToGameSpace() {
+    Rectangle dest = GetLetterboxRect();
+    if (dest.width <= 0.0f || dest.height <= 0.0f) return;
+    float scale = dest.width / (float)GAME_W;
+    SetMouseOffset((int)-dest.x, (int)-dest.y);
+    SetMouseScale(1.0f / scale, 1.0f / scale);
 }
 
 void showDialog(std::vector<DialogEntry>& seq, int idx) {
@@ -49,6 +72,8 @@ void showDialog(std::vector<DialogEntry>& seq, int idx) {
 }
 
 void UpdateDrawFrame() {
+    SyncMouseToGameSpace();
+
     float dt = GetFrameTime();
     std::string currentScene = sceneManager->getCurrentSceneName();
 
@@ -145,7 +170,7 @@ int main() {
     SetTargetFPS(60);
 
     gameTarget = LoadRenderTexture(GAME_W, GAME_H);
-    SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(gameTarget.texture, TEXTURE_FILTER_POINT);
 
     sceneManager = new SceneManager();
     sceneManager->registerScene("game", new GameScene());

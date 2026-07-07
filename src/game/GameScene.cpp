@@ -11,7 +11,7 @@
 
 GameScene::GameScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
     // Set up callbacks for the pause menu
-    pauseMenu = std::make_unique<PauseMenuOverlay>(*this);
+    pauseMenu = std::unique_ptr<PauseMenuOverlay>(new PauseMenuOverlay(*this));
     pauseMenu->onResume = [this]() {
         // Resume game - close pause menu and resume physics
         paused = false;
@@ -132,11 +132,21 @@ void GameScene::draw() {
 }
 
 void GameScene::update(float deltaTime) {
-    // Skip physics update while paused or controls overlay is active
-    if (paused || controlsOverlay) {
+    // Scene::update() always refreshes the input handler even while paused
+    // (see Scene::update), so the pause menu / controls overlay get fresh
+    // mouse/key edge-detection for their buttons without any extra polling.
+    Scene::update(deltaTime);
+
+    if (controlsOverlay) {
+        controlsOverlay->update(deltaTime);
         return;
     }
-    Scene::update(deltaTime);
+
+    if (paused) {
+        if (pauseMenu) pauseMenu->update(deltaTime);
+        return;
+    }
+
     PlayerActor* player = (PlayerActor*)findActorByTag("player");
     if (!player) return;
 
@@ -213,7 +223,7 @@ void GameScene::onControlsSelected() {
     // This callback is invoked when "Controls" is selected in pause menu
     // Create and show controls overlay within this scene (not a separate scene)
     if (!controlsOverlay && getInputHandler()) {
-        controlsOverlay = std::make_unique<ControlsOverlay>(getInputHandler());
+        controlsOverlay = std::unique_ptr<ControlsOverlay>(new ControlsOverlay(getInputHandler()));
         controlsOverlay->open();
         // When closing controls, return to paused state with menu visible
         controlsOverlay->onClose = [this]() {
