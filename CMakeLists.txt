@@ -77,6 +77,11 @@ if(RBUILD_DESKTOP)
         glfw
     )
 
+    # Statically link MinGW runtime to avoid missing DLLs
+    set_target_properties(game PROPERTIES
+        LINK_FLAGS "-static-libgcc -static-libstdc++ -static"
+    )
+
     # Set output directories for desktop build
     set_target_properties(game PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build/desktop/$<CONFIG>
