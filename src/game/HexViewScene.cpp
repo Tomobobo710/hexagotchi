@@ -14,6 +14,7 @@ HexViewScene::~HexViewScene() {
 }
 
 void HexViewScene::init() {
+    TraceLog(LOG_WARNING, "=== HEXVIEW init() called, generating world ===");
     // Set up callbacks for the pause menu
     pauseMenu = std::unique_ptr<PauseMenuOverlay>(new PauseMenuOverlay(*this));
     pauseMenu->onResume = [this]() {
@@ -42,12 +43,19 @@ void HexViewScene::init() {
     world->generate();
 
     getCamera()->setBoundary(0, -200, 4800.0f, 900.0f);
-    getCamera()->setLookaheadEnabled(true);
+    getCamera()->setLookaheadEnabled(false);  // Disable lookahead since we're not following anything
     getCamera()->setZoom(0.8f);
+
+    // Position camera at origin to see the hex tiles at (0,0) etc.
+    // World is 32 hexes wide (3072px) so center at ~1500,1000
+    getCamera()->setPosition(1536.0f, 960.0f);
 }
 
 void HexViewScene::draw() {
     Camera2D cam = getCamera()->getRaylibCamera();
+
+    TraceLog(LOG_WARNING, "HEXCAM target=(%.0f,%.0f) offset=(%.0f,%.0f) zoom=%.2f",
+        cam.target.x, cam.target.y, cam.offset.x, cam.offset.y, cam.zoom);
 
     Scene::draw();
 

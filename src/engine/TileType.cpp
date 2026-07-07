@@ -12,8 +12,8 @@ TileType::TileType(const std::string& name, const std::string& biome, TileDepth 
 }
 
 std::string TileType::getTexturePath() const {
-    // Path format: single_tiles/{biome}/{name}.png
-    // (AssetPack reads packed resources, not filesystem paths)
+    // Path format: single_tiles/{biome}/{name}.png (relative to assets/)
+    // This matches the key format used by tools/pack_assets.cpp
     return "single_tiles/" + biome + "/" + name + ".png";
 }
 

@@ -2,6 +2,7 @@
 #include <random>
 #include <cmath>
 #include <algorithm>
+#include <cstdio>
 
 // Simple Perlin-like noise implementation
 HexWorld::HexWorld(const HexWorldConfig& cfg)

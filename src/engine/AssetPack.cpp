@@ -20,6 +20,7 @@ Texture2D loadTexture(const std::string& key) {
     rresResourceChunk chunk = rresLoadResourceChunk(packFile.c_str(), id);
 
     if (chunk.data.raw == nullptr) {
+        TraceLog(LOG_WARNING, "ASSETPACK miss: key='%s' id=%08X", key.c_str(), id);
         return Texture2D{0};
     }
 

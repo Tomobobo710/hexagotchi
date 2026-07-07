@@ -11,6 +11,7 @@
 #include "game/PizzaParlorScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/DialogSequences.hpp"
+#include "engine/AssetPack.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -217,22 +218,26 @@ int main() {
         680.0f, 160.0f
     );
 
+    // Initialize the asset pack system
+    AssetPack::setPackFile("assets.rres");
+
     sceneManager = new SceneManager();
     sceneManager->registerScene("game", new GameScene());
     sceneManager->registerScene("boss", new BossScene());
     sceneManager->registerScene("hexboard", new HexViewScene());
     sceneManager->registerScene("input_test", new InputTestScene());
     sceneManager->registerScene("gotchi", new GotchiScene());
-    sceneManager->switchSceneImmediate("hexboard");
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
     sceneManager->registerScene("pizza_parlor", new PizzaParlorScene(dialog));
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
+
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
         (shotScene && shotScene[0]) ? shotScene : "game");
 #else
     sceneManager->switchSceneImmediate("game");
 #endif
+
     dialog->setAnchor("bottom");
     dialog->setCharacterRevealSpeed(45.0f);
 

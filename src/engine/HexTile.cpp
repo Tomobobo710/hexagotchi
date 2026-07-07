@@ -1,6 +1,5 @@
 #include "HexTile.hpp"
 #include <cmath>
-
 #include "AssetPack.hpp"
 
 // Convert hex coordinates to pixel coordinates (flat-top hex)
@@ -34,8 +33,8 @@ Vector2 HexTile::getWorldPosition() const {
 
 void HexTile::loadTexture() {
     if (!tileType) return;
-    std::string path = tileType->getTexturePath();
-    Texture2D texture = AssetPack::loadTexture(path);
+    std::string key = tileType->getTexturePath();  // e.g., "single_tiles/ocean/ocean_0.png"
+    Texture2D texture = AssetPack::loadTexture(key);
     setTexture(texture);
 }
 
@@ -62,10 +61,27 @@ void HexTile::updateVertices() {
 
 void HexTile::draw() {
     if (!visible) return;
+    if (texture.id != 0) {
+        static int n = 0;
+        if (n < 3) {
+            TraceLog(LOG_WARNING, "=== HEXDRAW pos=(%.0f,%.0f) texid=%d %dx%d a=%d ===",
+                position.x, position.y, texture.id, texture.width, texture.height, color.a);
+            n++;
+        }
+    }
 
     // Draw the tile texture if loaded
     if (texture.id != 0) {
-        DrawTextureV(texture, Vector2{position.x - hexSize, position.y - hexSize * std::sqrt(3.0f) / 2.0f}, color);
+        // Draw texture scaled to fit the hex cell using DrawTexturePro
+        // The hex cell is hexSize*2 wide and hexSize*sqrt(3) tall
+        Rectangle src = { 0, 0, (float)texture.width, (float)texture.height };
+        Rectangle dest = {
+            position.x - hexSize,
+            position.y - hexSize * std::sqrt(3.0f) / 2.0f,
+            hexSize * 2.0f,
+            hexSize * std::sqrt(3.0f)
+        };
+        DrawTexturePro(texture, src, dest, {0, 0}, 0.0f, color);
     } else if (tileType) {
         // Draw hexagon outline/shape
         Color hexColor = tileType->getBiome() == "ocean" ? BLUE :
