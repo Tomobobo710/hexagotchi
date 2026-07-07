@@ -6,7 +6,16 @@ RL   = raylib/src
 SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp)
 INCLUDES    = -I src/engine -I src/game -I src/effects -I $(RL) -I glfw/include -I rres/src
 CXXFLAGS    = -std=c++14 $(INCLUDES)
+
+# Desktop linker flags differ per platform: Windows (devkitPro/Cygwin) links
+# against the Win32 GL/window libs, Linux needs raylib's X11 dependencies
+# instead. Windows_NT is set by cmd.exe/PowerShell's environment; anything
+# else falls through to the Linux flags.
+ifeq ($(OS),Windows_NT)
+LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm
+else
 LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -pthread -lm -ldl -lX11 -lXrandr -lXinerama -lXi -lXcursor
+endif
 
 WEBINCLUDES = -I src/engine -I src/game -I src/effects -I $(RL) -I rres/src
 WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)
@@ -66,7 +75,7 @@ $(ASSET_PACK): $(PACKER_BIN) $(ASSET_FILES)
 # Web
 web: $(ASSET_PACK) $(RL)/libraylib.web.a
 	mkdir -p $(WEB_OUT)
-	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/index.html $(WEBINCLUDES) $(WEBLINK) --shell-file $(RL)/minshell.html
+	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/index.html $(WEBINCLUDES) $(WEBLINK) --shell-file web/shell.html
 
 $(RL)/libraylib.web.a:
 	$(EMCC) -c $(RL)/rcore.c     $(WEBFLAGS) -o $(RL)/rcore.wasm.o

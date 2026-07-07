@@ -15,7 +15,7 @@ static const int GAME_H = 720;
 //        of GAME_W/GAME_H.
 // false: scale is the exact fractional fit to the window (no wasted space,
 //        but pixel-art edges can look uneven/aliased at non-integer scales).
-static const bool GAME_INTEGER_SCALING_DEFAULT = true;
+static const bool GAME_INTEGER_SCALING_DEFAULT = false;
 
 inline bool& IntegerScalingState() {
     static bool value = GAME_INTEGER_SCALING_DEFAULT;
