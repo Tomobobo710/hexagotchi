@@ -97,11 +97,15 @@ if(RBUILD_DESKTOP)
 
     # Copy assets.rres to the build output directory on Linux/Windows
     if(NOT RBUILD_WEB)
-        add_custom_command(TARGET game POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_SOURCE_DIR}/assets.rres
-            $<TARGET_FILE_DIR:game>/assets.rres
-        )
+        if(EXISTS ${CMAKE_SOURCE_DIR}/assets.rres)
+            add_custom_command(TARGET game POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${CMAKE_SOURCE_DIR}/assets.rres
+                $<TARGET_FILE_DIR:game>/assets.rres
+            )
+        else()
+            message(WARNING "assets.rres not found. Run tools/pack_assets.sh to build it.")
+        endif()
     endif()
 endif()
 

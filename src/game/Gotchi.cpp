@@ -1,4 +1,5 @@
 #include "Gotchi.hpp"
+#include "SpriteLoader.hpp"
 #include <cmath>
 #include <iostream>
 
