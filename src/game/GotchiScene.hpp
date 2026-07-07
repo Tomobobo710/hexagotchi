@@ -19,6 +19,8 @@ public:
 private:
     Gotchi* gotchi = nullptr;
     std::string gotchiDir;
+    float simTime_ = 0.0f;  // Total simulation time
+    int frameCount_ = 0;    // Frame counter for animation
 };
 
 #endif // GOTCHI_SCENE_HPP
