@@ -31,6 +31,7 @@ Vector2 HexTile::getWorldPosition() const {
 }
 
 void HexTile::loadTexture() {
+    if (!tileType) return;
     std::string path = tileType->getTexturePath();
     Texture2D texture = LoadTexture(path.c_str());
     setTexture(texture);
@@ -63,7 +64,7 @@ void HexTile::draw() {
     // Draw the tile texture if loaded
     if (texture.id != 0) {
         DrawTextureV(texture, Vector2{position.x - hexSize, position.y - hexSize * std::sqrt(3.0f) / 2.0f}, color);
-    } else {
+    } else if (tileType) {
         // Draw hexagon outline/shape
         Color hexColor = tileType->getBiome() == "ocean" ? BLUE :
                         tileType->getBiome() == "sand" ? YELLOW :
