@@ -34,6 +34,9 @@ Gotchi::Gotchi(Vector2 position)
     animPlay_.clear();
     animSad_.clear();
     animHappy_.clear();
+    animBounce_.clear();
+    animHurt_.clear();
+    animWalk_.clear();
 }
 
 
@@ -122,6 +125,9 @@ void Gotchi::update(float deltaTime) {
 }
 
 void Gotchi::updateStats(float ticks) {
+    // Age increases with each tick (time passing)
+    stats_.addStat(SecondaryStat::AGE, ticks);
+
     // Core vital stats drain/gain
     stats_.addStat(SecondaryStat::FOOD_LEVEL, 5.0f * ticks);     // Hunger increases
     stats_.addStat(SecondaryStat::HYDRATION, 3.0f * ticks);     // Thirst increases
@@ -144,14 +150,16 @@ void Gotchi::updateStats(float ticks) {
         stats_.addStat(EmotionalStat::HAPPINESS, 1.0f * ticks);
     }
 
-    // Clamp all stats to valid ranges
-    stats_.setStat(SecondaryStat::FOOD_LEVEL, stats_.getNormalizedStat(SecondaryStat::FOOD_LEVEL));
-    stats_.setStat(SecondaryStat::HYDRATION, stats_.getNormalizedStat(SecondaryStat::HYDRATION));
-    stats_.setStat(SecondaryStat::SLEEP_DEBT, stats_.getNormalizedStat(SecondaryStat::SLEEP_DEBT));
-    stats_.setStat(SecondaryStat::ENERGY, stats_.getNormalizedStat(SecondaryStat::ENERGY));
-    stats_.setStat(SecondaryStat::CLEANLINESS, stats_.getNormalizedStat(SecondaryStat::CLEANLINESS));
-    stats_.setStat(EmotionalStat::HAPPINESS, stats_.getNormalizedStat(EmotionalStat::HAPPINESS));
-    stats_.setStat(EmotionalStat::EXCITEMENT, stats_.getNormalizedStat(EmotionalStat::EXCITEMENT));
+    // Clamp all stats to valid ranges (use the stat's built-in clamping via setStat)
+    // Note: We don't use getNormalizedStat here because that returns 0-1 values
+    // which would incorrectly clamp all stats to that range
+    stats_.setStat(SecondaryStat::FOOD_LEVEL, stats_.getStat(SecondaryStat::FOOD_LEVEL));
+    stats_.setStat(SecondaryStat::HYDRATION, stats_.getStat(SecondaryStat::HYDRATION));
+    stats_.setStat(SecondaryStat::SLEEP_DEBT, stats_.getStat(SecondaryStat::SLEEP_DEBT));
+    stats_.setStat(SecondaryStat::ENERGY, stats_.getStat(SecondaryStat::ENERGY));
+    stats_.setStat(SecondaryStat::CLEANLINESS, stats_.getStat(SecondaryStat::CLEANLINESS));
+    stats_.setStat(EmotionalStat::HAPPINESS, stats_.getStat(EmotionalStat::HAPPINESS));
+    stats_.setStat(EmotionalStat::EXCITEMENT, stats_.getStat(EmotionalStat::EXCITEMENT));
 
     // Health impacts from unmet needs
     float healthDrain = 0.0f;
@@ -428,6 +436,7 @@ void Gotchi::setAction(const std::string& action) {
     actionTimer_ = 0.0f;
 
     // Animation setup based on action
+    // Maps logical actions to available animation files
     if (action == "idle") {
         clearAnimation();
         if (!animIdle_.empty()) {
@@ -435,12 +444,14 @@ void Gotchi::setAction(const std::string& action) {
             play();
         }
     } else if (action == "move") {
+        // Map 'move' to 'walk' animation
         clearAnimation();
         if (!animMove_.empty()) {
             setAnimationFrames(animMove_, 0.1f, true);
             play();
         }
     } else if (action == "eat") {
+        // Map 'eat' to 'bounce' animation (mouth movement)
         clearAnimation();
         if (!animEat_.empty()) {
             setAnimationFrames(animEat_, 0.15f, false);
@@ -451,23 +462,42 @@ void Gotchi::setAction(const std::string& action) {
         if (!animSleep_.empty()) {
             setAnimationFrames(animSleep_, 0.3f, true);
             play();
+        } else if (!animIdle_.empty()) {
+            // Fallback to idle if sleep not available
+            setAnimationFrames(animIdle_, 0.3f, true);
+            play();
         }
     } else if (action == "play") {
+        // Map 'play' to 'bounce' animation
         clearAnimation();
         if (!animPlay_.empty()) {
             setAnimationFrames(animPlay_, 0.1f, false);
             play();
+        } else if (!animBounce_.empty()) {
+            setAnimationFrames(animBounce_, 0.1f, false);
+            play();
         }
     } else if (action == "sad") {
+        // Map 'sad' to 'hurt' animation
         clearAnimation();
         if (!animSad_.empty()) {
             setAnimationFrames(animSad_, 0.25f, true);
             play();
+        } else if (!animHurt_.empty()) {
+            setAnimationFrames(animHurt_, 0.25f, true);
+            play();
         }
     } else if (action == "happy") {
+        // Map 'happy' to 'idle' or 'bounce' animation
         clearAnimation();
         if (!animHappy_.empty()) {
             setAnimationFrames(animHappy_, 0.15f, true);
+            play();
+        } else if (!animBounce_.empty()) {
+            setAnimationFrames(animBounce_, 0.15f, true);
+            play();
+        } else if (!animIdle_.empty()) {
+            setAnimationFrames(animIdle_, 0.15f, true);
             play();
         }
     }
@@ -492,12 +522,15 @@ bool Gotchi::loadAnimationFrames(const std::string& basePath) {
     // Returns true if at least idle frames were loaded
 
     animIdle_ = SpriteLoader::loadFrames(basePath, "idle");
-    animMove_ = SpriteLoader::loadFrames(basePath, "move");
-    animEat_ = SpriteLoader::loadFrames(basePath, "eat");
+    animMove_ = SpriteLoader::loadFrames(basePath, "walk");  // Map move to walk
+    animEat_ = SpriteLoader::loadFrames(basePath, "bounce");  // Map eat to bounce
     animSleep_ = SpriteLoader::loadFrames(basePath, "sleep");
-    animPlay_ = SpriteLoader::loadFrames(basePath, "play");
-    animSad_ = SpriteLoader::loadFrames(basePath, "sad");
+    animPlay_ = SpriteLoader::loadFrames(basePath, "bounce");  // Map play to bounce
+    animSad_ = SpriteLoader::loadFrames(basePath, "hurt");  // Map sad to hurt
     animHappy_ = SpriteLoader::loadFrames(basePath, "happy");
+    animBounce_ = SpriteLoader::loadFrames(basePath, "bounce");
+    animHurt_ = SpriteLoader::loadFrames(basePath, "hurt");
+    animWalk_ = SpriteLoader::loadFrames(basePath, "walk");
 
     // Return true if at least idle frames were loaded
     return !animIdle_.empty();
@@ -511,6 +544,9 @@ void Gotchi::unloadAnimations() {
     animPlay_.clear();
     animSad_.clear();
     animHappy_.clear();
+    animBounce_.clear();
+    animHurt_.clear();
+    animWalk_.clear();
 }
 
 std::string Gotchi::serialize() const {

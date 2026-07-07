@@ -96,13 +96,18 @@ private:
     float actionTimer_;
 
     // Animation frames (loaded at init)
+    // Note: Only animations that exist in assets are loaded
+    // Missing animations are mapped to available ones in setAction()
     std::vector<Texture2D> animIdle_;
-    std::vector<Texture2D> animMove_;
-    std::vector<Texture2D> animEat_;
+    std::vector<Texture2D> animMove_;      // mapped to walk
+    std::vector<Texture2D> animEat_;       // mapped to bounce
     std::vector<Texture2D> animSleep_;
-    std::vector<Texture2D> animPlay_;
-    std::vector<Texture2D> animSad_;
-    std::vector<Texture2D> animHappy_;
+    std::vector<Texture2D> animPlay_;      // mapped to bounce
+    std::vector<Texture2D> animSad_;       // mapped to hurt
+    std::vector<Texture2D> animHappy_;     // mapped to idle/bounce
+    std::vector<Texture2D> animBounce_;    // available animation
+    std::vector<Texture2D> animHurt_;      // available animation
+    std::vector<Texture2D> animWalk_;      // available animation
 };
 
 #endif // GOTCHI_HPP
