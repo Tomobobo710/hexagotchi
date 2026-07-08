@@ -1,7 +1,7 @@
 #include "OfficeScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
-#include "rlgl.h"
+#include "SceneDebugCamera.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR     = {139, 172, 15, 255};
@@ -16,6 +16,9 @@ void OfficeScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
     background = AssetPack::loadTexture("backgrounds/officebg.png");
+
+    portal = new PortalEffect();
+    portal->init();
 
     tom = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
@@ -81,6 +84,26 @@ void OfficeScene::init() {
 void OfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
+    if (portal) portal->update(deltaTime);
+    updateSceneDebugCamera(portal, getCamera(), deltaTime);
+
+    if (portal) {
+        // Numpad +/-: uniform scale. Numpad 4/6: yaw (rotate around Y).
+        // PortalEffect-specific (not part of SceneEffect's generic
+        // debug-camera interface), so handled directly here rather than
+        // through SceneDebugCamera.hpp.
+        float scale = portal->getObjectScale();
+        if (IsKeyDown(KEY_KP_ADD)) scale += 0.6f * deltaTime;
+        if (IsKeyDown(KEY_KP_SUBTRACT)) scale -= 0.6f * deltaTime;
+        if (scale < 0.1f) scale = 0.1f;
+        portal->setObjectScale(scale);
+
+        float yaw = portal->getObjectYaw();
+        if (IsKeyDown(KEY_KP_6)) yaw += 60.0f * deltaTime;
+        if (IsKeyDown(KEY_KP_4)) yaw -= 60.0f * deltaTime;
+        portal->setObjectYaw(yaw);
+    }
+
     if (activeEvent < 0) {
         // Ambient: Tom balancing/wobbling on the yoga ball, boss absent
         // (only appears during the scripted events, called into "his office").
@@ -111,35 +134,23 @@ void OfficeScene::draw() {
     drawOffice();
     EndMode2D();
 
-    // 3D object layer: renders ON TOP of the background art but BEHIND the
-    // actors, since the actor draws come after this. Needs its own 3D mode
-    // (can't share the 2D camera), so the 2D pass is split around it.
-    draw3DObjectLayer();
+    // Portal/merge-machine: renders ON TOP of the background art but BEHIND
+    // the actors, since the actor draws come after this. Needs its own 3D
+    // mode (can't share the 2D camera), so the 2D pass is split around it.
+    if (portal) portal->drawBackground();
 
-    // Actors last, on top of the 3D object.
+    // Actors last, on top of the portal.
     BeginMode2D(cam);
     drawTom(tom->getPosition());
     if (activeEvent >= 0) drawBoss(boss->getPosition());
     EndMode2D();
-}
 
-void OfficeScene::draw3DObjectLayer() {
-    Camera3D cam3d = {};
-    cam3d.position   = {0.0f, 0.0f, 6.0f};
-    cam3d.target     = {0.0f, 0.0f, 0.0f};
-    cam3d.up         = {0.0f, 1.0f, 0.0f};
-    cam3d.fovy       = 45.0f;
-    cam3d.projection = CAMERA_PERSPECTIVE;
-
-    cubeSpin += GetFrameTime() * 40.0f;
-
-    BeginMode3D(cam3d);
-        rlPushMatrix();
-        rlRotatef(cubeSpin, 0.3f, 1.0f, 0.0f);
-        DrawCube({0.0f, 0.0f, 0.0f}, 1.5f, 1.5f, 1.5f, Color{200, 80, 80, 255});
-        DrawCubeWires({0.0f, 0.0f, 0.0f}, 1.5f, 1.5f, 1.5f, WHITE);
-        rlPopMatrix();
-    EndMode3D();
+    drawSceneDebugCameraReadout(portal, 16, 16);
+    if (portal) {
+        const char* txt = TextFormat("scale: %.2f (Numpad +/-)   yaw: %.1f deg (Numpad 4/6)",
+            portal->getObjectScale(), portal->getObjectYaw());
+        DrawText(txt, 16, 60, 18, Color{255, 220, 140, 255});
+    }
 }
 
 void OfficeScene::cleanup() {
@@ -152,6 +163,8 @@ void OfficeScene::cleanup() {
     lineIndex = 0;
 
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
+
+    if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
 }
 
 void OfficeScene::triggerEvent(int index) {

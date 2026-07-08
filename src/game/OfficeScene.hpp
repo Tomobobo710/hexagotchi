@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "PortalEffect.hpp"
 #include <vector>
 #include <string>
 
@@ -53,10 +54,12 @@ private:
     void drawBoss(Vector2 pos);
     void drawOffice();
 
-    // Proof-of-concept 3D object drawn in front of the background art but
-    // behind the actors (see OfficeScene::draw()).
-    void draw3DObjectLayer();
-    float cubeSpin = 0.0f;
+    // The merge-machine/teleporter, drawn in front of the background art but
+    // behind the actors (see OfficeScene::draw() -- it's a SceneEffect but
+    // called directly here instead of via addEffect()'s normal background/
+    // foreground split, since neither of those slots alone gives that
+    // ordering).
+    PortalEffect* portal = nullptr;
 };
 
 #endif // OFFICE_SCENE_HPP
