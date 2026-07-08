@@ -6,12 +6,7 @@
         "survival": 1.0
     },
     "firstMergeBucket": 0,
-    "flags": {
-        "test": {
-            "t": "bool",
-            "v": true
-        }
-    },
+    "flags": {},
     "mergeLockTimer": 0.0,
     "mode": 0,
     "needs": {
