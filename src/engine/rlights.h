@@ -89,7 +89,8 @@ void UpdateLightValues(Shader shader, Light light);         // Send light proper
 *
 ************************************************************************************/
 
-#if defined(RLIGHTS_IMPLEMENTATION)
+#if defined(RLIGHTS_IMPLEMENTATION) && !defined(RLIGHTS_IMPLEMENTATION_DONE)
+#define RLIGHTS_IMPLEMENTATION_DONE
 
 #include "raylib.h"
 

@@ -19,7 +19,7 @@ void ScenePreviewScene::init() {
     entries.push_back({"PIZZA PARLOR", "backgrounds/parlorbg.png", Color{30, 20, 20, 255}, nullptr});
     entries.push_back({"APARTMENT", "backgrounds/apartmentbg.png", Color{22, 18, 26, 255}, nullptr});
     entries.push_back({"THERAPIST'S OFFICE", "backgrounds/therapistbg.png", Color{26, 22, 20, 255}, nullptr});
-    entries.push_back({"DATATEK SOLUTIONS (OFFICE)", "", Color{20, 22, 28, 255}, nullptr});
+    entries.push_back({"DATATEK SOLUTIONS (OFFICE)", "backgrounds/officebg.png", Color{20, 22, 28, 255}, nullptr});
     entries.push_back({"SCHOOL PICKUP", "backgrounds/schoolbg.png", Color{202, 232, 250, 255},
         []() -> SceneEffect* { return new SchoolSkyEffect(); }});
 

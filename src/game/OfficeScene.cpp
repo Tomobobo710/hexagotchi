@@ -1,5 +1,6 @@
 #include "OfficeScene.hpp"
 #include "GameConstants.hpp"
+#include "AssetPack.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR     = {139, 172, 15, 255};
@@ -12,6 +13,8 @@ OfficeScene::OfficeScene(DialogBox* sharedDialog)
 
 void OfficeScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    background = AssetPack::loadTexture("backgrounds/officebg.png");
 
     tom = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
@@ -114,6 +117,8 @@ void OfficeScene::cleanup() {
     events.clear();
     activeEvent = -1;
     lineIndex = 0;
+
+    if (background.id != 0) { UnloadTexture(background); background = {0}; }
 }
 
 void OfficeScene::triggerEvent(int index) {
@@ -174,6 +179,8 @@ void OfficeScene::focusCameraOn(int actorIndex, bool shake) {
 
 // --- Set dressing ---------------------------------------------------------
 void OfficeScene::drawOffice() {
+    if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
+
     // Open-plan "flex workspace" -- rows of identical hot-desks, mostly empty
     Color deskColor = {70, 70, 85, 255};
     Color deskDark = {50, 50, 62, 255};

@@ -31,6 +31,8 @@ public:
     bool isPlayingEvent() const;
 
 private:
+    Texture2D background = {0};
+
     SceneActor* tom = nullptr;
     SceneActor* boss  = nullptr;
 
