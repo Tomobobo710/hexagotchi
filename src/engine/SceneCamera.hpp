@@ -64,6 +64,7 @@ public:
     
     // Screen shake effect
     void shake(float intensity, float duration);
+    bool isShaking() const;
     
     // Boundary clamping
     void setBoundary(float minX, float minY, float maxX, float maxY);

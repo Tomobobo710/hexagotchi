@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "CityWindowEffect.hpp"
 #include <vector>
 #include <string>
 
@@ -38,6 +39,7 @@ public:
 private:
     SceneActor* tom = nullptr;
     Texture2D background = {0};
+    CityWindowEffect* cityWindow = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 

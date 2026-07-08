@@ -90,7 +90,12 @@ void SchoolSkyEffect::update(float deltaTime) {
 void SchoolSkyEffect::RespawnCloud(CloudInstance& cloud, bool offscreenRight) {
     // X: either scattered across the visible width (initial placement) or
     // placed just past the right edge (recycling one that drifted off-left).
-    float x = offscreenRight ? (6.5f + (float)(GetRandomValue(0, 150)) / 100.0f)
+    // Recycle range is as wide as the initial scatter (6.5 to 12.5, matching
+    // the 6-unit spread of -5.5 to 5.5) -- a narrow fixed recycle band made
+    // every cloud funnel through the same ~1.5-unit slot on respawn, so after
+    // the first cycle they'd drift in near-lockstep and clump/gap instead of
+    // staying naturally staggered like the initial scatter.
+    float x = offscreenRight ? (6.5f + (float)(GetRandomValue(0, 600)) / 100.0f)
                               : (float)(GetRandomValue(-550, 550)) / 100.0f;
     // The 3D camera (fovy=28 at z=10) always renders into the FULL 1280x720
     // canvas regardless of where the 2D SceneCamera is panned/zoomed to at

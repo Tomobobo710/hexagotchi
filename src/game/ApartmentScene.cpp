@@ -21,6 +21,9 @@ void ApartmentScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/apartmentbg.png");
 
+    cityWindow = new CityWindowEffect();
+    addEffect(cityWindow);
+
     // Ported from the JS prototype's "Monday Morning" intro episode --
     // same beats (alarm, mirror, Karen's text, broken coffee machine),
     // adapted into our speaker/text/focus/shake line format. Karen's text
@@ -49,13 +52,27 @@ void ApartmentScene::init() {
 void ApartmentScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
+    if (cityWindow && cityWindow->consumeTrainShakeRequest()) {
+        // Duration computed by the effect itself from the actual visible
+        // window/lead-in/trail-out timing, not a fixed guess -- see
+        // CityWindowEffect::getShakeDuration().
+        getCamera()->shake(6.0f, cityWindow->getShakeDuration());
+    }
+
     if (activeEvent < 0) {
         // Ambient: slow slumped sway, nothing else in the room moving --
         // this is meant to feel emptier and quieter than the pizza parlor.
         tomSlumpTimer += deltaTime * 1.2f;
         tom->setPosition({470.0f, 380.0f + sinf(tomSlumpTimer) * 3.0f});
 
-        getCamera()->setPosition(512.0f, 288.0f);
+        // setPosition() hard-resets camera position every single frame --
+        // if that ran while a shake (from the train passing) is mid-flight,
+        // it would stomp the shake's per-frame random offset right back to
+        // this fixed point before it was ever visible. Skip the re-pin for
+        // the shake's duration so the train's camera hit actually reads.
+        if (!getCamera()->isShaking()) {
+            getCamera()->setPosition(512.0f, 288.0f);
+        }
         getCamera()->setZoom(1.0f);
     }
 
@@ -83,6 +100,7 @@ void ApartmentScene::draw() {
 
 void ApartmentScene::cleanup() {
     Scene::cleanup();
+    cityWindow = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the event table -- reset so events doesn't accumulate
