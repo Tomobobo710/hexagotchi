@@ -66,7 +66,11 @@ public:
 
     // Input
     SceneInputHandler* getInputHandler();
-    
+
+    // Scene manager access
+    void setSceneManager(void* manager);
+    void* getSceneManager() const;
+
 protected:
     std::vector<SceneActor*> actors;
     std::vector<SceneActor*> actorsToRemove;
@@ -76,6 +80,7 @@ protected:
     bool paused;
     Color backgroundColor;
     float width, height;
+    void* sceneMgr_;  // Pointer to SceneManager (opaque for header-only dependency)
     
     // Helper methods
     void processRemovals();

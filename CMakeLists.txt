@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(hexagotchi CXX C)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set essential CMake variables for C compilation and static library creation
@@ -19,13 +19,14 @@ option(RBUILD_WEB "Build WebAssembly target" OFF)
 
 if(RBUILD_DESKTOP)
     # Include directories
-    include_directories(src/engine src/game src/effects raylib/src glfw/include rres/src)
+    include_directories(src/engine src/game src/effects src/events src/flags raylib/src glfw/include rres/src)
 
     # Source files
     file(GLOB ENGINE_SRCS "src/engine/*.cpp" "src/engine/*/*.cpp")
     file(GLOB GAME_SRCS "src/game/*.cpp")
     file(GLOB EFFECTS_SRCS "src/effects/*.cpp")
-    set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS})
+    file(GLOB EVENT_SRCS "src/events/*.cpp")
+    set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS} ${EVENT_SRCS})
 
     # Build raylib as a static library
     add_library(raylib STATIC
@@ -186,9 +187,11 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/OfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/CityWindowEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/SchoolSkyEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp

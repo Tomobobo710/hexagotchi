@@ -1,5 +1,5 @@
-#ifndef GOTCHI_SCENE_HPP
-#define GOTCHI_SCENE_HPP
+#ifndef GOTCHI_STATS_SCENE_HPP
+#define GOTCHI_STATS_SCENE_HPP
 
 #include "Scene.hpp"
 #include "Gotchi.hpp"
@@ -8,18 +8,16 @@
 #include <vector>
 #include <memory>
 
-// Scene 8 - Gotchi display scene
-// Shows the Gotchi character centered on screen, updating every frame
-class GotchiScene : public Scene {
+// Scene for displaying detailed gotchi stats
+// Shows all status bars for the most relevant fields
+class GotchiStatsScene : public Scene {
 public:
-    GotchiScene();
+    GotchiStatsScene();
 
     void init() override;
     void update(float deltaTime) override;
     void draw() override;
     void cleanup() override;
-
-    void addButtons();
 
 private:
     Gotchi* gotchi = nullptr;
@@ -27,10 +25,8 @@ private:
     float simTime_ = 0.0f;  // Total simulation time
     int frameCount_ = 0;    // Frame counter for animation
     std::vector<std::unique_ptr<Button>> buttons;
-    std::string lastClickedButton_;  // Message to display when a button is clicked
 
     void addNavigationButton(const std::string& label, const std::string& targetScene, float x, float y);
-    void addButton(const std::string& label, float x, float y);
 };
 
-#endif // GOTCHI_SCENE_HPP
+#endif // GOTCHI_STATS_SCENE_HPP

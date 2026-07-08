@@ -5,7 +5,7 @@ RL   = raylib/src
 
 SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp)
 INCLUDES    = -I src/engine -I src/game -I src/effects -I $(RL) -I glfw/include -I rres/src
-CXXFLAGS    = -std=c++14 $(INCLUDES)
+CXXFLAGS    = -std=c++17 $(INCLUDES)
 
 # Desktop linker flags differ per platform: Windows (devkitPro/Cygwin) links
 # against the Win32 GL/window libs, Linux needs raylib's X11 dependencies

@@ -3,6 +3,7 @@
 #include "GameConstants.hpp"
 #include "GotchiStats.hpp"
 #include "GotchiMood.hpp"
+#include "SceneManager.hpp"
 #include <iostream>
 #include <sstream>
 
@@ -30,6 +31,47 @@ void GotchiScene::init() {
 
     // Set initial action (will use the loaded frames)
     gotchi->setAction("idle");
+
+    // Add navigation buttons
+    addButtons();
+}
+
+void GotchiScene::addButtons() {
+    buttons.clear();
+    lastClickedButton_ = "";
+
+    // Add action buttons at the bottom
+    // Six buttons: Wash, Groom, Feed, Pet, Play, Give a Break
+    float buttonWidth = 80.0f;
+    float buttonHeight = 32.0f;
+    float totalWidth = 6 * buttonWidth + 5 * 10.0f;  // 6 buttons + 5 gaps
+    float startX = (GAME_W - totalWidth) / 2.0f;
+    float y = GAME_H - 40.0f;
+
+    std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Play", "Give a Break"};
+    for (size_t i = 0; i < labels.size(); i++) {
+        float x = startX + i * (buttonWidth + 10.0f);
+        addButton(labels[i], x, y);
+    }
+
+    // Add "Detailed Vitals" button at bottom center
+    addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 80);
+}
+
+void GotchiScene::addButton(const std::string& label, float x, float y) {
+    float buttonWidth = 80.0f;
+    float buttonHeight = 32.0f;
+    Button* btn = new Button({x, y}, buttonWidth, buttonHeight, label);
+    btn->setAnchor("top-left");
+    btn->setFontSize(12);
+    btn->setBackgroundColor({60, 60, 100, 220});
+    btn->setHoverColor({100, 100, 160, 240});
+    btn->setBorderColor({150, 150, 200, 255});
+
+    btn->setOnClick([this, label]() {
+        lastClickedButton_ = label + " was clicked";
+    });
+    buttons.push_back(std::unique_ptr<Button>(btn));
 }
 
 void GotchiScene::update(float deltaTime) {
@@ -38,6 +80,12 @@ void GotchiScene::update(float deltaTime) {
     // Update the Gotchi every frame
     if (gotchi) {
         gotchi->update(deltaTime);
+    }
+
+    // Update button states
+    SceneInputHandler* input = getInputHandler();
+    for (auto& btn : buttons) {
+        btn->update(input, deltaTime);
     }
 
     // Update simulation time and frame count
@@ -134,10 +182,14 @@ void GotchiScene::draw() {
     cy += 16;
 
     // Calculate and display key mood drivers
+    float happiness = gotchi->getStats().getNormalizedStat(EmotionalStat::HAPPINESS);
+    float excitement = gotchi->getStats().getNormalizedStat(EmotionalStat::EXCITEMENT);
+    float satisfaction = gotchi->getStats().getNormalizedStat(EmotionalStat::SATISFACTION);
+
     std::vector<std::pair<std::string, float>> moodDrivers;
-    moodDrivers.push_back({"Happiness", gotchi->getStats().getNormalizedStat(EmotionalStat::HAPPINESS)});
-    moodDrivers.push_back({"Excitement", gotchi->getStats().getNormalizedStat(EmotionalStat::EXCITEMENT)});
-    moodDrivers.push_back({"Satisfaction", gotchi->getStats().getNormalizedStat(EmotionalStat::SATISFACTION)});
+    moodDrivers.push_back({"Happiness", happiness});
+    moodDrivers.push_back({"Excitement", excitement});
+    moodDrivers.push_back({"Satisfaction", satisfaction});
     moodDrivers.push_back({"Energy", energy});
     moodDrivers.push_back({"Health", health});
 
@@ -147,80 +199,36 @@ void GotchiScene::draw() {
     }
 
     // ==============================
-    // RIGHT PANEL: Emotional & Social Stats
+    // TOP-RIGHT: Status & Info
     // ==============================
     int rx = 520;
     int ry = 40;
 
-    DrawText("EMOTIONAL", rx, ry, 14, {200, 100, 255, 255});
-    ry += 18;
+    // Draw a blinking/running indicator to show simulation is active
+    float blinkTimer = std::fmod(simTime_, 1.0f);
+    bool blinkOn = blinkTimer < 0.5f;
 
-    // Emotional bars
-    float happiness = gotchi->getStats().getNormalizedStat(EmotionalStat::HAPPINESS);
-    DrawText("Happiness", rx, ry, 11, {220, 220, 220, 255});
-    DrawRectangle(rx + 70, ry + 2, 90, 8, {50, 50, 50, 255});
-    DrawRectangle(rx + 70, ry + 2, static_cast<int>(90 * happiness), 8, {255, 200, 50, 255});
-    ry += 14;
+    if (blinkOn) {
+        DrawText("RUNNING", rx, ry, 12, {100, 255, 100, 255});
+    } else {
+        DrawText("RUNNING", rx, ry, 12, {50, 200, 50, 255});
+    }
+    ry += 16;
 
-    float excitement = gotchi->getStats().getNormalizedStat(EmotionalStat::EXCITEMENT);
-    DrawText("Excitement", rx, ry, 11, {220, 220, 220, 255});
-    DrawRectangle(rx + 70, ry + 2, 90, 8, {50, 50, 50, 255});
-    DrawRectangle(rx + 70, ry + 2, static_cast<int>(90 * excitement), 8, {255, 100, 0, 255});
-    ry += 14;
-
-    float satisfaction = gotchi->getStats().getNormalizedStat(EmotionalStat::SATISFACTION);
-    DrawText("Satisfaction", rx, ry, 11, {220, 220, 220, 255});
-    DrawRectangle(rx + 70, ry + 2, 90, 8, {50, 50, 50, 255});
-    DrawRectangle(rx + 70, ry + 2, static_cast<int>(90 * satisfaction), 8, {0, 200, 100, 255});
-    ry += 14;
-
-    float love = gotchi->getStats().getNormalizedStat(EmotionalStat::LOVE);
-    DrawText("Love/Affection", rx, ry, 11, {220, 220, 220, 255});
-    DrawRectangle(rx + 70, ry + 2, 90, 8, {50, 50, 50, 255});
-    DrawRectangle(rx + 70, ry + 2, static_cast<int>(90 * love), 8, {255, 150, 200, 255});
-    ry += 14;
-
-    float friendship = gotchi->getStats().getNormalizedStat(EmotionalStat::FRIEDNSHIP);
-    DrawText("Friends", rx, ry, 11, {220, 220, 220, 255});
-    DrawRectangle(rx + 70, ry + 2, 90, 8, {50, 50, 50, 255});
-    DrawRectangle(rx + 70, ry + 2, static_cast<int>(90 * friendship), 8, {200, 100, 255, 255});
-    ry += 20;
-
-    DrawText("SOCIAL", rx, ry, 14, {100, 255, 200, 255});
-    ry += 18;
-
-    float popularity = gotchi->getStats().getNormalizedStat(SocialStat::POPULARITY);
-    DrawText("Popularity", rx, ry, 11, {220, 220, 220, 255});
-    DrawRectangle(rx + 70, ry + 2, 90, 8, {50, 50, 50, 255});
-    DrawRectangle(rx + 70, ry + 2, static_cast<int>(90 * popularity), 8, {100, 255, 100, 255});
-    ry += 14;
-
-    float confidence = gotchi->getStats().getNormalizedStat(EmotionalStat::CONFIDENCE);
-    DrawText("Confidence", rx, ry, 11, {220, 220, 220, 255});
-    DrawRectangle(rx + 70, ry + 2, 90, 8, {50, 50, 50, 255});
-    DrawRectangle(rx + 70, ry + 2, static_cast<int>(90 * confidence), 8, {255, 200, 100, 255});
-    ry += 20;
-
-    // ==============================
-    // BOTTOM PANEL: Status & Info
-    // ==============================
-    int bx = 16;
-    int by = 580;
-
-    DrawText("STATUS", bx, by, 12, {150, 150, 255, 255});
-    by += 16;
-
-    // Status indicators (state icons)
+    // Status indicators
     std::string statusText;
     if (gotchi->isSleeping()) {
         statusText = "[SLEEPING] - Needs rest";
-        DrawText(statusText.c_str(), bx, by, 12, {150, 100, 255, 255});
+        DrawText(statusText.c_str(), rx, ry, 12, {150, 100, 255, 255});
+        ry += 16;
     } else if (gotchi->isDead()) {
         statusText = "[DEAD] - Game Over";
-        DrawText(statusText.c_str(), bx, by, 12, {255, 50, 50, 255});
+        DrawText(statusText.c_str(), rx, ry, 12, {255, 50, 50, 255});
+        ry += 16;
     } else if (!gotchi->isActive()) {
         statusText = "[INACTIVE] - Click to interact";
-        DrawText(statusText.c_str(), bx, by, 12, {255, 200, 50, 255});
+        DrawText(statusText.c_str(), rx, ry, 12, {255, 200, 50, 255});
+        ry += 16;
     } else {
         // Check for needs that require action
         std::vector<std::string> needs;
@@ -236,54 +244,71 @@ void GotchiScene::draw() {
                 statusText += needs[i];
             }
             statusText = "[NEEDS ATTENTION] " + statusText;
-            DrawText(statusText.c_str(), bx, by, 12, {255, 100, 100, 255});
+            DrawText(statusText.c_str(), rx, ry, 12, {255, 100, 100, 255});
+            ry += 16;
         } else {
-            DrawText("[ALL GOOD] - Gotchi is content", bx, by, 12, {100, 255, 100, 255});
+            DrawText("[ALL GOOD] - Gotchi is content", rx, ry, 12, {100, 255, 100, 255});
+            ry += 16;
         }
-    }
-    by += 20;
-
-    // Stats summary at bottom
-    DrawText("STAT SUMMARY", bx, by, 12, {150, 150, 255, 255});
-    by += 16;
-
-    std::ostringstream summary;
-    summary << "Health: " << static_cast<int>(health * 100)
-            << " | Hunger: " << static_cast<int>(hunger * 100)
-            << " | Energy: " << static_cast<int>(energy * 100)
-            << " | Mood: " << moodName;
-    DrawText(summary.str().c_str(), bx, by, 11, {200, 200, 200, 255});
-
-    // ==============================
-    // BOTTOM-RIGHT: Simulation Clock (updates each frame)
-    // ==============================
-    int rx2 = 520;
-    int ry2 = 580;
-
-    // Draw a blinking/running indicator to show simulation is active
-    float blinkTimer = std::fmod(simTime_, 1.0f);
-    bool blinkOn = blinkTimer < 0.5f;
-
-    if (blinkOn) {
-        DrawText("RUNNING", rx2, ry2, 12, {100, 255, 100, 255});
-    } else {
-        DrawText("RUNNING", rx2, ry2, 12, {50, 200, 50, 255});
     }
 
     // Show formatted time
     int totalSeconds = static_cast<int>(simTime_);
     int minutes = totalSeconds / 60;
     int seconds = totalSeconds % 60;
-    int frames = frameCount_ % 100;
 
     std::ostringstream clock;
     clock << "Time: " << (minutes < 10 ? "0" : "") << minutes << ":"
-          << (seconds < 10 ? "0" : "") << seconds << "  Frame: " << frameCount_;
-    DrawText(clock.str().c_str(), rx2, ry2 + 16, 11, {200, 200, 200, 255});
+          << (seconds < 10 ? "0" : "") << seconds;
+    DrawText(clock.str().c_str(), rx, ry, 11, {200, 200, 200, 255});
+    ry += 16;
 
-    // Show tick rate (updates per second)
+    // Show tick rate
     std::string tickText = "Ticks: " + std::to_string(static_cast<int>(gotchi->getStats().getStat(SecondaryStat::AGE)));
-    DrawText(tickText.c_str(), rx2, ry2 + 30, 11, {150, 150, 200, 255});
+    DrawText(tickText.c_str(), rx, ry, 11, {150, 150, 200, 255});
+    ry += 16;
+
+    // Stats summary
+    DrawText("STAT SUMMARY", rx, ry, 12, {150, 150, 255, 255});
+    ry += 16;
+
+    std::ostringstream summary;
+    summary << "Health: " << static_cast<int>(health * 100)
+            << " | Hunger: " << static_cast<int>(hunger * 100)
+            << " | Energy: " << static_cast<int>(energy * 100)
+            << " | Mood: " << moodName;
+    DrawText(summary.str().c_str(), rx, ry, 11, {200, 200, 200, 255});
+
+    // Draw button click message above action buttons
+    if (!lastClickedButton_.empty()) {
+        int msgWidth = MeasureText(lastClickedButton_.c_str(), 12);
+        int msgX = (GAME_W - msgWidth) / 2;
+        DrawText(lastClickedButton_.c_str(), msgX, GAME_H - 140, 12, {255, 255, 255, 255});
+    }
+
+    // Draw buttons
+    for (auto& btn : buttons) {
+        btn->draw();
+    }
+}
+
+void GotchiScene::addNavigationButton(const std::string& label, const std::string& targetScene, float x, float y) {
+    float buttonWidth = 160.0f;
+    float buttonHeight = 32.0f;
+    Button* btn = new Button({x, y}, buttonWidth, buttonHeight, label);
+    btn->setAnchor("center");
+    btn->setFontSize(14);
+    btn->setBackgroundColor({60, 60, 100, 220});
+    btn->setHoverColor({100, 100, 160, 240});
+    btn->setBorderColor({150, 150, 200, 255});
+
+    btn->setOnClick([this, targetScene]() {
+        if (getSceneManager()) {
+            SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
+            mgr->switchScene(targetScene, TransitionEffect::FADE, 0.5f);
+        }
+    });
+    buttons.push_back(std::unique_ptr<Button>(btn));
 }
 
 void GotchiScene::cleanup() {
