@@ -27,8 +27,10 @@ private:
     float simTime_ = 0.0f;  // Total simulation time
     int frameCount_ = 0;    // Frame counter for animation
     std::vector<std::unique_ptr<Button>> buttons;
+    std::string lastClickedButton_;  // Message to display when a button is clicked
 
     void addNavigationButton(const std::string& label, const std::string& targetScene, float x, float y);
+    void addButton(const std::string& label, float x, float y);
 };
 
 #endif // GOTCHI_SCENE_HPP

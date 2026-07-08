@@ -38,8 +38,40 @@ void GotchiScene::init() {
 
 void GotchiScene::addButtons() {
     buttons.clear();
+    lastClickedButton_ = "";
+
+    // Add action buttons at the bottom
+    // Six buttons: Wash, Groom, Feed, Pet, Play, Give a Break
+    float buttonWidth = 80.0f;
+    float buttonHeight = 32.0f;
+    float totalWidth = 6 * buttonWidth + 5 * 10.0f;  // 6 buttons + 5 gaps
+    float startX = (GAME_W - totalWidth) / 2.0f;
+    float y = GAME_H - 40.0f;
+
+    std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Play", "Give a Break"};
+    for (size_t i = 0; i < labels.size(); i++) {
+        float x = startX + i * (buttonWidth + 10.0f);
+        addButton(labels[i], x, y);
+    }
+
     // Add "Detailed Vitals" button at bottom center
-    addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 50);
+    addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 80);
+}
+
+void GotchiScene::addButton(const std::string& label, float x, float y) {
+    float buttonWidth = 80.0f;
+    float buttonHeight = 32.0f;
+    Button* btn = new Button({x, y}, buttonWidth, buttonHeight, label);
+    btn->setAnchor("top-left");
+    btn->setFontSize(12);
+    btn->setBackgroundColor({60, 60, 100, 220});
+    btn->setHoverColor({100, 100, 160, 240});
+    btn->setBorderColor({150, 150, 200, 255});
+
+    btn->setOnClick([this, label]() {
+        lastClickedButton_ = label + " was clicked";
+    });
+    buttons.push_back(std::unique_ptr<Button>(btn));
 }
 
 void GotchiScene::update(float deltaTime) {
@@ -246,6 +278,13 @@ void GotchiScene::draw() {
             << " | Energy: " << static_cast<int>(energy * 100)
             << " | Mood: " << moodName;
     DrawText(summary.str().c_str(), rx, ry, 11, {200, 200, 200, 255});
+
+    // Draw button click message above action buttons
+    if (!lastClickedButton_.empty()) {
+        int msgWidth = MeasureText(lastClickedButton_.c_str(), 12);
+        int msgX = (GAME_W - msgWidth) / 2;
+        DrawText(lastClickedButton_.c_str(), msgX, GAME_H - 140, 12, {255, 255, 255, 255});
+    }
 
     // Draw buttons
     for (auto& btn : buttons) {
