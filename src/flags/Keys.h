@@ -14,6 +14,9 @@ namespace flag {
     inline constexpr auto SEEN_REALITY        = "seen_reality";
     inline constexpr auto BOTH_SIDES_ENGAGED  = "both_sides_engaged";
 
+    // Pre-registered bag keys (typed fields for structural invariants)
+    inline constexpr auto VOLUNTARY_MERGE_UNLOCKED = "voluntary_merge_unlocked"; // B; kept in bag since §12 is undecided
+
     // Scene choices — convention: "choice.<scene>.<name>"
     inline constexpr auto CHOICE_OFFICE_CONFRONT = "choice.office.confront_boss";
     inline constexpr auto CHOICE_SCHOOL_DEFEND   = "choice.school.defend_zap";

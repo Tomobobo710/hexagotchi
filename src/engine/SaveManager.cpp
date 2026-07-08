@@ -143,6 +143,11 @@ void to_json(nlohmann::json& j, const GameState& s) {
     j["storyBeatIndex"] = s.storyBeatIndex;
     j["mergeLockTimer"] = s.mergeLockTimer;
     j["playtimeSeconds"] = s.playtimeSeconds;
+    j["mergeCount"] = s.mergeCount;
+    j["grime"] = s.grime;
+    j["collapsed"] = s.collapsed;
+    j["engagedCareSide"] = s.engagedCareSide;
+    j["engagedStorySide"] = s.engagedStorySide;
 
     // Serialize flags map manually since Value is a variant
     nlohmann::json flags_json = nlohmann::json::object();
@@ -195,6 +200,11 @@ void from_json(const nlohmann::json& j, GameState& s) {
     s.storyBeatIndex = j.value("storyBeatIndex", 0);
     s.mergeLockTimer = j.value("mergeLockTimer", 0.0f);
     s.playtimeSeconds = j.value("playtimeSeconds", 0.0);
+    s.mergeCount = j.value("mergeCount", 0);
+    s.grime = j.value("grime", 0.0f);
+    s.collapsed = j.value("collapsed", false);
+    s.engagedCareSide = j.value("engagedCareSide", false);
+    s.engagedStorySide = j.value("engagedStorySide", false);
 
     // Flags: read if present, otherwise empty map
     if (j.contains("flags")) {
