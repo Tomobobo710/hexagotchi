@@ -10,14 +10,14 @@ struct SchoolLine {
     std::string speaker;
     std::string text;
     Color speakerColor;
-    int focusActor;   // 0 = Tom, 1 = Karen, 2 = Zap, -1 = none
+    int focusActor;   // 0 = Tom, 1 = Karen, 2 = Jimmy, -1 = none
     bool shake;
 };
 
-// Zap's school pickup -- ported from the JS prototype's "The School Pickup
+// Jimmy's school pickup -- ported from the JS prototype's "The School Pickup
 // Incident" episode. Ambient mode is Tom waiting alone outside; the
 // scripted event is the ported pickup almost line-for-line (Karen needling
-// him for being late, Zap's lost tooth, the inflation joke).
+// him for being late, Jimmy's lost tooth, the inflation joke).
 class SchoolScene : public Scene {
 public:
     SchoolScene(DialogBox* sharedDialog);
@@ -33,9 +33,11 @@ public:
 private:
     SceneActor* tom  = nullptr;
     SceneActor* karen = nullptr;
-    SceneActor* zap   = nullptr;
+    SceneActor* jimmy   = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
+
+    Texture2D background = {0};
 
     float tomWaitTimer = 0.0f;
 
@@ -50,7 +52,7 @@ private:
 
     void drawTom(Vector2 pos);
     void drawKaren(Vector2 pos);
-    void drawZap(Vector2 pos);
+    void drawJimmy(Vector2 pos);
     void drawSchoolYard();
 };
 

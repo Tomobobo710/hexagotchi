@@ -1,5 +1,6 @@
 #include "ApartmentScene.hpp"
 #include "GameConstants.hpp"
+#include "AssetPack.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR      = {139, 172, 15, 255};
@@ -7,16 +8,18 @@ static const Color NARRATOR_COLOR  = {150, 150, 170, 255};
 static const Color PHONE_COLOR     = {230, 160, 60, 255};
 
 ApartmentScene::ApartmentScene(DialogBox* sharedDialog)
-    : Scene(1024.0f, 576.0f, {22, 18, 26, 255}), dialog(sharedDialog) {
+    : Scene(1280.0f, 720.0f, {22, 18, 26, 255}), dialog(sharedDialog) {
 }
 
 void ApartmentScene::init() {
-    getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
+    getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
     tom = new SceneActor({470.0f, 380.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
     tom->setVisible(false);
     addActor(tom);
+
+    background = AssetPack::loadTexture("backgrounds/apartmentbg.png");
 
     // Ported from the JS prototype's "Monday Morning" intro episode --
     // same beats (alarm, mirror, Karen's text, broken coffee machine),
@@ -69,13 +72,24 @@ void ApartmentScene::draw() {
 
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
-    drawApartment();
+    if (background.id != 0) {
+        DrawTexture(background, 0, 0, WHITE);
+    } else {
+        drawApartment();
+    }
     drawTom(tom->getPosition());
     EndMode2D();
 }
 
 void ApartmentScene::cleanup() {
     Scene::cleanup();
+    if (background.id != 0) { UnloadTexture(background); background = {0}; }
+    // init() re-runs on every re-entry to this scene and unconditionally
+    // push_back()s the event table -- reset so events doesn't accumulate
+    // duplicates and a mid-event exit doesn't permanently block triggerEvent().
+    events.clear();
+    activeEvent = -1;
+    lineIndex = 0;
 }
 
 void ApartmentScene::triggerEvent(int index) {

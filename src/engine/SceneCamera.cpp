@@ -75,8 +75,13 @@ void SceneCamera::update(float deltaTime) {
     if (position.x != pre.x) velocity.x = 0.0f;
     if (position.y != pre.y) velocity.y = 0.0f;
 
-    // Keep targetPosition coherent for followPosition/lerp
-    if (!isFollowing()) targetPosition = position;
+    // Keep targetPosition coherent with manual pan/inertia moves (which drive
+    // position directly, bypassing targetPosition entirely). Skipped while
+    // followPosition()'s lerp is still chasing targetPosition -- otherwise
+    // this would stomp the target back onto position every frame and stall
+    // the lerp permanently (see focusCameraOn() callers).
+    bool movingViaPanOrInertia = panning || (inertiaEnabled && (velocity.x != 0.0f || velocity.y != 0.0f));
+    if (!isFollowing() && movingViaPanOrInertia) targetPosition = position;
 
     prevPosition = position;
 }
