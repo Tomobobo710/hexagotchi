@@ -1,0 +1,291 @@
+# hexagotchi Game Design
+
+Game jam entry. Theme: **hex + merge**. Due Sunday 1:00 PM CST.
+
+This doc is the working design spine. It assumes the systems already documented in
+`SCENE_RENDERING.mx` and `GOTCHI_SYSTEM.mx` exist and are wired. It focuses on the
+connective tissue that turns those systems into the actual game, and on a strict
+cut-line so the jam does not eat us on Saturday.
+
+---
+
+## 1. Premise
+
+You are handed what looks like a Tamagotchi. You do what anyone does with a Tamagotchi:
+you press every button. One of those buttons is a **merge** button ("give him a break").
+Press it and the toy cracks open into the real life of Gary, the man trapped inside it,
+whose wife is leaving him, whose kid is a jerk, and whose job is being your pet.
+
+The gotchi half is care and play. The story half is Gary losing his mind. The two worlds
+bleed into each other as the game goes, and how you treated the pet decides which of three
+endings Gary gets.
+
+---
+
+## 2. Theme compliance (state this on the jam page)
+
+- **hex**: the pet's playfield is a hex board (`HexViewScene`, existing biomes). Taking
+  care of the pet partly happens on hexes.
+- **merge**: the core verb. The "merge" button crosses the pet world and Gary's real world.
+  Transitions are literal (Gary steps through a door out of the office). Late game, the two
+  worlds visibly merge into one.
+
+Both boxes are checked by mechanics the player uses, not by lore. Judges look for this.
+
+---
+
+## 3. Core loop and structure
+
+The player is forced through both sides. Neither side is skippable.
+
+```
+START (gotchi mode, Gameboy shell)
+  -> player presses buttons, discovers the merge button
+  -> FIRST MERGE (player-triggered, TIMED)  ---> Story beat 1 (flavored by press timing)
+  -> merge back to gotchi (button locks briefly)
+  -> play gotchi + hex; SLEEP drains (uncontrollable, one-way)
+  -> SLEEP hits zero  -> FORCED MERGE       ---> Story beat 2 (flavored by current stats)
+  -> merge back to gotchi (button locks briefly)
+  -> ... repeat ...
+  -> CLIMAX: death enabled, worlds fully merged -> ENDING (1, 2, or 3)
+```
+
+Load-bearing rules:
+
+- **First merge is the player's choice, and we record how long they waited.** Bucket the
+  elapsed time (immediate / after a bit / after they already started neglecting him) and
+  use the bucket to pick the opening dialogue variant of story beat 1. This is the "oh they
+  made a Tamagotchi -> oh no, what is this" moment. It happens early. It is the hook.
+- **Every merge after the first is gated by sleep.** Sleep is not player-controllable and
+  drains one-way. At zero, merge is forced. This is the pacing metronome; the story always
+  advances even if the player wants to camp in gotchi/hex mode. Once unlocked the player may
+  also merge early on purpose.
+- **After each story beat, merge back and lock the button for a short cooldown** so the
+  player returns to caretaking before the next beat.
+- The **story is not finished and may change within scope.** All connective logic attaches
+  to "the next story beat," never to a hardcoded scene count or order. Scenes can be added,
+  cut, or reordered without touching the merge/stat plumbing.
+
+No clock. "Episodic" means narrative beats, not a simulated day. Time of day does not affect
+gameplay. The `MoonEffect` day/night stays purely cosmetic.
+
+---
+
+## 4. The two screens
+
+### 4a. Gotchi screen (Gameboy shell)
+
+Looks like a handheld. A **busy wall of need/want bars** (sourced from the existing stat
+system) so the player cannot tell which few actually matter. Buttons:
+
+- Feed
+- Pet / play (affection)
+- Wash / groom (hygiene)
+- **Merge** ("give him a break") — always present, sometimes locked
+
+Deliberately easy. Expect the player to spend under 10 minutes total. Death is off here for
+almost the whole game (see section 5).
+
+### 4b. Hex board screen ("take him for a walk")
+
+A second way to care for the pet, not a complex sim. Entered from the gotchi screen. The
+gotchi wanders the hexes; the player **drags and drops items** onto tiles and the pet seeks
+them.
+
+- Movement is a straight-line seek. We already have `setTargetPosition`, `moveToTarget`,
+  and `wander`. No pathfinding. Drop item -> set target -> he walks over -> effect fires.
+- Item types (small set): food (hunger), ball (affection/excitement), maybe a bath/water
+  tile (hygiene). Keep it to two or three.
+- Biomes already exist (Ocean, Sand, Grass, Dirt, Ice, Swamp, Lava). Tiles have a "he likes
+  it / he doesn't" flavor that we exploit for the tile-rot connection (section 8).
+
+The hex board exists for the theme and because it is fun to build. It should stay shallow.
+Even fully scripted it lands the point in the play window.
+
+---
+
+## 5. Stat model (scoped)
+
+Do **not** surface the 100-stat / 100-mood backend as real mechanics. It exists to populate
+the cosmetic wall of bars, nothing more.
+
+### Player-visible needs (the ones with buttons)
+Four the player thinks they are managing: **hunger, hygiene, affection, energy/excitement.**
+Easy to keep topped. This is the bait.
+
+### The metronome stat
+**Sleep**: not player-controllable, drains one-way, forces the next merge at zero. Pure
+pacing. See section 3.
+
+### The hidden branch drivers (never shown as numbers)
+These, not the visible bars, decide the ending:
+
+| Hidden driver | Fed by | What it means |
+|---|---|---|
+| **Affection** | petting, playing, ball on the hex board | did you show warmth, or just fill bars |
+| **Mercy** | using merge / giving breaks (count and how early) | did you let him rest, or grind him |
+| **Survival** | not letting him collapse once death is enabled | is he alive at the climax |
+
+The twist: a player who keeps every visible bar full but never shows affection or gives
+breaks is playing him like a spreadsheet, and that routes to the trapped ending, not the
+good one. Which inputs matter is never told to the player. Discovering it is the reason to
+replay for all three endings.
+
+> These thresholds are tunable and currently a proposal. Lock exact cutoffs once one full
+> playthrough exists.
+
+### Death
+Disabled by a flag for almost the entire game ("cannot die right off the bat", drains are
+slow, lots of bars). The flag flips at the climax. From that point, letting him collapse is
+possible and routes to ending 3.
+
+---
+
+## 6. Story mode
+
+Reuses the existing narrative scenes (Apartment, Office/Datatek, School pickup, Therapist,
+Pizza Parlor) via the shared `DialogBox`. Cast already exists: Gary, wife Karen, son Zap,
+boss, therapist, and Ronzer.
+
+- On merge, Gary **steps through a door** into the scene (office door is the reference beat).
+  Reuse the existing transition effects.
+- At scripted points, dialogue **references the pet's current stats** ("I can't remember my
+  last real meal" if starved; someone remarks he seems fine because he keeps smiling if he
+  is fed but loveless). A few pointed lines, keyed to state, not a branching tree.
+- Scenes stay in a fixed authored order and are **reflavored, not re-branched**, through the
+  body of the game. The only real branch is the ending.
+
+> Ronzer note: make Ronzer an **original creature**, not a literal Pokemon. Using the actual
+> IP is a real disqualification/takedown risk for a public jam entry.
+
+---
+
+## 7. The three endings
+
+Gated on the hidden drivers in section 5. Rough gating, tunable:
+
+**Ending 1 — Escape (good).** High affection + mercy, alive. Gary, in good enough shape to
+have agency, follows Ronzer and catches him being inappropriate and harassing a woman who is
+not Karen. Ronzer is exposed as a cheater and a creep. Gary intervenes and decks him. Good
+things follow, and Gary escapes the gotchi world. Written as infidelity plus harassment that
+Gary interrupts; nothing sexual is depicted. Keep it clean or it gets pulled.
+
+**Ending 2 — Trapped (bittersweet).** Alive, but low affection or mercy. Everyone around Gary
+gets a happy resolution. Gary does not. He stays the Tamagotchi, aware and hating it. This is
+the ending for the efficient, loveless caretaker. Thematically the strongest gut-punch.
+
+**Ending 3 — Collapse (bad).** He dies as the pet once death is enabled, because the player
+let him fall apart. In-story: he gets fired for falling apart, and ends up homeless. The
+kicker is that it was the player's neglect, not Gary's failing.
+
+Force the player to have engaged both the gotchi and story sides before any ending fires.
+
+---
+
+## 8. Care -> story connection hooks
+
+A few connections, made to count. Tagged by priority. Everything here is shader, tint, or
+reflavor. **No new per-animation art**, because the asset budget cannot cover a fraying suit
+across every frame; if we cannot do it with a shader, it is out.
+
+**PROTECT (do these first):**
+
+1. **Story-Gary inherits the gotchi's grime.** Gary is drawn via `drawGary` silhouette
+   functions. Thread one Kindness/grime value into a tint on that silhouette so a neglected
+   pet is a visibly rougher Gary in every scene. One value, threaded once. Best merge-per-hour
+   in the game and the most direct "these are the same being" statement.
+2. **Needs-nag beep intrudes on story dialogue.** If a need is critical when a beat fires,
+   punctuate a line with the Tamagotchi beep. Diegetic, unsettling, near-free. Gary flinches
+   at a sound only the player recognizes.
+3. **Dialogue variants keyed to state.** A handful of one-line swaps keyed to specific need
+   states and to the hidden drivers. This is literally "the gotchi fuels the story."
+
+**IF TIME:**
+
+4. **Tiles rot live on a bad beat.** Convert a patch of hex toward disliked biomes
+   (Lava/Swamp/Ice creeping over Grass) with a tween timed to a grim story moment. Hits hex,
+   merge, and care in one animation.
+5. **Mood tint leaks into the scene palette.** Moods carry a `tint` Color already. Lerp the
+   story scene background toward the pet's current mood tint. Sad pet, colder Gary scene. One
+   lerp per scene.
+6. **DialogBox portrait swaps to the grimy gotchi face** when Kindness is low. Gary's inner
+   face becomes the pet you mistreated. The portrait slot is already an optional texture.
+7. **The merge button ages** as the worlds bleed, from a cheerful pet-care button to
+   something worn and wrong. Silent tell that the toy is breaking down.
+
+**STRETCH (cut first):**
+
+8. **Climax hex overlay.** Draw the `HexTile` shapes at low alpha as a foreground effect over
+   a story scene. The effects system renders outside the 2D camera, so a screen-space hex
+   ghost over Gary's world is a natural merge finale.
+
+---
+
+## 9. Merge escalation (how the worlds bleed)
+
+The visible bleed increases as the game goes, so the "merge" theme is felt, not just labeled:
+
+- Early: clean toy, clean Gary. Merge is a novelty.
+- Middle: grime shader ramps, mood tint leaks, occasional beep intrusion, button starts to
+  wear.
+- Climax: forced merges via sleep, death enabled, hex overlay ghosts into the real world,
+  and the two screens converge into the ending.
+
+---
+
+## 10. Scope and cut-line
+
+**Minimum viable (must ship):**
+- Gotchi screen with the four buttons, the merge button, and the cosmetic bar wall.
+- First merge with timing bucket -> flavored story beat 1.
+- Sleep metronome forcing subsequent merges.
+- Existing story scenes playable in order via DialogBox.
+- The three endings with gating on the hidden drivers.
+- Grime shader on the gotchi and on story-Gary (hook 1).
+- Beep intrusion (hook 2) and a few state-keyed lines (hook 3).
+
+**Polish (if the MVP is solid by Friday night):**
+- Hex board item drag-drop and seek (if not already in MVP, it can degrade to a scripted
+  "walk" demo).
+- Tile rot, mood tint leak, portrait swap, button aging (hooks 4-7).
+
+**Stretch (cut without guilt):**
+- Climax hex overlay (hook 8).
+- Any additional story scenes beyond the core arc.
+
+**First thing to cut if Saturday burns:** everything in Stretch, then hooks 6 and 7, then the
+hex board degrades from interactive to scripted. The grime shader, the timed first merge, the
+sleep metronome, and the three endings do **not** get cut. Those four are the game.
+
+---
+
+## 11. Invariants (must not break)
+
+- The gotchi cannot die before the death-enabled flag flips at the climax.
+- The merge button is always present; it may be locked, but it never disappears.
+- The first merge is player-triggered and records a timing bucket.
+- Both the gotchi side and the story side are forced before any ending fires.
+- Hidden branch drivers are never surfaced to the player as numbers.
+- All "life getting worse" visuals are shader / tint / reflavor. No new per-animation art.
+
+---
+
+## 12. Open questions (still to lock)
+
+- Exact story scene count and order (story unfinished; keep logic scene-count-agnostic).
+- Exact thresholds mapping the hidden drivers to endings 1/2/3.
+- Whether the player can voluntarily merge early after unlock, or only when sleep forces it.
+- Final item set for the hex board (target: two or three).
+- Canonical gotchi sprite choice for Gary (needed so Tom can build matching characters in
+  Comfy). Pick one and commit; `gotchis/001` is the current default in `SpriteTestScene`.
+
+---
+
+## 13. Asset and build notes
+
+- Tom is building props and characters in ComfyUI; goal is at least one story scene looking
+  great to hero on the jam page.
+- Grime and disheveling must be shader-driven. The `MoonEffect` dual `_DESKTOP`/`_WEB` GLSL
+  pattern is the template for adding the grime shader.
+- Web build ships via Emscripten per `BUILD_INSTRUCTIONS.md`. Test the merge transition and
+  the grime shader on the web target early; shader string parity is where web builds break.
