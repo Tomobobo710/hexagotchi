@@ -20,11 +20,11 @@ static const char* POKEMON_QUIPS[] = {
 static const float POKEMON_QUIP_DURATION = 1.8f;
 
 PizzaParlorScene::PizzaParlorScene(DialogBox* sharedDialog)
-    : Scene(1024.0f, 576.0f, {30, 20, 20, 255}), dialog(sharedDialog) {
+    : Scene(1280.0f, 720.0f, {30, 20, 20, 255}), dialog(sharedDialog) {
 }
 
 void PizzaParlorScene::init() {
-    getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
+    getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
     // Actors are invisible bounds/position holders -- drawTom/drawWife/
     // drawPokemon render the actual silhouettes on top, keyed by tag (same
@@ -46,6 +46,8 @@ void PizzaParlorScene::init() {
 
     nextQuipTime = 3.0f + (float)(rand() % 400) / 100.0f;
 
+    background = AssetPack::loadTexture("backgrounds/parlorbg.png");
+
     // Portraits: [actor][emotion], sad/mid/happy. Ronzer only has a happy
     // shot, so its sad/mid slots just reuse that texture.
     portraits[0][0] = AssetPack::loadTexture("portraits/gotchiportraitsad.png");
@@ -66,7 +68,7 @@ void PizzaParlorScene::init() {
         { "Ronzer",  "Ronzer!", POKEMON_COLOR, 2, false, 2, 2 },
         { "Tom",    "Right. Tuesdays. I knew that.",
           TOM_COLOR, 0, false, 0, 0 },
-        { "Karen",   "Did you get my email about Zap's recital?",
+        { "Karen",   "Did you get my email about Jimmy's recital?",
           WIFE_COLOR, 1, false, 1, 1 },
         { "Tom",    "I -- yeah, I'm looking into it. Work's been --",
           TOM_COLOR, 0, false, 0, 0 },
@@ -140,6 +142,7 @@ void PizzaParlorScene::draw() {
 
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
+    if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
     drawTom(tom->getPosition());
     drawWife(wife->getPosition());
     drawPokemon(pokemon->getPosition());
@@ -148,6 +151,7 @@ void PizzaParlorScene::draw() {
 
 void PizzaParlorScene::cleanup() {
     Scene::cleanup();
+    if (background.id != 0) { UnloadTexture(background); background = {0}; }
     if (portraits[0][0].id != 0) UnloadTexture(portraits[0][0]);
     if (portraits[0][1].id != 0) UnloadTexture(portraits[0][1]);
     if (portraits[0][2].id != 0) UnloadTexture(portraits[0][2]);
@@ -155,6 +159,15 @@ void PizzaParlorScene::cleanup() {
     if (portraits[1][1].id != 0) UnloadTexture(portraits[1][1]);
     if (portraits[1][2].id != 0) UnloadTexture(portraits[1][2]);
     if (portraits[2][2].id != 0) UnloadTexture(portraits[2][2]);
+
+    // init() re-runs on every re-entry to this scene (SceneManager re-inits
+    // scenes on switch) and unconditionally push_back()s the event table --
+    // without resetting these, events accumulates duplicates and activeEvent
+    // can be left >= 0 if the player left mid-event, permanently blocking
+    // triggerEvent()'s guard on every future visit.
+    events.clear();
+    activeEvent = -1;
+    lineIndex = 0;
 }
 
 void PizzaParlorScene::triggerEvent(int index) {

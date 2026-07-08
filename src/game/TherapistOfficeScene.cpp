@@ -1,5 +1,6 @@
 #include "TherapistOfficeScene.hpp"
 #include "GameConstants.hpp"
+#include "AssetPack.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR      = {139, 172, 15, 255};
@@ -7,11 +8,11 @@ static const Color THERAPIST_COLOR = {22, 160, 133, 255};   // matches JS THERAP
 static const Color NARRATOR_COLOR  = {150, 150, 170, 255};
 
 TherapistOfficeScene::TherapistOfficeScene(DialogBox* sharedDialog)
-    : Scene(1024.0f, 576.0f, {26, 22, 20, 255}), dialog(sharedDialog) {
+    : Scene(1280.0f, 720.0f, {26, 22, 20, 255}), dialog(sharedDialog) {
 }
 
 void TherapistOfficeScene::init() {
-    getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
+    getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
     tom = new SceneActor({380.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
@@ -22,6 +23,8 @@ void TherapistOfficeScene::init() {
     therapist->setTag("therapist");
     therapist->setVisible(false);
     addActor(therapist);
+
+    background = AssetPack::loadTexture("backgrounds/therapistbg.png");
 
     // Ported from the JS prototype's "The Last Session" episode almost
     // line-for-line -- the digital-pet metaphor breakdown, ending on the
@@ -82,7 +85,8 @@ void TherapistOfficeScene::draw() {
 
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
-    drawOffice();
+    if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
+    else drawOffice();
     drawTom(tom->getPosition());
     drawTherapist(therapist->getPosition());
     EndMode2D();
@@ -90,6 +94,13 @@ void TherapistOfficeScene::draw() {
 
 void TherapistOfficeScene::cleanup() {
     Scene::cleanup();
+    if (background.id != 0) { UnloadTexture(background); background = {0}; }
+    // init() re-runs on every re-entry to this scene and unconditionally
+    // push_back()s the event table -- reset so events doesn't accumulate
+    // duplicates and a mid-event exit doesn't permanently block triggerEvent().
+    events.clear();
+    activeEvent = -1;
+    lineIndex = 0;
 }
 
 void TherapistOfficeScene::triggerEvent(int index) {

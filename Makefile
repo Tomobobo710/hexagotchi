@@ -72,6 +72,30 @@ $(ASSET_PACK): $(PACKER_BIN) $(ASSET_FILES)
 	mkdir -p build
 	$(PACKER_BIN) assets $(ASSET_PACK)
 
+# Scene layout editor (tools/scene_editor.cpp) -- standalone GUI tool, not
+# part of the game itself. Own subfolder so it doesn't get lost/confused
+# among the other devtools binaries (pack_assets, the screenshot tool's
+# game_devtool.exe, etc), with its own copy of assets.rres + the manifest
+# pack_assets.cpp writes alongside it -- same convention as build/desktop/'s
+# own assets.rres copy -- so this tool works regardless of the caller's cwd
+# (Explorer double-click, a shortcut, whatever) instead of assuming repo root.
+SCENE_EDITOR_OUT = build/scene_editor
+SCENE_EDITOR_BIN = $(SCENE_EDITOR_OUT)/scene_editor.exe
+
+scene-editor: $(SCENE_EDITOR_BIN) $(SCENE_EDITOR_OUT)/assets.rres $(SCENE_EDITOR_OUT)/assets_manifest.txt
+
+$(SCENE_EDITOR_BIN): tools/scene_editor.cpp
+	mkdir -p $(SCENE_EDITOR_OUT)
+	$(CXX) -std=c++11 -I raylib/src -I rres/src tools/scene_editor.cpp -o $(SCENE_EDITOR_BIN) $(LDFLAGS)
+
+$(SCENE_EDITOR_OUT)/assets.rres: $(ASSET_PACK)
+	mkdir -p $(SCENE_EDITOR_OUT)
+	cp $(ASSET_PACK) $(SCENE_EDITOR_OUT)/assets.rres
+
+$(SCENE_EDITOR_OUT)/assets_manifest.txt: $(ASSET_PACK)
+	mkdir -p $(SCENE_EDITOR_OUT)
+	cp build/assets_manifest.txt $(SCENE_EDITOR_OUT)/assets_manifest.txt
+
 # Web
 web: $(ASSET_PACK) $(RL)/libraylib.web.a
 	mkdir -p $(WEB_OUT)
@@ -103,4 +127,4 @@ clean:
 clean-web:
 	rm -rf $(WEB_OUT) $(RL)/*.wasm.o $(RL)/libraylib.web.a
 
-.PHONY: all web deps emsdk-setup clean clean-web
+.PHONY: all web deps emsdk-setup clean clean-web scene-editor

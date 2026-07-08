@@ -148,5 +148,24 @@ int main(int argc, char** argv) {
 
     fclose(rresFile);
     printf("Wrote %s: %d resources\n", outPath.c_str(), packed);
+
+    // Plain-text manifest alongside the .rres -- rres itself has no directory
+    // listing (lookups are by CRC32 of the key, one-way), so anything that
+    // needs to enumerate "every packed asset" (e.g. tools/scene_editor.cpp's
+    // asset browser) reads this instead of the binary pack.
+    std::string manifestPath = outPath;
+    size_t dot = manifestPath.find_last_of('.');
+    if (dot != std::string::npos) manifestPath = manifestPath.substr(0, dot);
+    manifestPath += "_manifest.txt";
+
+    FILE* manifestFile = fopen(manifestPath.c_str(), "w");
+    if (manifestFile) {
+        for (const std::string& fullPath : pngs) {
+            fprintf(manifestFile, "%s\n", ToRelativeKey(fullPath, assetsDir).c_str());
+        }
+        fclose(manifestFile);
+        printf("Wrote %s: %d entries\n", manifestPath.c_str(), (int)pngs.size());
+    }
+
     return 0;
 }

@@ -37,6 +37,7 @@ public:
 
 private:
     SceneActor* tom = nullptr;
+    Texture2D background = {0};
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 

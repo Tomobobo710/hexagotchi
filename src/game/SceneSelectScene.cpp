@@ -31,6 +31,8 @@ void SceneSelectScene::init() {
     addSceneButton("THERAPIST'S OFFICE", "therapist_office", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 2);
     addSceneButton("DATATEK SOLUTIONS (OFFICE)", "office", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 3);
     addSceneButton("SCHOOL PICKUP", "school", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 4);
+    addSceneButton("3D MODEL TEST", "model3d_test", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 5);
+    addSceneButton("SCENE PREVIEW", "scene_preview", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 6);
 
     // Future world-scenes get one more addSceneButton() call here.
 }

@@ -1,18 +1,26 @@
 #include "SchoolScene.hpp"
 #include "GameConstants.hpp"
+#include "AssetPack.hpp"
+#include "SchoolSkyEffect.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR     = {139, 172, 15, 255};
 static const Color KAREN_COLOR    = {200, 60, 90, 255};
-static const Color ZAP_COLOR      = {41, 128, 185, 255};   // matches JS ZAP color scheme (blue kid)
+static const Color JIMMY_COLOR      = {41, 128, 185, 255};   // matches JS JIMMY color scheme (blue kid)
 static const Color NARRATOR_COLOR = {150, 150, 170, 255};
 
+// Matches the opaque sky color actually painted in schoolbg.png's daytime
+// sky, sampled from the art -- schoolbg.png's sky region is otherwise
+// transparent (see the scene-effect background discussion), so this is what
+// shows through those gaps until an effect fills them.
 SchoolScene::SchoolScene(DialogBox* sharedDialog)
-    : Scene(1024.0f, 576.0f, {36, 40, 30, 255}), dialog(sharedDialog) {
+    : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {
 }
 
 void SchoolScene::init() {
-    getCamera()->setBoundary(0.0f, 0.0f, 1024.0f, 576.0f);
+    getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    addEffect(new SchoolSkyEffect());
 
     tom = new SceneActor({440.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
@@ -24,39 +32,41 @@ void SchoolScene::init() {
     karen->setVisible(false);
     addActor(karen);
 
-    zap = new SceneActor({680.0f, 440.0f}, 28.0f, 36.0f);
-    zap->setTag("zap");
-    zap->setVisible(false);
-    addActor(zap);
+    jimmy = new SceneActor({680.0f, 440.0f}, 28.0f, 36.0f);
+    jimmy->setTag("jimmy");
+    jimmy->setVisible(false);
+    addActor(jimmy);
+
+    background = AssetPack::loadTexture("backgrounds/schoolbg.png");
 
     // Ported from the JS prototype's "The School Pickup Incident" episode
-    // almost line-for-line -- Karen needling Tom for being late, Zap's lost
+    // almost line-for-line -- Karen needling Tom for being late, Jimmy's lost
     // tooth, the tooth fairy inflation joke, ending on Tom quietly giving up
     // his last $5.
     events.push_back({
-        { "Narrator", "Tom arrives at Zap's school.\n3:35 PM. Pickup was at 3:30.",
+        { "Narrator", "Tom arrives at Jimmy's school.\n3:35 PM. Pickup was at 3:30.",
           NARRATOR_COLOR, -1, false },
         { "Karen", "You're late.",
           KAREN_COLOR, 1, false },
         { "Tom",  "I'm FIVE minutes late Karen,\nI drove the whole way here.",
           TOM_COLOR, 0, false },
-        { "Karen", "Zap waited.\nBy himself.\nAgain.",
+        { "Karen", "Jimmy waited.\nBy himself.\nAgain.",
           KAREN_COLOR, 1, false },
         { "Tom",  "There are TEACHERS here,\nhe wasn't ALONE --",
           TOM_COLOR, 0, true },
-        { "Zap",   "Hi Dad! I lost a tooth!",
-          ZAP_COLOR, 2, false },
+        { "Jimmy",   "Hi Dad! I lost a tooth!",
+          JIMMY_COLOR, 2, false },
         { "Tom",  "Oh buddy! Which one?",
           TOM_COLOR, 0, false },
-        { "Zap",   "This one! Mom says the fairy\ngives five dollars now.",
-          ZAP_COLOR, 2, false },
+        { "Jimmy",   "This one! Mom says the fairy\ngives five dollars now.",
+          JIMMY_COLOR, 2, false },
         { "Tom",  "...Five dollars.",
           TOM_COLOR, 0, false },
         { "Karen", "Inflation, Tom.",
           KAREN_COLOR, 1, false },
         { "Tom",  "I know what inflation IS Karen.\nI AM experiencing it.",
           TOM_COLOR, 0, true },
-        { "Narrator", "Tom gives Zap the tooth fairy money.\nIt is his last $5 bill.\nHe does not tell Zap this.",
+        { "Narrator", "Tom gives Jimmy the tooth fairy money.\nIt is his last $5 bill.\nHe does not tell Jimmy this.",
           NARRATOR_COLOR, -1, false },
     });
 }
@@ -65,7 +75,7 @@ void SchoolScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
     if (activeEvent < 0) {
-        // Ambient: Tom alone waiting outside, Karen and Zap only appear
+        // Ambient: Tom alone waiting outside, Karen and Jimmy only appear
         // during the scripted pickup itself.
         tomWaitTimer += deltaTime * 1.5f;
         tom->setPosition({440.0f, 400.0f + sinf(tomWaitTimer) * 3.0f});
@@ -87,17 +97,25 @@ void SchoolScene::draw() {
 
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
-    drawSchoolYard();
+    if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
+    else drawSchoolYard();
     drawTom(tom->getPosition());
     if (activeEvent >= 0) {
         drawKaren(karen->getPosition());
-        drawZap(zap->getPosition());
+        drawJimmy(jimmy->getPosition());
     }
     EndMode2D();
 }
 
 void SchoolScene::cleanup() {
     Scene::cleanup();
+    if (background.id != 0) { UnloadTexture(background); background = {0}; }
+    // init() re-runs on every re-entry to this scene and unconditionally
+    // push_back()s the event table -- reset so events doesn't accumulate
+    // duplicates and a mid-event exit doesn't permanently block triggerEvent().
+    events.clear();
+    activeEvent = -1;
+    lineIndex = 0;
 }
 
 void SchoolScene::triggerEvent(int index) {
@@ -144,7 +162,7 @@ void SchoolScene::focusCameraOn(int actorIndex, bool shake) {
     SceneActor* target = nullptr;
     if (actorIndex == 0) target = tom;
     else if (actorIndex == 1) target = karen;
-    else if (actorIndex == 2) target = zap;
+    else if (actorIndex == 2) target = jimmy;
 
     if (target) {
         Vector2 pos = target->getCenter();
@@ -223,23 +241,23 @@ void SchoolScene::drawKaren(Vector2 pos) {
     DrawLineEx({cx + 16, cy + 2}, {cx - 12, cy + 12}, 6.0f, darkKaren);
 }
 
-void SchoolScene::drawZap(Vector2 pos) {
+void SchoolScene::drawJimmy(Vector2 pos) {
     float cx = pos.x + 14.0f;
     float cy = pos.y + 18.0f;
 
     // Small, energetic kid silhouette -- half Tom's height, bright and bouncy
-    Color darkZap = {20, 70, 100, 255};
-    DrawEllipse((int)cx, (int)(cy + 12), 14, 16, ZAP_COLOR);
-    DrawCircle((int)cx, (int)(cy - 8), 12, ZAP_COLOR);
+    Color darkJimmy = {20, 70, 100, 255};
+    DrawEllipse((int)cx, (int)(cy + 12), 14, 16, JIMMY_COLOR);
+    DrawCircle((int)cx, (int)(cy - 8), 12, JIMMY_COLOR);
 
     // Big excited eyes
-    DrawCircle((int)(cx - 5), (int)(cy - 9), 2, darkZap);
-    DrawCircle((int)(cx + 5), (int)(cy - 9), 2, darkZap);
+    DrawCircle((int)(cx - 5), (int)(cy - 9), 2, darkJimmy);
+    DrawCircle((int)(cx + 5), (int)(cy - 9), 2, darkJimmy);
     // Big gap-tooth grin (missing tooth is the whole point of this scene)
-    DrawRectangle((int)(cx - 4), (int)(cy - 2), 8, 3, darkZap);
-    DrawRectangle((int)(cx - 1), (int)(cy - 2), 2, 3, ZAP_COLOR);  // the gap
+    DrawRectangle((int)(cx - 4), (int)(cy - 2), 8, 3, darkJimmy);
+    DrawRectangle((int)(cx - 1), (int)(cy - 2), 2, 3, JIMMY_COLOR);  // the gap
 
     // Backpack straps
-    DrawLineEx({cx - 8, cy + 2}, {cx - 8, cy + 20}, 3.0f, darkZap);
-    DrawLineEx({cx + 8, cy + 2}, {cx + 8, cy + 20}, 3.0f, darkZap);
+    DrawLineEx({cx - 8, cy + 2}, {cx - 8, cy + 20}, 3.0f, darkJimmy);
+    DrawLineEx({cx + 8, cy + 2}, {cx + 8, cy + 20}, 3.0f, darkJimmy);
 }

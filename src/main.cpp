@@ -13,6 +13,8 @@
 #include "game/TherapistOfficeScene.hpp"
 #include "game/OfficeScene.hpp"
 #include "game/SchoolScene.hpp"
+#include "game/Model3DTestScene.hpp"
+#include "game/ScenePreviewScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
@@ -281,6 +283,8 @@ int main() {
     sceneManager->registerScene("therapist_office", new TherapistOfficeScene(dialog));
     sceneManager->registerScene("office", new OfficeScene(dialog));
     sceneManager->registerScene("school", new SchoolScene(dialog));
+    sceneManager->registerScene("model3d_test", new Model3DTestScene());
+    sceneManager->registerScene("scene_preview", new ScenePreviewScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
 
 #ifdef HEXA_SHOT_TOOL
