@@ -187,6 +187,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/OfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
