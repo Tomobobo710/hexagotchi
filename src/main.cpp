@@ -16,6 +16,7 @@
 #include "game/Model3DTestScene.hpp"
 #include "game/ScenePreviewScene.hpp"
 #include "game/SceneSelectScene.hpp"
+#include "game/TitleScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
@@ -108,7 +109,7 @@ void UpdateDrawFrame() {
     // These standalone debug/demo scenes never use the shared dialog box at
     // all, so it's safe to keep it hidden every frame unconditionally.
     if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" ||
-        currentScene == "gotchi") {
+        currentScene == "gotchi" || currentScene == "title") {
         dialog->hide();
     }
 
@@ -124,6 +125,8 @@ void UpdateDrawFrame() {
         sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_EIGHT) && currentScene != "gotchi")
         sceneManager->switchScene("gotchi", TransitionEffect::FADE, 0.5f);
+    if (IsKeyPressed(KEY_NINE) && currentScene != "title")
+        sceneManager->switchScene("title", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_SEVEN) && currentScene != "scene_select")
         sceneManager->switchScene("scene_select", TransitionEffect::FADE, 0.5f);
 
@@ -219,6 +222,9 @@ void UpdateDrawFrame() {
         } else if (currentScene == "scene_select") {
             DrawText("SCENE SELECT", 14, 8, 18, {180, 180, 255, 255});
             DrawText("Click a scene  1: World  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+        } else if (currentScene == "title") {
+            DrawText("TITLE SCREEN", 14, 8, 18, {180, 180, 255, 255});
+            DrawText("9: Title Screen  ESC: Exit", GAME_W - 220, 8, 12, {140, 140, 180, 255});
         } else {
             std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
             DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
@@ -286,6 +292,7 @@ int main() {
     sceneManager->registerScene("model3d_test", new Model3DTestScene());
     sceneManager->registerScene("scene_preview", new ScenePreviewScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
+    sceneManager->registerScene("title", new TitleScene());
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
