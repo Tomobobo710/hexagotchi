@@ -208,7 +208,7 @@ void GotchiStatsScene::draw() {
     ry += 20;
 
     // ==============================
-    // BOTTOM PANEL: Physical & Other Stats
+    // BOTTOM LEFT: Physical & Other Stats
     // ==============================
     int bx = 16;
     int by = 320;
@@ -247,26 +247,32 @@ void GotchiStatsScene::draw() {
     by += 20;
 
     // ==============================
-    // BOTTOM-RIGHT: Status & Info
+    // BOTTOM CENTER: Mood & Status
     // ==============================
-    int rx2 = 520;
-    int ry2 = 580;
+    int mx2 = 250;
+    int my2 = 320;
 
     // Current Mood
-    DrawText("CURRENT MOOD", rx2, ry2, 12, {255, 220, 100, 255});
-    ry2 += 16;
+    DrawText("CURRENT MOOD", mx2, my2, 14, {255, 220, 100, 255});
+    my2 += 18;
     std::string moodName = gotchi->getMood().getMoodName();
-    DrawText(moodName.c_str(), rx2, ry2, 16, {255, 255, 255, 255});
-    ry2 += 24;
+    DrawText(moodName.c_str(), mx2, my2, 20, {255, 255, 255, 255});
+    my2 += 30;
+
+    // Mood color indicator
+    Color moodTint = gotchi->getMood().getMoodTint();
+    DrawRectangle(mx2, my2, 50, 50, moodTint);
+    DrawRectangleLines(mx2, my2, 50, 50, {255, 255, 255, 200});
+    my2 += 60;
 
     // Age
     float age = stats.getStat(SecondaryStat::AGE);
-    DrawText(("Age: " + std::to_string(static_cast<int>(age))).c_str(), rx2, ry2, 12, {200, 200, 200, 255});
-    ry2 += 16;
+    DrawText(("Age: " + std::to_string(static_cast<int>(age))).c_str(), mx2, my2, 12, {200, 200, 200, 255});
+    my2 += 16;
 
     // Show tick rate
     std::string tickText = "Ticks: " + std::to_string(static_cast<int>(gotchi->getStats().getStat(SecondaryStat::AGE)));
-    DrawText(tickText.c_str(), rx2, ry2, 11, {150, 150, 200, 255});
+    DrawText(tickText.c_str(), mx2, my2, 12, {150, 150, 200, 255});
 
     // Draw buttons
     for (auto& btn : buttons) {
