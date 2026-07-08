@@ -2,7 +2,7 @@
 #include "rlgl.h"
 
 Scene::Scene(float w, float h, Color bgColor)
-    : paused(false), backgroundColor(bgColor), width(w), height(h) {
+    : paused(false), backgroundColor(bgColor), width(w), height(h), sceneMgr_(nullptr) {
     // Create default camera
     camera = new SceneCamera(w / 2.0f, h / 2.0f, 1.0f);
     inputHandler.setCamera(camera);
@@ -193,6 +193,14 @@ std::vector<SceneActor*> Scene::findActorsInRect(Rectangle rect) {
 
 SceneInputHandler* Scene::getInputHandler() {
     return &inputHandler;
+}
+
+void Scene::setSceneManager(void* manager) {
+    sceneMgr_ = manager;
+}
+
+void* Scene::getSceneManager() const {
+    return sceneMgr_;
 }
 
 void Scene::processRemovals() {

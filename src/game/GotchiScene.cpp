@@ -3,6 +3,7 @@
 #include "GameConstants.hpp"
 #include "GotchiStats.hpp"
 #include "GotchiMood.hpp"
+#include "SceneManager.hpp"
 #include <iostream>
 #include <sstream>
 
@@ -30,6 +31,15 @@ void GotchiScene::init() {
 
     // Set initial action (will use the loaded frames)
     gotchi->setAction("idle");
+
+    // Add navigation buttons
+    addButtons();
+}
+
+void GotchiScene::addButtons() {
+    buttons.clear();
+    // Add "Detailed Vitals" button at bottom center
+    addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 50);
 }
 
 void GotchiScene::update(float deltaTime) {
@@ -38,6 +48,12 @@ void GotchiScene::update(float deltaTime) {
     // Update the Gotchi every frame
     if (gotchi) {
         gotchi->update(deltaTime);
+    }
+
+    // Update button states
+    SceneInputHandler* input = getInputHandler();
+    for (auto& btn : buttons) {
+        btn->update(input, deltaTime);
     }
 
     // Update simulation time and frame count
@@ -284,6 +300,30 @@ void GotchiScene::draw() {
     // Show tick rate (updates per second)
     std::string tickText = "Ticks: " + std::to_string(static_cast<int>(gotchi->getStats().getStat(SecondaryStat::AGE)));
     DrawText(tickText.c_str(), rx2, ry2 + 30, 11, {150, 150, 200, 255});
+
+    // Draw buttons
+    for (auto& btn : buttons) {
+        btn->draw();
+    }
+}
+
+void GotchiScene::addNavigationButton(const std::string& label, const std::string& targetScene, float x, float y) {
+    float buttonWidth = 160.0f;
+    float buttonHeight = 32.0f;
+    Button* btn = new Button({x, y}, buttonWidth, buttonHeight, label);
+    btn->setAnchor("center");
+    btn->setFontSize(14);
+    btn->setBackgroundColor({60, 60, 100, 220});
+    btn->setHoverColor({100, 100, 160, 240});
+    btn->setBorderColor({150, 150, 200, 255});
+
+    btn->setOnClick([this, targetScene]() {
+        if (getSceneManager()) {
+            SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
+            mgr->switchScene(targetScene, TransitionEffect::FADE, 0.5f);
+        }
+    });
+    buttons.push_back(std::unique_ptr<Button>(btn));
 }
 
 void GotchiScene::cleanup() {

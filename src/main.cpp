@@ -17,6 +17,7 @@
 #include "game/ScenePreviewScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/TitleScene.hpp"
+#include "game/GotchiStatsScene.hpp"
 #include "game/DialogSequences.hpp"
 #include <string>
 #include <vector>
@@ -293,6 +294,7 @@ int main() {
     sceneManager->registerScene("scene_preview", new ScenePreviewScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     sceneManager->registerScene("title", new TitleScene());
+    sceneManager->registerScene("gotchi_stats", new GotchiStatsScene());
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
