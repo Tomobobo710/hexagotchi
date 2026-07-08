@@ -18,7 +18,10 @@
 #include "game/SceneSelectScene.hpp"
 #include "game/TitleScene.hpp"
 #include "game/GotchiStatsScene.hpp"
+#include "game/MergeController.hpp"
 #include "game/DialogSequences.hpp"
+#include "engine/GameState.h"
+#include "events/EventBus.h"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -26,6 +29,13 @@
 
 // Global exit request flag
 bool exitRequested = false;
+
+// Global game state and event bus
+GameState globalGameState;
+EventBus  globalEventBus;
+
+// MergeController - created in main() and used in UpdateDrawFrame
+MergeController* mergeController = nullptr;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -186,6 +196,9 @@ void UpdateDrawFrame() {
     }
 
     sceneManager->update(dt);
+    if (mergeController) {
+        mergeController->update(dt);
+    }
     dialog->update(dt);
 
     BeginTextureMode(gameTarget);
@@ -283,7 +296,8 @@ int main() {
     sceneManager->registerScene("boss", new BossScene());
     sceneManager->registerScene("hexboard", new HexViewScene());
     sceneManager->registerScene("input_test", new InputTestScene());
-    sceneManager->registerScene("gotchi", new GotchiScene());
+    GotchiScene* gotchiScene = new GotchiScene();
+    sceneManager->registerScene("gotchi", gotchiScene);
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
     sceneManager->registerScene("pizza_parlor", new PizzaParlorScene(dialog));
     sceneManager->registerScene("apartment", new ApartmentScene(dialog));
@@ -295,6 +309,10 @@ int main() {
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     sceneManager->registerScene("title", new TitleScene());
     sceneManager->registerScene("gotchi_stats", new GotchiStatsScene());
+
+    // Wire up the merge controller
+    mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);
+    gotchiScene->setEventBus(&globalEventBus);
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
@@ -345,6 +363,7 @@ int main() {
     }
     UnloadRenderTexture(gameTarget);
     delete dialog;
+    delete mergeController;
     delete sceneManager;
     CloseWindow();
 #endif
