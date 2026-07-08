@@ -1,10 +1,13 @@
 #include "HexViewScene.hpp"
 #include "../engine/HexWorld.hpp"
 #include "../engine/GameConstants.hpp"
+#include "../engine/SceneInputHandler.hpp"
 #include "PauseMenuOverlay.hpp"
+#include <cmath>
 
 HexViewScene::HexViewScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
     world = nullptr;
+    cameraPanning = false;
 }
 
 HexViewScene::~HexViewScene() {
@@ -23,6 +26,7 @@ void HexViewScene::init() {
         if (ih) {
             ih->clearAllInputs();
         }
+        cameraPanning = false;
     };
 
     pauseMenu->onClose = [this]() {
@@ -33,7 +37,6 @@ void HexViewScene::init() {
     };
 
     // Initialize the hex world map
-    // Initialize the hex world map
     HexWorldConfig config;
     config.width = 32;   // 32 hexes wide
     config.height = 18;  // 18 hexes tall
@@ -42,13 +45,15 @@ void HexViewScene::init() {
     world = new HexWorld(config);
     world->generate();
 
+    // Camera setup with smooth panning
     getCamera()->setBoundary(0, -200, 4800.0f, 900.0f);
-    getCamera()->setLookaheadEnabled(false);  // Disable lookahead since we're not following anything
-    getCamera()->setZoom(0.8f);
+    getCamera()->setLookaheadEnabled(false);
 
-    // Position camera at origin to see the hex tiles at (0,0) etc.
-    // World is 32 hexes wide (3072px) so center at ~1500,1000
-    getCamera()->setPosition(1536.0f, 960.0f);
+    // Position camera at world center (Y is at vertical center of valid band)
+    float startX = (0.0f + 4800.0f) * 0.5f;
+    float startY = (-200.0f + 900.0f) * 0.5f;
+    getCamera()->setPosition(startX, startY);
+    getCamera()->setZoom(0.8f);
 }
 
 void HexViewScene::draw() {
@@ -73,9 +78,14 @@ void HexViewScene::draw() {
     }
     EndMode2D();
 
+    // Draw panning hint when panning
+    if (cameraPanning) {
+        DrawText("PANNING (drag to move)", 20, GAME_H - 40, 20, Color{255, 255, 255, 200});
+    }
+
     // Draw instructions
     DrawText("HEX VIEW", 14, 8, 18, Color{180, 180, 255, 255});
-    DrawText("1: World  2: Boss  3: Input  4: Sprite  5: World  ESC: Exit", GAME_W - 290, 8, 12, Color{140, 140, 180, 255});
+    DrawText("Right-click drag to pan  Mouse wheel to zoom", GAME_W - 290, 8, 12, Color{140, 140, 180, 255});
 }
 
 void HexViewScene::update(float deltaTime) {
@@ -84,6 +94,27 @@ void HexViewScene::update(float deltaTime) {
     if (paused) {
         if (pauseMenu) pauseMenu->update(deltaTime);
         return;
+    }
+
+    // Camera panning logic
+    SceneInputHandler* ih = getInputHandler();
+    SceneCamera* cam = getCamera();
+    Vector2 mouse = ih->getMousePosition();
+
+    // Right-drag panning with inertia
+    if (ih->isMouseButtonHeld(MOUSE_BUTTON_RIGHT)) {
+        cam->panUpdate(mouse);
+        cameraPanning = true;
+    } else {
+        cam->panEnd();
+        cameraPanning = false;
+    }
+
+    // Zoom with mouse wheel - using camera's smooth zoom-to-cursor
+    float wheelMove = ih->getMouseWheel();
+    if (wheelMove != 0.0f) {
+        float ZOOM_STEP = 0.15f;
+        cam->zoomAtScreen(mouse, wheelMove * ZOOM_STEP);
     }
 }
 

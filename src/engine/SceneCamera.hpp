@@ -43,7 +43,20 @@ public:
     void followPosition(Vector2 pos, float smoothSpeed = CAMERA_FOLLOW_SPEED);
     void stopFollowing();
     bool isFollowing() const;
-    
+
+    // Panning mode - disables automatic position interpolation
+    void setPanning(bool panning);
+    bool isPanning() const;
+
+    // Panning API - for drag-to-move with fling
+    void panUpdate(Vector2 mouseScreen);
+    void panEnd();
+
+    // Zoom API - smooth zoom-to-cursor animation
+    void zoomAtScreen(Vector2 mouseScreen, float deltaZoom);
+    void setZoomLerpRate(float rate);
+    void setInertiaEnabled(bool enabled);
+
     // Lookahead - camera looks ahead in direction of movement
     void setLookaheadEnabled(bool enabled);
     void setLookaheadDistance(float distance);
@@ -54,7 +67,9 @@ public:
     
     // Boundary clamping
     void setBoundary(float minX, float minY, float maxX, float maxY);
+    void setPanMargin(float margin);
     void disableBoundary();
+    float minZoomForBounds() const;
     
     // Coordinate conversion
     Vector2 screenToWorld(Vector2 screenPos) const;
@@ -70,42 +85,68 @@ private:
     // Core position
     Vector2 position;
     Vector2 targetPosition;
-    
+
     // Zoom and rotation
     float zoom;
     float targetZoom;
     float zoomDuration;
     float zoomTimer;
-    
+
     float rotation;
     float targetRotation;
     float rotateDuration;
     float rotateTimer;
-    
+
     // Following
     SceneActor* followTarget;
     float followSpeed;
-    
+
+    // Panning state - when true, disables automatic position interpolation
+    bool panning;
+
     // Lookahead
     bool lookaheadEnabled;
     float lookaheadDistance;
     Vector2 lookaheadOffset;
-    
+
     // Screen shake
     float shakeIntensity;
     float shakeDuration;
     float shakeTimer;
-    
+
     // Pulse
     float pulseIntensity;
     float pulseDuration;
     float pulseTimer;
-    
+
     // Boundaries
     bool boundaryEnabled;
     float boundaryMinX, boundaryMinY;
     float boundaryMaxX, boundaryMaxY;
-    
+
+    // Cached min zoom (computed once when boundary changes)
+    float cachedMinZoom;
+
+    // Pan margin (overscroll padding in world units)
+    float panMargin;
+
+    // Inertia state (for fling momentum)
+    Vector2 velocity;
+    Vector2 prevPosition;
+    Vector2 lastPanMouse;
+    bool    inertiaEnabled;
+
+    // Inertia tuning (default values, can be tuned via setters)
+    float inertiaFriction;   // per-sec exponential decay
+    float minFlingSpeed;     // world u/s below which we snap to rest
+    float velTau;            // velocity smoothing time constant
+
+    // Zoom animation state (for smooth zoom-to-cursor)
+    Vector2 zoomAnchorWorld;   // world point to keep pinned during zoom
+    Vector2 zoomAnchorScreen;  // screen point it should stay under
+    float   zoomLerpRate;      // per-sec, default 12.0
+    bool    zoomAnimating;
+
     // Helper methods
     void updateFollow(float deltaTime);
     void updateShake(float deltaTime);
