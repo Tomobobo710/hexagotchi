@@ -246,3 +246,21 @@ void main()
 Shader LoadLitShader() {
     return LoadShaderFromMemory(LIT_VS, LIT_FS);
 }
+
+Light CreateLight0(int type, Vector3 position, Vector3 target, Color color, Shader shader) {
+    Light light = { 0 };
+    light.enabled = true;
+    light.type = type;
+    light.position = position;
+    light.target = target;
+    light.color = color;
+
+    light.enabledLoc = GetShaderLocation(shader, "lights[0].enabled");
+    light.typeLoc = GetShaderLocation(shader, "lights[0].type");
+    light.positionLoc = GetShaderLocation(shader, "lights[0].position");
+    light.targetLoc = GetShaderLocation(shader, "lights[0].target");
+    light.colorLoc = GetShaderLocation(shader, "lights[0].color");
+
+    UpdateLightValues(shader, light);
+    return light;
+}

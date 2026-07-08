@@ -42,7 +42,7 @@ void SchoolSkyEffect::init() {
     // Directional light: from the camera's side, up and behind, angled down
     // and away at 45 degrees -- position is up+toward-camera, target is
     // down+away, so the light vector (position->target) points forward-down.
-    light = CreateLight(LIGHT_DIRECTIONAL, {0.0f, 4.0f, 6.0f}, {0.0f, -4.0f, -6.0f}, WHITE, shader);
+    light = CreateLight0(LIGHT_DIRECTIONAL, {0.0f, 4.0f, 6.0f}, {0.0f, -4.0f, -6.0f}, WHITE, shader);
 
     // A pool of clouds, each a small cluster of overlapping puffs so they
     // read as a cloud silhouette rather than a single sphere. Scattered
@@ -92,10 +92,17 @@ void SchoolSkyEffect::RespawnCloud(CloudInstance& cloud, bool offscreenRight) {
     // placed just past the right edge (recycling one that drifted off-left).
     float x = offscreenRight ? (6.5f + (float)(GetRandomValue(0, 150)) / 100.0f)
                               : (float)(GetRandomValue(-550, 550)) / 100.0f;
-    // 0.5 to 2.5: previous attempt (-1.5 to 1.0) put too much of the range
-    // below/at the horizon behind the building roofline, so barely anything
-    // was actually visible in open sky -- this band sits low but clear of it.
-    float y = 0.5f + (float)(GetRandomValue(0, 200)) / 100.0f;
+    // The 3D camera (fovy=28 at z=10) always renders into the FULL 1280x720
+    // canvas regardless of where the 2D SceneCamera is panned/zoomed to at
+    // that moment -- the 2D camera crops a window out of this canvas after
+    // the fact, it doesn't affect the 3D sky render itself. So this range
+    // only needs to stay within the actual sky band of that fixed canvas:
+    // above schoolbg.png's roofline (~3D-Y -0.6) and below the top edge
+    // (~3D-Y +2.6). 0.0 to 1.6 keeps clouds comfortably inside that band
+    // instead of clustering near the top edge (previous 0.5-2.5 put too much
+    // of the range right at the frame's very top, above where you'd ever
+    // actually see it once the 2D camera crops down toward gameplay zoom).
+    float y = 0.0f + (float)(GetRandomValue(0, 160)) / 100.0f;
     float z = -0.8f - (float)(GetRandomValue(0, 180)) / 100.0f; // -0.8 to -2.6, some forward/back depth variance
     cloud.basePos = {x, y, z};
     cloud.driftSpeed = 0.05f + (float)(GetRandomValue(0, 60)) / 1000.0f;  // 0.05-0.11 u/s, gentle and varied

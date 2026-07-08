@@ -22,7 +22,7 @@ void MoonEffect::init() {
     model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = LoadTextureFromImage(white);
     UnloadImage(white);
     model.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = {220, 220, 180, 255};
-    light = CreateLight(LIGHT_DIRECTIONAL, {6.0f, 8.0f, 4.0f}, {0,0,0}, WHITE, shader);
+    light = CreateLight0(LIGHT_DIRECTIONAL, {6.0f, 8.0f, 4.0f}, {0,0,0}, WHITE, shader);
 }
 
 void MoonEffect::update(float deltaTime) {

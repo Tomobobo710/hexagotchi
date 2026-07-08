@@ -27,7 +27,7 @@ void Model3DTestScene::init() {
 
     // Same "from behind-above, down-and-away at 45" light direction used in
     // SchoolSkyEffect, so this preview matches how it'll actually look there.
-    light = CreateLight(LIGHT_DIRECTIONAL, {0.0f, 4.0f, 6.0f}, {0.0f, -4.0f, -6.0f}, WHITE, shader);
+    light = CreateLight0(LIGHT_DIRECTIONAL, {0.0f, 4.0f, 6.0f}, {0.0f, -4.0f, -6.0f}, WHITE, shader);
 }
 
 void Model3DTestScene::update(float deltaTime) {
