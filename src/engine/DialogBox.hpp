@@ -17,7 +17,7 @@ const float DIALOG_DEFAULT_BORDER = 2.0f;
 const float DIALOG_CHAR_REVEAL_SPEED = 50.0f;  // Slower reveal for readability
 const float DIALOG_FADE_DURATION = 0.3f;
 const float DIALOG_OPTION_SPACING = 12.0f;
-const float DIALOG_PORTRAIT_SIZE = 120.0f;
+const float DIALOG_PORTRAIT_SIZE = 128.0f;
 const float DIALOG_PORTRAIT_PADDING = 16.0f;
 
 class DialogBox {
