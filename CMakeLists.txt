@@ -188,8 +188,14 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/SchoolSkyEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/LitShader.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/ScenePreviewScene.cpp
     )
     add_custom_target(game-web ALL
         COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
