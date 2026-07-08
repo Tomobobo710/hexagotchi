@@ -150,6 +150,8 @@ void SceneCamera::shake(float intensity, float duration) {
     shakeIntensity = intensity; shakeDuration = duration; shakeTimer = 0.0f;
 }
 
+bool SceneCamera::isShaking() const { return shakeTimer < shakeDuration; }
+
 void SceneCamera::setBoundary(float minX, float minY, float maxX, float maxY) {
     boundaryEnabled = true;
     boundaryMinX = minX; boundaryMinY = minY;
