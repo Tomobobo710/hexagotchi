@@ -1,0 +1,28 @@
+{
+    "deathEnabled": false,
+    "drivers": {
+        "affection": 0.0,
+        "mercy": 0.0,
+        "survival": 1.0
+    },
+    "firstMergeBucket": 0,
+    "flags": {
+        "test": {
+            "t": "bool",
+            "v": true
+        }
+    },
+    "mergeLockTimer": 0.0,
+    "mode": 0,
+    "needs": {
+        "affection": 1.0,
+        "energy": 1.0,
+        "hunger": 1.0,
+        "hygiene": 1.0
+    },
+    "playtimeSeconds": 0.0,
+    "seenReality": false,
+    "sleep": 1.0,
+    "storyBeatIndex": 0,
+    "version": 1
+}
