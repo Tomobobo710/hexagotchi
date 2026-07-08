@@ -14,7 +14,9 @@ Vector2 HexCoords::toPixel(float hexSize) const {
     const float height = 2.0f * hexSize;
 
     // x position: odd rows shifted right by half width
-    float xOffset = width * ((float)q + 0.5f * (float)(r & 1));
+    // Adjust for HEX_FILL: the drawn tiles are scaled by this factor,
+    // so reduce spacing to make them appear closer together
+    float xOffset = width / HEX_FILL * ((float)q + 0.5f * (float)(r & 1));
 
     // y position: row spacing is 1.5 * S (3/4 of height)
     float yOffset = 0.75f * height * (float)r;
