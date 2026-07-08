@@ -47,7 +47,7 @@ fi
 
 for f in src/main.cpp src/engine/*.cpp src/game/*.cpp src/effects/*.cpp; do
     n=$(basename "$f" .cpp)
-    timeout 120 $GPP -DHEXA_SHOT_TOOL $SYS -std=c++11 $INC -c "$f" -o "$OBJ/$n.o"
+    timeout 120 $GPP -DHEXA_SHOT_TOOL $SYS -std=c++17 $INC -c "$f" -o "$OBJ/$n.o"
 done
 
 timeout 120 $GPP "$OBJ"/*.o -o "$DEVOUT/game_devtool.exe" $LD

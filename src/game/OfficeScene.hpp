@@ -52,6 +52,11 @@ private:
     void drawTom(Vector2 pos);
     void drawBoss(Vector2 pos);
     void drawOffice();
+
+    // Proof-of-concept 3D object drawn in front of the background art but
+    // behind the actors (see OfficeScene::draw()).
+    void draw3DObjectLayer();
+    float cubeSpin = 0.0f;
 };
 
 #endif // OFFICE_SCENE_HPP

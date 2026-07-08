@@ -22,7 +22,7 @@ WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)
 # Preload just the packed assets.rres, not the whole assets/ tree -- everything
 # loads through AssetPack now, so the loose PNGs never need to be in the
 # virtual filesystem.
-WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++11 --preload-file build/assets.rres@assets.rres
+WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++17 --preload-file build/assets.rres@assets.rres
 
 DESKTOP_OUT = build/desktop
 WEB_OUT     = build/web

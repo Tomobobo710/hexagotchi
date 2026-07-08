@@ -68,8 +68,10 @@ void TherapistOfficeScene::update(float deltaTime) {
         tom->setPosition({380.0f, 400.0f + sinf(tomFidgetTimer) * 3.0f});
         therapist->setPosition({620.0f, 390.0f + sinf(therapistNodTimer) * 1.5f});
 
-        getCamera()->setPosition(512.0f, 288.0f);
-        getCamera()->setZoom(1.0f);
+        if (!getCamera()->isWideViewEnabled()) {
+            getCamera()->setPosition(512.0f, 288.0f);
+            getCamera()->setZoom(1.0f);
+        }
     }
 
     if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {

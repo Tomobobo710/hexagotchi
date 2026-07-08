@@ -14,7 +14,6 @@
 #include "game/OfficeScene.hpp"
 #include "game/SchoolScene.hpp"
 #include "game/Model3DTestScene.hpp"
-#include "game/ScenePreviewScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/TitleScene.hpp"
 #include "game/GotchiStatsScene.hpp"
@@ -291,16 +290,15 @@ int main() {
     sceneManager->registerScene("office", new OfficeScene(dialog));
     sceneManager->registerScene("school", new SchoolScene(dialog));
     sceneManager->registerScene("model3d_test", new Model3DTestScene());
-    sceneManager->registerScene("scene_preview", new ScenePreviewScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     sceneManager->registerScene("title", new TitleScene());
     sceneManager->registerScene("gotchi_stats", new GotchiStatsScene());
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
-        (shotScene && shotScene[0]) ? shotScene : "game");
+        (shotScene && shotScene[0]) ? shotScene : "scene_select");
 #else
-    sceneManager->switchSceneImmediate("game");
+    sceneManager->switchSceneImmediate("scene_select");
 #endif
 
     dialog->setAnchor("bottom");

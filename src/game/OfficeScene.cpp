@@ -1,6 +1,7 @@
 #include "OfficeScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
+#include "rlgl.h"
 #include <cmath>
 
 static const Color TOM_COLOR     = {139, 172, 15, 255};
@@ -86,8 +87,10 @@ void OfficeScene::update(float deltaTime) {
         tomWobbleTimer += deltaTime * 3.0f;
         tom->setPosition({420.0f, 400.0f + sinf(tomWobbleTimer) * 6.0f});
 
-        getCamera()->setPosition(460.0f, 320.0f);
-        getCamera()->setZoom(1.0f);
+        if (!getCamera()->isWideViewEnabled()) {
+            getCamera()->setPosition(460.0f, 320.0f);
+            getCamera()->setZoom(1.0f);
+        }
     }
 
     if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
@@ -102,11 +105,41 @@ void OfficeScene::draw() {
     Scene::draw();
 
     Camera2D cam = getCamera()->getRaylibCamera();
+
+    // Background art first (its own 2D pass).
     BeginMode2D(cam);
     drawOffice();
+    EndMode2D();
+
+    // 3D object layer: renders ON TOP of the background art but BEHIND the
+    // actors, since the actor draws come after this. Needs its own 3D mode
+    // (can't share the 2D camera), so the 2D pass is split around it.
+    draw3DObjectLayer();
+
+    // Actors last, on top of the 3D object.
+    BeginMode2D(cam);
     drawTom(tom->getPosition());
     if (activeEvent >= 0) drawBoss(boss->getPosition());
     EndMode2D();
+}
+
+void OfficeScene::draw3DObjectLayer() {
+    Camera3D cam3d = {};
+    cam3d.position   = {0.0f, 0.0f, 6.0f};
+    cam3d.target     = {0.0f, 0.0f, 0.0f};
+    cam3d.up         = {0.0f, 1.0f, 0.0f};
+    cam3d.fovy       = 45.0f;
+    cam3d.projection = CAMERA_PERSPECTIVE;
+
+    cubeSpin += GetFrameTime() * 40.0f;
+
+    BeginMode3D(cam3d);
+        rlPushMatrix();
+        rlRotatef(cubeSpin, 0.3f, 1.0f, 0.0f);
+        DrawCube({0.0f, 0.0f, 0.0f}, 1.5f, 1.5f, 1.5f, Color{200, 80, 80, 255});
+        DrawCubeWires({0.0f, 0.0f, 0.0f}, 1.5f, 1.5f, 1.5f, WHITE);
+        rlPopMatrix();
+    EndMode3D();
 }
 
 void OfficeScene::cleanup() {

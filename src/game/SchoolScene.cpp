@@ -80,8 +80,10 @@ void SchoolScene::update(float deltaTime) {
         tomWaitTimer += deltaTime * 1.5f;
         tom->setPosition({440.0f, 400.0f + sinf(tomWaitTimer) * 3.0f});
 
-        getCamera()->setPosition(480.0f, 320.0f);
-        getCamera()->setZoom(1.0f);
+        if (!getCamera()->isWideViewEnabled()) {
+            getCamera()->setPosition(480.0f, 320.0f);
+            getCamera()->setZoom(1.0f);
+        }
     }
 
     if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {

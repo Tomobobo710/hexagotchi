@@ -10,6 +10,7 @@ SceneCamera::SceneCamera(float x, float y, float zoom)
       panning(false),
       lookaheadEnabled(false), lookaheadDistance(CAMERA_LOOKAHEAD_DISTANCE), lookaheadOffset({0, 0}),
       shakeIntensity(0.0f), shakeDuration(0.0f), shakeTimer(0.0f),
+      wideViewEnabled(false),
       pulseIntensity(0.0f), pulseDuration(0.0f), pulseTimer(0.0f),
       boundaryEnabled(false), boundaryMinX(0), boundaryMinY(0),
       boundaryMaxX(0), boundaryMaxY(0), cachedMinZoom(CAMERA_MIN_ZOOM),
@@ -83,6 +84,25 @@ void SceneCamera::update(float deltaTime) {
     bool movingViaPanOrInertia = panning || (inertiaEnabled && (velocity.x != 0.0f || velocity.y != 0.0f));
     if (!isFollowing() && movingViaPanOrInertia) targetPosition = position;
 
+    // Wide view overrides everything above, every frame it's enabled. Note
+    // this runs BEFORE each scene's own update() (SceneCamera::update() is
+    // called from the top of Scene::update(), and a scene's ambient logic
+    // runs after that returns) -- so a one-shot override here alone would
+    // still get stomped by a scene's unconditional
+    // "getCamera()->setPosition(...); getCamera()->setZoom(1.0f);" later in
+    // the same frame. Each world scene's ambient block additionally checks
+    // !isWideViewEnabled() before re-pinning, same pattern as the existing
+    // isShaking() guard, so the two together make wide view actually stick.
+    if (wideViewEnabled && boundaryEnabled) {
+        float boundaryW = boundaryMaxX - boundaryMinX;
+        float boundaryH = boundaryMaxY - boundaryMinY;
+        float fitZoom = fminf((float)GAME_W / boundaryW, (float)GAME_H / boundaryH);
+        zoom = fitZoom;
+        targetZoom = fitZoom;
+        position = {boundaryMinX + boundaryW * 0.5f, boundaryMinY + boundaryH * 0.5f};
+        targetPosition = position;
+    }
+
     prevPosition = position;
 }
 
@@ -151,6 +171,10 @@ void SceneCamera::shake(float intensity, float duration) {
 }
 
 bool SceneCamera::isShaking() const { return shakeTimer < shakeDuration; }
+
+void SceneCamera::setWideViewEnabled(bool enabled) { wideViewEnabled = enabled; }
+bool SceneCamera::isWideViewEnabled() const { return wideViewEnabled; }
+void SceneCamera::toggleWideView() { wideViewEnabled = !wideViewEnabled; }
 
 void SceneCamera::setBoundary(float minX, float minY, float maxX, float maxY) {
     boundaryEnabled = true;
