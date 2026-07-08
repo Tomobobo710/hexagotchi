@@ -1,6 +1,7 @@
 #include "SchoolScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
+#include "SchoolSkyEffect.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR     = {139, 172, 15, 255};
@@ -8,12 +9,18 @@ static const Color KAREN_COLOR    = {200, 60, 90, 255};
 static const Color JIMMY_COLOR      = {41, 128, 185, 255};   // matches JS JIMMY color scheme (blue kid)
 static const Color NARRATOR_COLOR = {150, 150, 170, 255};
 
+// Matches the opaque sky color actually painted in schoolbg.png's daytime
+// sky, sampled from the art -- schoolbg.png's sky region is otherwise
+// transparent (see the scene-effect background discussion), so this is what
+// shows through those gaps until an effect fills them.
 SchoolScene::SchoolScene(DialogBox* sharedDialog)
-    : Scene(1280.0f, 720.0f, {36, 40, 30, 255}), dialog(sharedDialog) {
+    : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {
 }
 
 void SchoolScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    addEffect(new SchoolSkyEffect());
 
     tom = new SceneActor({440.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");

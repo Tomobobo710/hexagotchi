@@ -36,6 +36,8 @@ private:
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
+    Texture2D background = {0};
+
     float tomFidgetTimer = 0.0f;
     float therapistNodTimer = 0.0f;
 
