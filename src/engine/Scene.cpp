@@ -77,6 +77,15 @@ void Scene::update(float deltaTime) {
 
     if (paused) return;
 
+    // Wide view toggle (Numpad 0): zooms out to see the whole scene's
+    // boundary rect at once, for eyeballing a 3D effect's placement across
+    // the full scene instead of just the scene's normal gameplay framing.
+    // Handled once here so every scene gets it for free instead of each
+    // scene wiring its own zoomed-out preview mode.
+    if (camera && IsKeyPressed(KEY_KP_0)) {
+        camera->toggleWideView();
+    }
+
     // Update camera
     if (camera) {
         camera->update(deltaTime);

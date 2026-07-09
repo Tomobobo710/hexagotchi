@@ -65,6 +65,17 @@ public:
     // Screen shake effect
     void shake(float intensity, float duration);
     bool isShaking() const;
+
+    // Wide view: zooms out to show the whole scene (using the boundary rect
+    // set via setBoundary()) instead of the scene's normal gameplay framing.
+    // Every scene's ambient logic re-pins position/zoom unconditionally each
+    // frame (same reason isShaking() exists) -- so this is enforced as the
+    // last step of update(), after everything else, rather than being a
+    // one-shot setPosition()/setZoom() call a scene's own update() would
+    // immediately stomp back out.
+    void setWideViewEnabled(bool enabled);
+    bool isWideViewEnabled() const;
+    void toggleWideView();
     
     // Boundary clamping
     void setBoundary(float minX, float minY, float maxX, float maxY);
@@ -114,6 +125,9 @@ private:
     float shakeIntensity;
     float shakeDuration;
     float shakeTimer;
+
+    // Wide view
+    bool wideViewEnabled;
 
     // Pulse
     float pulseIntensity;
