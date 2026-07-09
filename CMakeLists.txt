@@ -87,9 +87,11 @@ if(RBUILD_DESKTOP)
         tests/TestSaveManager.cpp
         src/engine/SaveManager.cpp
         src/engine/GameState.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
     )
     add_executable(test_save_manager ${SAVE_TEST_SRCS})
-    target_include_directories(test_save_manager PRIVATE . src src/engine raylib/src rres/src)
+    target_include_directories(test_save_manager PRIVATE . src src/engine src/game raylib/src rres/src)
     target_link_libraries(test_save_manager PRIVATE raylib glfw)
 
     # Test executable for SaveWiring (includes SaveManager tests)
@@ -97,10 +99,12 @@ if(RBUILD_DESKTOP)
         tests/TestSaveWiring.cpp
         src/engine/SaveManager.cpp
         src/engine/GameState.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
         src/events/EventBus.cpp
     )
     add_executable(test_save_wiring ${SAVE_WIRING_TEST_SRCS})
-    target_include_directories(test_save_wiring PRIVATE . src src/engine src/events src/flags raylib/src rres/src)
+    target_include_directories(test_save_wiring PRIVATE . src src/engine src/game src/events src/flags raylib/src rres/src)
     target_link_libraries(test_save_wiring PRIVATE raylib glfw)
 
     # Test executable for MergeController
