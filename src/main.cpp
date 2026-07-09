@@ -315,7 +315,12 @@ int main() {
     sceneManager->registerScene("scene_preview", new ScenePreviewScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     sceneManager->registerScene("title", new TitleScene());
-    sceneManager->registerScene("gotchi_stats", new GotchiStatsScene());
+    GotchiStatsScene* gotchiStatsScene = new GotchiStatsScene();
+    sceneManager->registerScene("gotchi_stats", gotchiStatsScene);
+
+    // Wire up shared GameState to scenes (vitals and mood are now shared)
+    gotchiScene->setGameState(&globalGameState);
+    gotchiStatsScene->setGameState(&globalGameState);
 
     // Wire up the merge controller
     mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);

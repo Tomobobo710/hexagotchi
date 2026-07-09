@@ -56,6 +56,8 @@ if(RBUILD_DESKTOP)
     set(TEST_GAME_SRCS
         src/game/MergeController.cpp
         src/game/StorySequencer.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
     )
     set(TEST_EVENT_SRCS
         src/events/EventBus.cpp
@@ -94,6 +96,7 @@ if(RBUILD_DESKTOP)
         target_sources(tests PRIVATE ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp)
         target_link_libraries(tests PRIVATE raylib glfw)
     endif()
+
 
     # Build raylib as a static library
     add_library(raylib STATIC

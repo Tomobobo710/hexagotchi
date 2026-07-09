@@ -4,6 +4,7 @@
 #include "Scene.hpp"
 #include "Gotchi.hpp"
 #include "Button.hpp"
+#include "GameState.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -19,8 +20,14 @@ public:
     void draw() override;
     void cleanup() override;
 
+    // Set the shared GameState reference (for vitals)
+    void setGameState(GameState* state) { gameState_ = state; }
+
 private:
     Gotchi* gotchi = nullptr;
+    GameState* gameState_ = nullptr;  // Shared vitals from GameState
+    GotchiStats defaultStats_;  // Fallback if gameState_ is not set (for tests)
+    GotchiMood defaultMood_;    // Fallback mood if gameState_ is not set
     std::string gotchiDir;
     float simTime_ = 0.0f;  // Total simulation time
     int frameCount_ = 0;    // Frame counter for animation

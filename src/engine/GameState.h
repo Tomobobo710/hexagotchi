@@ -7,6 +7,11 @@
 #include <optional>
 #include "GameConstants.hpp"
 
+// Include GotchiStats and GotchiMood before GameState since we need their full definitions
+// for member variables
+#include "GotchiStats.hpp"
+#include "GotchiMood.hpp"
+
 // Save version for forward/backward compatibility
 constexpr int SAVE_VERSION = 1;
 
@@ -73,6 +78,11 @@ struct GameState {
     void reset() {
         *this = GameState{};
     }
+
+    // Gotchi vitals and mood - owned here as single source of truth
+    // This is initialized once and shared across all scenes
+    GotchiStats vitals;
+    GotchiMood  mood;
 };
 
 #endif // GAME_STATE_H
