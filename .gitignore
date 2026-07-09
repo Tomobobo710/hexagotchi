@@ -46,6 +46,9 @@ Makefile
 .vscode/
 .vs/
 
+# Claude settings
+.claude/
+
 # Markdown (except docs we want)
 *.md
 !README.md
