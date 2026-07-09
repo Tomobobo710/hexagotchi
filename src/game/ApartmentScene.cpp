@@ -2,11 +2,12 @@
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
 #include "SceneDebugCamera.hpp"
+#include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = {139, 172, 15, 255};
-static const Color NARRATOR_COLOR  = {150, 150, 170, 255};
-static const Color PHONE_COLOR     = {230, 160, 60, 255};
+static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).color;
+static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).color;
+static const Color PHONE_COLOR    = CharacterRegistry::get(CharacterId::Phone).color;
 
 ApartmentScene::ApartmentScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {22, 18, 26, 255}), dialog(sharedDialog) {

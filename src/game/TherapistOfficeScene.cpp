@@ -2,11 +2,12 @@
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
 #include "SceneDebugCamera.hpp"
+#include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = {139, 172, 15, 255};
-static const Color THERAPIST_COLOR = {22, 160, 133, 255};   // matches JS THERAPIST: '#16a085'
-static const Color NARRATOR_COLOR  = {150, 150, 170, 255};
+static const Color TOM_COLOR       = CharacterRegistry::get(CharacterId::Tom).color;
+static const Color THERAPIST_COLOR = CharacterRegistry::get(CharacterId::Therapist).color;
+static const Color NARRATOR_COLOR  = CharacterRegistry::get(CharacterId::Narrator).color;
 
 TherapistOfficeScene::TherapistOfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {

@@ -1,12 +1,13 @@
 #include "PizzaParlorScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
+#include "CharacterRegistry.hpp"
 #include <cstdlib>
 #include <cmath>
 
-static const Color TOM_COLOR    = {139, 172, 15, 255};
-static const Color WIFE_COLOR    = {200, 60, 90, 255};
-static const Color POKEMON_COLOR = {250, 200, 40, 255};
+static const Color TOM_COLOR     = CharacterRegistry::get(CharacterId::Tom).color;
+static const Color WIFE_COLOR    = CharacterRegistry::get(CharacterId::Karen).color;
+static const Color POKEMON_COLOR = CharacterRegistry::get(CharacterId::Ronzer).color;
 
 // Ambient-only lines the Pokemon shouts unprompted, popped through the same
 // shared DialogBox as scripted events. Its entire personality is its own name.
@@ -48,16 +49,17 @@ void PizzaParlorScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/parlorbg.png");
 
-    // Portraits: [actor][emotion], sad/mid/happy. Ronzer only has a happy
-    // shot, so its sad/mid slots just reuse that texture.
-    portraits[0][0] = AssetPack::loadTexture("portraits/tom/gotchiportraitsad.png");
-    portraits[0][1] = AssetPack::loadTexture("portraits/tom/gotchiportraitmid.png");
-    portraits[0][2] = AssetPack::loadTexture("portraits/tom/gotchiportraithappy.png");
-    portraits[1][0] = AssetPack::loadTexture("portraits/karen/karensad.png");
-    portraits[1][1] = AssetPack::loadTexture("portraits/karen/karenmid.png");
-    portraits[1][2] = AssetPack::loadTexture("portraits/karen/karenhappy.png");
-    portraits[2][2] = AssetPack::loadTexture("portraits/ronzer/ronzerhappy.png");
-    portraits[2][0] = portraits[2][1] = portraits[2][2];
+    // Portraits: [actor][emotion], sad/mid/happy -- loaded via the shared
+    // CharacterRegistry rather than hand-listing asset paths per scene.
+    portraits[0][0] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Sad);
+    portraits[0][1] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Mid);
+    portraits[0][2] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Happy);
+    portraits[1][0] = CharacterRegistry::loadPortrait(CharacterId::Karen, Emotion::Sad);
+    portraits[1][1] = CharacterRegistry::loadPortrait(CharacterId::Karen, Emotion::Mid);
+    portraits[1][2] = CharacterRegistry::loadPortrait(CharacterId::Karen, Emotion::Happy);
+    portraits[2][0] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Sad);
+    portraits[2][1] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Mid);
+    portraits[2][2] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Happy);
 
     // --- Event 0: the wife needling Tom while the Pokemon heckles from the sideline ---
     events.push_back({
@@ -160,6 +162,8 @@ void PizzaParlorScene::cleanup() {
     if (portraits[1][0].id != 0) UnloadTexture(portraits[1][0]);
     if (portraits[1][1].id != 0) UnloadTexture(portraits[1][1]);
     if (portraits[1][2].id != 0) UnloadTexture(portraits[1][2]);
+    if (portraits[2][0].id != 0) UnloadTexture(portraits[2][0]);
+    if (portraits[2][1].id != 0) UnloadTexture(portraits[2][1]);
     if (portraits[2][2].id != 0) UnloadTexture(portraits[2][2]);
 
     // init() re-runs on every re-entry to this scene (SceneManager re-inits

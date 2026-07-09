@@ -2,12 +2,13 @@
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
 #include "SchoolSkyEffect.hpp"
+#include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR     = {139, 172, 15, 255};
-static const Color KAREN_COLOR    = {200, 60, 90, 255};
-static const Color JIMMY_COLOR      = {41, 128, 185, 255};   // matches JS JIMMY color scheme (blue kid)
-static const Color NARRATOR_COLOR = {150, 150, 170, 255};
+static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).color;
+static const Color KAREN_COLOR    = CharacterRegistry::get(CharacterId::Karen).color;
+static const Color JIMMY_COLOR    = CharacterRegistry::get(CharacterId::Jimmy).color;
+static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).color;
 
 // Matches the opaque sky color actually painted in schoolbg.png's daytime
 // sky, sampled from the art -- schoolbg.png's sky region is otherwise

@@ -2,11 +2,12 @@
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
 #include "SceneDebugCamera.hpp"
+#include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR     = {139, 172, 15, 255};
-static const Color BOSS_COLOR     = {142, 68, 173, 255};   // matches JS BOSS: '#8e44ad'
-static const Color NARRATOR_COLOR = {150, 150, 170, 255};
+static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).color;
+static const Color BOSS_COLOR     = CharacterRegistry::get(CharacterId::Boss).color;
+static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).color;
 
 // The portal's anchor in this scene's 2D world space (same coordinate space
 // as tom/boss's positions) -- where in the room it should visually sit.

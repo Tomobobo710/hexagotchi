@@ -57,8 +57,8 @@ private:
     Texture2D background = {0};
 
     // Portraits per actor per emotion: [0]=Tom, [1]=wife/Karen, [2]=pokemon/Ronzer,
-    // each with [0]=sad, [1]=mid, [2]=happy. Ronzer only has a happy portrait,
-    // so its sad/mid slots reuse the happy texture.
+    // each with [0]=sad, [1]=mid, [2]=happy -- loaded via CharacterRegistry
+    // (see init()), which owns the actual asset paths/colors per character.
     Texture2D portraits[3][3] = {};
 
     // --- Ambient behavior ---
