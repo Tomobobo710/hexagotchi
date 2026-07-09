@@ -56,6 +56,7 @@ if(RBUILD_DESKTOP)
     set(TEST_GAME_SRCS
         src/game/MergeController.cpp
         src/game/StorySequencer.cpp
+        src/game/GotchiSim.cpp
         src/game/GotchiStats.cpp
         src/game/GotchiMood.cpp
     )
@@ -71,6 +72,17 @@ if(RBUILD_DESKTOP)
     add_executable(test_merge_controller ${TEST_SRCS})
     target_include_directories(test_merge_controller PRIVATE . src src/engine src/game src/events src/flags raylib/src)
     target_link_libraries(test_merge_controller PRIVATE raylib glfw)
+
+    # Test executable for GotchiSim
+    set(GOTCHI_SIM_TEST_SRCS
+        tests/TestGotchiSim.cpp
+        ${TEST_ENGINE_SRCS}
+        ${TEST_EVENT_SRCS}
+        ${TEST_GAME_SRCS}
+    )
+    add_executable(test_gotchi_sim ${GOTCHI_SIM_TEST_SRCS})
+    target_include_directories(test_gotchi_sim PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+    target_link_libraries(test_gotchi_sim PRIVATE raylib glfw)
 
     # Test executable for StorySequencer
     add_executable(test_story_sequencer

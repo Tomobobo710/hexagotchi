@@ -8,6 +8,7 @@
 #include "game/HexViewScene.hpp"
 #include "game/SpriteTestScene.hpp"
 #include "game/GotchiScene.hpp"
+#include "game/GotchiSim.hpp"
 #include "game/PizzaParlorScene.hpp"
 #include "game/ApartmentScene.hpp"
 #include "game/TherapistOfficeScene.hpp"
@@ -42,6 +43,9 @@ MergeController* mergeController = nullptr;
 
 // StorySequencer - created in main() and used in UpdateDrawFrame
 StorySequencer* storySequencer = nullptr;
+
+// GotchiSim - simulation reducer (C-core)
+GotchiSim* gotchiSim = nullptr;
 
 // SaveManager - handles save/load/delete operations
 SaveManager saveManager;
@@ -219,6 +223,9 @@ void UpdateDrawFrame() {
     if (storySequencer) {
         storySequencer->update(dt);
     }
+    if (gotchiSim) {
+        gotchiSim->update(dt);
+    }
     dialog->update(dt);
 
     BeginTextureMode(gameTarget);
@@ -345,6 +352,9 @@ int main() {
     // Wire up the story sequencer
     storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);
 
+    // Wire up the sim reducer (C-core)
+    gotchiSim = new GotchiSim(globalEventBus, globalGameState);
+
     // Wire up SaveWiring for autosave on checkpoints
     saveWiring = new SaveWiring(saveManager, globalEventBus);
     saveWiring->setGameState(&globalGameState);
@@ -407,6 +417,7 @@ int main() {
     delete dialog;
     delete mergeController;
     delete storySequencer;
+    delete gotchiSim;
     delete saveWiring;
     delete sceneManager;
     CloseWindow();
