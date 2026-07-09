@@ -7,22 +7,26 @@
 #include <string>
 #include <vector>
 
+// Forward declaration
+class GameState;
+
 // Gotchi class - the main pet entity
 // Extends SceneActor with mood, stats, and AI behavior
+// Vitals are now owned by GameState - Gotchi holds a reference
 class Gotchi : public SceneActor {
 public:
-    // Constructor
-    Gotchi(Vector2 position);
+    // Constructor - vitals and mood are now passed from GameState (shared ownership)
+    Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef);
     ~Gotchi() = default;
 
     // Lifecycle
     void update(float deltaTime) override;
     void draw() override;
 
-    // Initialization
+    // Initialization - no longer resets vitals (they persist in GameState)
     void init();
 
-    // Stats and mood management
+    // Stats and mood management - reference the shared vitals
     GotchiStats& getStats() { return stats_; }
     const GotchiStats& getStats() const { return stats_; }
 
@@ -73,9 +77,9 @@ public:
     bool isDebugMode() const;
 
 private:
-    // Core systems
-    GotchiStats stats_;
-    GotchiMood mood_;
+    // Core systems - references to shared vitals owned by GameState
+    GotchiStats& stats_;
+    GotchiMood& mood_;
 
     // State
     bool active_;

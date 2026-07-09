@@ -176,6 +176,10 @@ void OfficeScene::triggerEvent(int index) {
     playLine(events[activeEvent][lineIndex]);
 }
 
+void OfficeScene::triggerStoryEvent(int eventIndex) {
+    triggerEvent(eventIndex);
+}
+
 bool OfficeScene::isPlayingEvent() const {
     return activeEvent >= 0;
 }

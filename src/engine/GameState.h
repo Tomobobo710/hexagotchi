@@ -7,6 +7,11 @@
 #include <optional>
 #include "GameConstants.hpp"
 
+// Include GotchiStats and GotchiMood before GameState since we need their full definitions
+// for member variables
+#include "GotchiStats.hpp"
+#include "GotchiMood.hpp"
+
 // Save version for forward/backward compatibility
 constexpr int SAVE_VERSION = 1;
 
@@ -51,6 +56,13 @@ struct GameState {
     float       mergeLockTimer    = 0.0f;               // Post-beat cooldown before next merge
     double      playtimeSeconds   = 0.0;                // For slot summaries
 
+    // --- batched up front so B/C/D/F don't each edit this header ---
+    int   mergeCount       = 0;      // B writes on each merge; C reads it for the mercy driver
+    float grime            = 0.0f;   // 0 = pristine, 1 = fully neglected. F tints drawGary from this; C/D drive it
+    bool  collapsed        = false;  // C sets when he falls after deathEnabled; E reads it for ending 3
+    bool  engagedCareSide  = false;  // set true once the player has used gotchi/hex care
+    bool  engagedStorySide = false;  // set true once the player has completed a story beat
+
     // ---- Extensible narrative bag: choices, seen-flags, arbitrary story vars ----
     std::unordered_map<std::string, Value> flags;
 
@@ -66,6 +78,11 @@ struct GameState {
     void reset() {
         *this = GameState{};
     }
+
+    // Gotchi vitals and mood - owned here as single source of truth
+    // This is initialized once and shared across all scenes
+    GotchiStats vitals;
+    GotchiMood  mood;
 };
 
 #endif // GAME_STATE_H

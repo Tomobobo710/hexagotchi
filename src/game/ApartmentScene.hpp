@@ -34,6 +34,7 @@ public:
     void cleanup() override;
 
     void triggerEvent(int index);
+    void triggerStoryEvent(int eventIndex) override;
     bool isPlayingEvent() const;
 
 private:

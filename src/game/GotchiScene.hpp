@@ -4,9 +4,13 @@
 #include "Scene.hpp"
 #include "Gotchi.hpp"
 #include "Button.hpp"
+#include "EventType.h"
+#include "EventBus.h"
+#include "GameState.h"
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>
 
 // Scene 8 - Gotchi display scene
 // Shows the Gotchi character centered on screen, updating every frame
@@ -21,16 +25,50 @@ public:
 
     void addButtons();
 
+    // Set the event bus for merge button events
+    void setEventBus(EventBus* bus) { eventBus_ = bus; }
+
+    // Set the shared GameState reference (for vitals)
+    void setGameState(GameState* state) { gameState_ = state; }
+
 private:
     Gotchi* gotchi = nullptr;
+    GameState* gameState_ = nullptr;  // Shared vitals from GameState
+    GotchiStats defaultStats_;  // Fallback if gameState_ is not set (for tests)
+    GotchiMood defaultMood_;    // Fallback mood if gameState_ is not set
     std::string gotchiDir;
     float simTime_ = 0.0f;  // Total simulation time
     int frameCount_ = 0;    // Frame counter for animation
     std::vector<std::unique_ptr<Button>> buttons;
     std::string lastClickedButton_;  // Message to display when a button is clicked
+    EventBus* eventBus_ = nullptr;   // Event bus for merge button events
+
+    // Button cooldown system
+    std::map<std::string, float> buttonCooldowns_;
+    float buttonFeedbackTimer_ = 0.0f;
+
+    // Action shader overlay
+    Shader actionShader_ = {0};
+    Texture2D whitePixel_ = {0};  // 1x1 white texture for DrawTexturePro UVs
+    int locMode_ = -1, locProgress_ = -1, locTime_ = -1, locResolution_ = -1;
+    float actionOverlayTimer_ = 0.0f;
+    float actionOverlayDuration_ = 0.0f;
+    int actionOverlayMode_ = -1;
 
     void addNavigationButton(const std::string& label, const std::string& targetScene, float x, float y);
-    void addButton(const std::string& label, float x, float y);
+    void addButton(const std::string& label, float x, float y, bool isMergeButton);
+
+    // Handle button clicks - routes to specific action handlers
+    void handleGotchiAction(const std::string& action);
+
+    // Trigger the action shader overlay
+    void triggerActionShader(int mode, float duration);
+
+    // Get the gotchi's screen rectangle for shader overlay
+    Rectangle getGotchiScreenRect();
+
+    // Merge button callback - emits MergeRequested on the bus
+    void onMergeButtonClicked();
 };
 
 #endif // GOTCHI_SCENE_HPP

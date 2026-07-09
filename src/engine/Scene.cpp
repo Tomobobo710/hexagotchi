@@ -212,6 +212,11 @@ void* Scene::getSceneManager() const {
     return sceneMgr_;
 }
 
+// Default implementation: do nothing. Override in story scenes.
+void Scene::triggerStoryEvent(int eventIndex) {
+    (void)eventIndex;
+}
+
 void Scene::processRemovals() {
     for (auto actor : actorsToRemove) {
         auto it = std::find(actors.begin(), actors.end(), actor);

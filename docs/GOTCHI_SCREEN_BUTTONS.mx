@@ -1,0 +1,496 @@
+# Gotchi Screen Buttons Implementation Plan
+
+**Last Updated:** 2026-07-08
+**Status:** Planning Phase (revised, code-validated)
+**Target:** Implementation for GotchiScene button interactions + per-action shader overlay
+
+---
+
+## 0. Validation Notes (read before implementing)
+
+This plan was checked against the actual source. What was verified vs. assumed:
+
+**Verified against `GotchiStats.cpp`, `GotchiMood.hpp`, `Gotchi.hpp`:**
+- Stat enum members, ranges, defaults, and the `getStat`/`setStat`/`addStat` API.
+- `GotchiMoodType` values (100-entry enum).
+- `GotchiMood::addMoodOverlay(GotchiMoodType mood, float duration)` signature.
+- Gotchi interaction method *declarations* (`interact`, `feed`, `play`, `clean`, `heal`, `sleep`, `wake`).
+
+**NOT verified (files not available at plan time) — grep before trusting:**
+- `Gotchi.cpp` — the *bodies* of `interact()`/`feed()`/`play()`/`clean()`/`heal()`. The
+  "Already Implemented" effects in section 1 are inferred, not confirmed. **Do not treat those
+  deltas as ground truth until `grep -n` on `Gotchi.cpp` confirms each stat write.**
+- `GotchiStats.hpp` — enum class *names* (`SecondaryStat`, `EmotionalStat`, `PhysicalStat`,
+  `SocialStat`, `EnvironmentalStat`, `SkillStat`) are taken from the `.cpp` method signatures.
+  They are almost certainly correct but confirm against the header.
+- `GotchiScene.cpp` / `GotchiScene.hpp` — current button wiring described from the prior plan,
+  not re-read.
+
+**Landmines fixed in this revision (see section 9 for detail):**
+1. Removed nonexistent moods `FUNNY`, `RESTED`, `CLEAR` (they are not in `GotchiMoodType`).
+2. Flagged the `EmotionalStat::FRIEDNSHIP` enum **typo** — code must use the misspelling.
+3. Hidden drivers (Affection/Mercy/Survival) have no storage yet — see section 5, do not wire
+   until the storage decision is made.
+4. Core-vs-alias stat duplication risk documented (section 4.3).
+
+---
+
+## 1. Current State
+
+### Existing GotchiScene Buttons
+The GotchiScene currently has 6 action buttons and 1 navigation button:
+
+| Button | Current Behavior |
+|--------|-----------------|
+| Wash | Shows "Wash was clicked" message on screen |
+| Groom | Shows "Groom was clicked" message on screen |
+| Feed | Shows "Feed was clicked" message on screen |
+| Pet | Shows "Pet was clicked" message on screen |
+| Play | Shows "Play was clicked" message on screen |
+| Give a Break | Shows "Give a Break was clicked" message on screen |
+| DETAILED VITALS | Navigates to gotchi_stats scene |
+
+### Gotchi Interaction Methods (declared in `Gotchi.hpp`; bodies UNVERIFIED)
+> The following effects are **inferred from the prior plan**, not confirmed against `Gotchi.cpp`.
+> Run `grep -n "addStat\|setStat" Gotchi.cpp` and paste the literal output before relying on these.
+
+| Method | Claimed Effects (verify) |
+|--------|--------------------------|
+| `interact()` | +15 Happiness, +20 Excitement, +1 Friendship, "play" action (2s) |
+| `feed()` | Hunger down, +10 Energy, +10 Satisfaction, "eat" action (3s) |
+| `play()` | +25 Excitement, +20 Happiness, +1 Agility, "play" action (4s) |
+| `clean()` | Cleanliness -> 100, +10 Satisfaction, "idle" action (1s) |
+| `heal()` | Health -> 100, +5 Happiness, "idle" action (1s) |
+| `sleep()` | Sets sleeping state, "sleep" action |
+| `wake()` | Clears sleeping state, +10 Happiness overlay |
+
+---
+
+## 2. Verified Stat Reference
+
+These are the **exact enum identifiers and ranges** confirmed in `GotchiStats.cpp`. Use these
+spellings verbatim in handler code.
+
+### Emotional stats (`EmotionalStat`, all 0-100 %)
+| Identifier | Display name | Default | Note |
+|-----------|--------------|---------|------|
+| `HAPPINESS` | Happiness | 80 | |
+| `EXCITEMENT` | Excitement | 30 | |
+| `SATISFACTION` | Satisfaction | 60 | |
+| `LOVE` | Love | 50 | description is literally "Affection" |
+| `FRIEDNSHIP` | Friendship | 0 | **MISSPELLED IN ENUM — must type `FRIEDNSHIP`** |
+| `JOY` | Joy | 70 | |
+
+### Secondary stats (`SecondaryStat`) — the ONLY public path to the core vitals
+| Identifier | Display name | Default | Range | Semantics |
+|-----------|--------------|---------|-------|-----------|
+| `FITALITY` | Health | 100 | 0-100 | alias of core HEALTH |
+| `FOOD_LEVEL` | Hunger | 0 | 0-100 | **0 = full, 100 = starving** (feeding lowers it) |
+| `HYDRATION` | Thirst | 0 | 0-100 | 0 = hydrated, 100 = dehydrated |
+| `ENERGY` | Energy | 100 | 0-100 | alias of core ENERGY |
+| `SLEEP_DEBT` | Sleep | 0 | 0-100 | 0 = rested, 100 = exhausted |
+| `CLEANLINESS` | Hygiene | 100 | 0-100 | alias of core HYGIENE |
+
+### Physical stats (`PhysicalStat`, 0-100 %)
+| Identifier | Default |
+|-----------|---------|
+| `AGILITY` | 50 |
+
+### Social stats (`SocialStat`)
+| Identifier | Default | Unit | Note |
+|-----------|---------|------|------|
+| `FRIENDS` | 0 | `#` (count) | reserve for real social encounters, NOT touch-bonding |
+
+---
+
+## 3. Button-to-Action Mapping (validated)
+
+All mood identifiers below are confirmed present in `GotchiMoodType`.
+
+| Button | Gotchi call | Extra stat writes (button-layer bonus) | Mood overlays | Action anim |
+|--------|-------------|------------------------------------------|---------------|-------------|
+| **Wash** | `clean()` | `SATISFACTION +5` | `MOOD_13_CALM` (5s), `MOOD_14_PEACEFUL` (8s) | shader: scrub, 1.5s |
+| **Groom** | `interact()` | `HAPPINESS +10`, `FRIEDNSHIP +2` | `MOOD_10_JOYFUL` (5s), `MOOD_52_BEAUTIFUL` (10s) | shader: sparkle, 3s |
+| **Feed** | `feed()` | `SATISFACTION +5` | `MOOD_02_SATISFIED` (10s), `MOOD_13_CALM` (5s) | shader: chomp, 3s |
+| **Pet** | `interact()` | `HAPPINESS +10`, `LOVE +5`, `FRIEDNSHIP +3` | `MOOD_10_JOYFUL` (8s), `MOOD_30_LOVING` (15s) | shader: warm pulse, 2s |
+| **Play** | `play()` | (none; `play()` already does the work) | `MOOD_01_EXCITED` (8s), `MOOD_31_PLAYFUL` (5s) | shader: speed lines, 4s |
+| **Give a Break** | `sleep()`/`wake()` | on wake: `HAPPINESS +10` (matches existing `wake()`) | sleep: `MOOD_13_CALM`; wake: `MOOD_12_RELIEVED` | shader: Z-drift/dim, 2s |
+
+**Why `FRIEDNSHIP` (emotional %) and not `SocialStat::FRIENDS` for Groom/Pet:**
+`FRIENDS` is a discrete count (`#`). Adding +2/+3 to it per pet means "petting created 3 friends,"
+which is nonsense for the display and for any friend-count-based logic on the hex board. Bonding
+through touch belongs in the emotional connection stat (`FRIEDNSHIP`). Leave `SocialStat::FRIENDS`
+for actual social encounters on the board.
+
+### Button Visual States (unchanged)
+
+| State | Color | Description |
+|-------|-------|-------------|
+| Normal | RGB(60, 60, 100, 220) | Default |
+| Hover | RGB(100, 100, 160, 240) | Mouse over |
+| Active | RGB(40, 40, 80, 220) | Being clicked |
+| Cooldown | RGB(80, 80, 120, 180) | After use (spam guard) |
+| Disabled | RGB(50, 50, 50, 100) | Sleeping or dead |
+
+---
+
+## 4. Integration with Gotchi Stats
+
+### 4.1 Action Effects Matrix (button layer + inferred base method)
+> Numbers combine what the base method *is claimed to* do (unverified) with the button-layer
+> bonuses from section 3. Verify the base-method column against `Gotchi.cpp` before trusting.
+
+| Action | Hunger (`FOOD_LEVEL`) | Energy | Happiness | Excitement | Hygiene (`CLEANLINESS`) | Satisfaction | Other |
+|--------|-----------------------|--------|-----------|------------|--------------------------|--------------|-------|
+| Wash | 0 | 0 | 0 | 0 | -> 100 | +5 | — |
+| Groom | 0 | 0 | +10 (+15 base) | +20 base | 0 | 0 | `FRIEDNSHIP +2` |
+| Feed | -30 base | +10 base | 0 | 0 | 0 | +5 (+10 base) | — |
+| Pet | 0 | 0 | +10 (+15 base) | +20 base | 0 | 0 | `LOVE +5`, `FRIEDNSHIP +3` |
+| Play | 0 | (drain — see note) | +20 base | +25 base | 0 | 0 | `AGILITY +1` base |
+| Give Break (sleep) | 0 | +/tick (tick loop) | +10 on wake | 0 | 0 | 0 | `SLEEP_DEBT` down/tick |
+
+**Energy on Play:** the prior plan asserted `-15` energy on play but the `play()` body is unverified.
+Do NOT add a separate `ENERGY -15` in the button layer until you confirm whether `play()` already
+drains energy — otherwise you double-drain. Grep `Gotchi.cpp` for `ENERGY` inside `play()` first.
+
+### 4.2 Stats deliberately NOT touched by screen buttons (reserved for hex-board work)
+Keeping the screen-button footprint small on purpose. The following are **left untouched here** and
+are available for hex-board actions to own:
+
+- `SocialStat::FRIENDS`, `ALLIANCES`, `POPULARITY`, `REPUTATION`, `RESPECT` — social encounters.
+- All `SkillStat` (`LEARNING`, `SURVIVAL`, `FORAGING`, `BUILDING`, ...) — exploration/task tiles.
+- All `EnvironmentalStat` (`SAFETY`, `TERRITORY`, `HOME`, ...) — world/placement tiles.
+- `PhysicalStat` beyond the one `AGILITY` bump from `play()` — training tiles.
+- `SecondaryStat::HYDRATION` (Thirst) — a future **Water/Drink** action (screen or board).
+- Emotional stats beyond the six in section 2 (`ANGER`, `SADNESS`, `FEAR`, `BOREDOM`, `TRUST`,
+  `HOPE`, `CURIOSITY`, `CREATIVITY`, `FOCUS`, `PATIENCE`, `GRATITUDE`, `PEACE`) — event/board driven.
+
+### 4.3 KNOWN RISK: core vs. secondary-alias duplication
+`Health/Hunger/Thirst/Energy/Sleep/Hygiene` exist in **two** places:
+- `coreStats_[0..5]` (no public enum accessor found in `GotchiStats.cpp`), and
+- `secondaryStats_[20..25]` via the `SecondaryStat` aliases `FITALITY/FOOD_LEVEL/HYDRATION/ENERGY/SLEEP_DEBT/CLEANLINESS`.
+
+The public `addStat`/`setStat` API can only reach the **alias** copy. If `feed()`/`clean()`/`heal()`
+or the tick loop write `coreStats_` directly, and the DETAILED VITALS display reads the alias (or
+vice versa), the button will appear to do nothing or the two values will drift.
+
+**Action item (blocking):** before wiring Feed/Wash, run and paste:
+```
+grep -n "coreStats_\|secondaryStats_\|FOOD_LEVEL\|CLEANLINESS\|FITALITY" Gotchi.cpp GotchiStats.hpp GotchiScene.cpp
+```
+Establish which copy is the source of truth for the display, and write to that one.
+
+---
+
+## 5. Hidden Drivers (Affection / Mercy / Survival) — storage decision REQUIRED
+
+The ending system needs three hidden drivers. Current status:
+
+| Driver | Existing home | Status |
+|--------|---------------|--------|
+| Affection | `EmotionalStat::LOVE` (desc = "Affection") | usable as-is |
+| Survival | `SkillStat::SURVIVAL` | usable as-is |
+| **Mercy** | **none** | **no backing field exists anywhere** |
+
+**Do not** wire the driver deltas until this is resolved. Two options:
+
+- **Option A (minimal):** map Affection->`LOVE`, Survival->`SkillStat::SURVIVAL`, and add a single
+  `float mercy_ = 0.0f;` to `Gotchi` with `getMercy()/addMercy()`. Simplest, but drivers now live in
+  two different systems (stats + a loose field), which is easy to forget when computing endings.
+- **Option B (clean):** add a small `HiddenDrivers { float affection, mercy, survival; }` struct on
+  `Gotchi`, decoupled from care stats entirely, so ending logic reads one place. Care stats still
+  move for feedback; drivers accumulate separately.
+
+Recommended: **Option B** — it keeps the "which ending" computation in one obvious place and stops
+care-stat clamping (0-100) from silently capping long-run driver accumulation.
+
+**Intended driver deltas once storage exists** (per action, additive):
+
+| Action | Affection | Mercy | Survival |
+|--------|-----------|-------|----------|
+| Wash | +2 | +5 | +1 |
+| Groom | +5 | +3 | 0 |
+| Feed | +3 | +1 | +5 |
+| Pet | +8 | +2 | 0 |
+| Play | +5 | 0 | +2 |
+| Give a Break | +3 | +10 | -5 |
+
+---
+
+## 6. Per-Action Shader Overlay (the "animation on top of the character")
+
+Goal: when a button is pressed, render a short shader effect **over the character** in the Gotchi
+scene, on top of the existing sprite animation (`setAction` is NOT replaced — the shader is additive).
+
+### 6.1 Approach (raylib)
+- One fragment shader with an `int uMode` uniform selecting the per-action effect. Cheaper and
+  simpler than six shaders.
+- Draw the existing gotchi sprite normally, then draw a transparent quad covering the character's
+  on-screen rect inside `BeginShaderMode/EndShaderMode`. The shader outputs mostly-transparent
+  pixels plus the effect (black lines, sparkles, etc.), so the sprite shows through.
+- The effect is driven by `uProgress` (0 -> 1 across the action duration) so it eases in/out and
+  self-terminates.
+
+### 6.2 STANDING CONSTRAINT: two shader source copies
+Per project rule, every shader exists as two C-string copies. Ship both and pick by platform:
+- `ACTION_OVERLAY_FS_DESKTOP` — begins `#version 330`
+- `ACTION_OVERLAY_FS_WEB` — begins `#version 300 es` (add `precision mediump float;`)
+Load with `LoadShaderFromMemory(nullptr, isWeb ? ACTION_OVERLAY_FS_WEB : ACTION_OVERLAY_FS_DESKTOP)`.
+No vertex shader override needed (pass `nullptr`); raylib's default vertex path is fine.
+
+### 6.3 Uniforms
+| Uniform | Type | Meaning |
+|---------|------|---------|
+| `uMode` | `int` | 0=Wash(scrub) 1=Groom(sparkle) 2=Feed(chomp) 3=Pet(warm pulse) 4=Play(speed lines) 5=Break(Z/dim) |
+| `uProgress` | `float` | 0..1 over the effect duration |
+| `uTime` | `float` | seconds, for animating within the effect |
+| `uResolution` | `vec2` | quad pixel size (for aspect-correct UVs) |
+
+Cache locations once at init via `GetShaderLocation`; set with `SetShaderValue` each frame the
+overlay is active.
+
+### 6.4 Effect intent (keep simple — black lines are fine)
+- **Play (4)** — animated black speed lines sweeping across (the "whatever is appropriate" default).
+- **Wash (0)** — horizontal scrub lines + faint bubbles.
+- **Groom (1)** — a few sparkle points that pop and fade.
+- **Feed (2)** — short chomp lines / crumbs falling.
+- **Pet (3)** — soft warm radial pulse (low-alpha, no hard geometry).
+- **Give a Break (5)** — screen dim + drifting "Z" glyphs (or just a vignette if glyphs are fiddly).
+
+Any effect that can't be done cleanly in the jam window falls back to the Play speed-lines look with
+a different tint. The requirement is "something renders on top per action," not six bespoke shaders.
+
+### 6.5 Scene wiring
+```cpp
+// GotchiScene.hpp
+Shader actionShader_{};
+int locMode_ = -1, locProgress_ = -1, locTime_ = -1, locResolution_ = -1;
+float actionOverlayTimer_ = 0.0f;    // counts down
+float actionOverlayDuration_ = 0.0f; // total, for progress
+int   actionOverlayMode_ = -1;
+
+// GotchiScene init (after window/context exists)
+const char* fs = isWeb ? ACTION_OVERLAY_FS_WEB : ACTION_OVERLAY_FS_DESKTOP;
+actionShader_ = LoadShaderFromMemory(nullptr, fs);
+locMode_       = GetShaderLocation(actionShader_, "uMode");
+locProgress_   = GetShaderLocation(actionShader_, "uProgress");
+locTime_       = GetShaderLocation(actionShader_, "uTime");
+locResolution_ = GetShaderLocation(actionShader_, "uResolution");
+
+// trigger, called from handleGotchiAction
+void GotchiScene::triggerActionShader(int mode, float duration) {
+    actionOverlayMode_ = mode;
+    actionOverlayDuration_ = duration;
+    actionOverlayTimer_ = duration;
+}
+
+// update()
+if (actionOverlayTimer_ > 0.0f) actionOverlayTimer_ -= deltaTime;
+
+// draw(), AFTER gotchi->draw()
+if (actionOverlayTimer_ > 0.0f && actionOverlayMode_ >= 0) {
+    Rectangle r = getGotchiScreenRect();  // character bounds in screen space
+    float progress = 1.0f - (actionOverlayTimer_ / actionOverlayDuration_);
+    float t = (float)GetTime();
+    Vector2 res = { r.width, r.height };
+    SetShaderValue(actionShader_, locMode_, &actionOverlayMode_, SHADER_UNIFORM_INT);
+    SetShaderValue(actionShader_, locProgress_, &progress, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(actionShader_, locTime_, &t, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(actionShader_, locResolution_, &res, SHADER_UNIFORM_VEC2);
+    BeginShaderMode(actionShader_);
+        DrawRectangleRec(r, WHITE);  // shader paints; alpha lets sprite show through
+    EndShaderMode();
+}
+
+// unload on scene teardown
+if (actionShader_.id) UnloadShader(actionShader_);
+```
+`getGotchiScreenRect()` must return the character's current on-screen rectangle (sprite origin +
+size, after any camera/scale). If the scene has no such helper yet, add one; do not hardcode.
+
+---
+
+## 7. Handler Implementation
+
+### Phase 1: Button click handler
+Replace the placeholder lambda so each button routes through one handler:
+```cpp
+btn->setOnClick([this, label]() { handleGotchiAction(label); });
+```
+
+### Phase 2: Action handler (updated — mood overlays + shader trigger included)
+```cpp
+void GotchiScene::handleGotchiAction(const std::string& action) {
+    if (!gotchi || gotchi->isDead()) {
+        lastClickedButton_ = "Cannot interact - Gotchi is dead";
+        buttonFeedbackTimer_ = 1.5f;
+        return;
+    }
+    // Sleeping guard: only "Give a Break" (to wake) is allowed while asleep
+    if (gotchi->isSleeping() && action != "Give a Break") {
+        lastClickedButton_ = "Gotchi is sleeping - give a break to wake";
+        buttonFeedbackTimer_ = 1.5f;
+        return;
+    }
+
+    float& cooldown = buttonCooldowns_[action];
+    if (cooldown > 0.0f) {
+        lastClickedButton_ = "Wait - Cooldown: " +
+            std::to_string(static_cast<int>(cooldown) + 1) + "s";
+        buttonFeedbackTimer_ = 1.0f;
+        return;
+    }
+
+    auto& stats = gotchi->getStats();
+    auto& mood  = gotchi->getMood();
+    std::string feedback;
+    int   shaderMode = -1;
+    float shaderDur  = 0.0f;
+    bool  success    = true;
+
+    if (action == "Wash") {
+        gotchi->clean();
+        stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_14_PEACEFUL, 8.0f);
+        feedback = "Washed - Cleanliness 100%";
+        shaderMode = 0; shaderDur = 1.5f;
+    } else if (action == "Groom") {
+        gotchi->interact();
+        stats.addStat(EmotionalStat::HAPPINESS, 10.0f);
+        stats.addStat(EmotionalStat::FRIEDNSHIP, 2.0f); // NOTE: enum is misspelled
+        mood.addMoodOverlay(GotchiMoodType::MOOD_10_JOYFUL, 5.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_52_BEAUTIFUL, 10.0f);
+        feedback = "Groomed - Happy & shiny!";
+        shaderMode = 1; shaderDur = 3.0f;
+    } else if (action == "Feed") {
+        gotchi->feed();
+        stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_02_SATISFIED, 10.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
+        feedback = "Fed - Hunger reduced";
+        shaderMode = 2; shaderDur = 3.0f;
+    } else if (action == "Pet") {
+        gotchi->interact();
+        stats.addStat(EmotionalStat::HAPPINESS, 10.0f);
+        stats.addStat(EmotionalStat::LOVE, 5.0f);
+        stats.addStat(EmotionalStat::FRIEDNSHIP, 3.0f); // NOTE: enum is misspelled
+        mood.addMoodOverlay(GotchiMoodType::MOOD_10_JOYFUL, 8.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_30_LOVING, 15.0f);
+        feedback = "Petted - Happiness up";
+        shaderMode = 3; shaderDur = 2.0f;
+    } else if (action == "Play") {
+        gotchi->play();
+        // No manual ENERGY change here: verify play() drain first (see 4.1)
+        mood.addMoodOverlay(GotchiMoodType::MOOD_01_EXCITED, 8.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_31_PLAYFUL, 5.0f);
+        feedback = "Played - Energetic!";
+        shaderMode = 4; shaderDur = 4.0f;
+    } else if (action == "Give a Break") {
+        if (gotchi->isSleeping()) {
+            gotchi->wake();  // wake() already applies +Happiness per its declaration
+            mood.addMoodOverlay(GotchiMoodType::MOOD_12_RELIEVED, 5.0f);
+            feedback = "Woke up - Refreshed";
+        } else {
+            gotchi->sleep();
+            mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 6.0f);
+            feedback = "Resting - Restoring energy";
+        }
+        shaderMode = 5; shaderDur = 2.0f;
+    } else {
+        success = false;
+    }
+
+    if (success) {
+        lastClickedButton_ = feedback;
+        buttonFeedbackTimer_ = 3.0f;
+        cooldown = 2.0f;
+        if (shaderMode >= 0) triggerActionShader(shaderMode, shaderDur);
+        // TODO: hidden-driver deltas here once storage exists (section 5)
+    }
+}
+```
+
+### Phase 3: Cooldown + feedback timers (in `update()`)
+```cpp
+for (auto& [name, timer] : buttonCooldowns_) if (timer > 0.0f) timer -= deltaTime;
+if (buttonFeedbackTimer_ > 0.0f) {
+    buttonFeedbackTimer_ -= deltaTime;
+    if (buttonFeedbackTimer_ <= 0.0f) lastClickedButton_.clear();
+}
+if (actionOverlayTimer_ > 0.0f) actionOverlayTimer_ -= deltaTime;
+```
+
+### Phase 4: Button cooldown visual (in `draw()`)
+```cpp
+for (auto& btn : buttons) {
+    float cd = buttonCooldowns_[btn->getLabel()];
+    if (cd > 0.0f) {
+        Color overlay = {0,0,0,(unsigned char)std::min(160.0f, cd*80.0f)};
+        DrawRectangle(btn->getX(), btn->getY(), btn->getWidth(), btn->getHeight(), overlay);
+    }
+    btn->draw();
+}
+```
+
+### New member variables (`GotchiScene.hpp`)
+```cpp
+std::map<std::string, float> buttonCooldowns_;
+float buttonFeedbackTimer_ = 0.0f;
+// shader overlay members from section 6.5
+```
+
+---
+
+## 8. Testing Checklist
+
+### Compile gate (do these FIRST)
+- [ ] Handler compiles — confirms `EmotionalStat::FRIEDNSHIP` (misspelled), `LOVE`, `SATISFACTION`,
+      `HAPPINESS` and all `MOOD_*` identifiers resolve.
+- [ ] Shader compiles on desktop (`#version 330`) AND web (`#version 300 es`).
+
+### Evidence-based verification (paste literal output, no self-certification)
+- [ ] `grep -n` in `Gotchi.cpp` for each interaction method's stat writes — reconcile with section 1.
+- [ ] Confirm which storage (`coreStats_` vs alias) the vitals display reads (section 4.3).
+- [ ] `Feed` lowers the displayed Hunger value (screenshot or log the before/after number).
+- [ ] `Wash` sets displayed Hygiene to 100.
+- [ ] `Play` does not double-drain energy (log ENERGY before/after; one drain only).
+
+### Behavior
+- [ ] Each button triggers its shader overlay for the right duration, drawn on top of the sprite.
+- [ ] Mood overlays apply (log `getMoodName()` after each action).
+- [ ] Cooldown blocks re-click for 2s with correct message.
+- [ ] Dead gotchi: all actions blocked. Sleeping gotchi: only "Give a Break" works (wakes it).
+- [ ] Feedback message clears after 3s.
+
+---
+
+## 9. Changelog vs. Previous Plan
+
+| Change | Reason |
+|--------|--------|
+| Removed moods `FUNNY`, `RESTED`, `CLEAR` | Not present in `GotchiMoodType`; would not compile |
+| Play mood -> `MOOD_31_PLAYFUL`; Break -> `MOOD_13_CALM`/`MOOD_12_RELIEVED` | Valid replacements |
+| Flagged `EmotionalStat::FRIEDNSHIP` typo | Enum is literally misspelled in `GotchiStats.cpp:506` |
+| Groom/Pet bonding uses emotional `FRIEDNSHIP`, not `SocialStat::FRIENDS` | `FRIENDS` is a count; touch-bonding is a % |
+| Removed manual `ENERGY -15` on Play from button layer | Avoid double-drain until `play()` verified |
+| Added shader overlay section (6) with two-copy DESKTOP/WEB constraint | Was missing; core of the request |
+| Hidden drivers marked as "no storage — decision required" (5) | Mercy has no backing field anywhere |
+| Documented core-vs-alias duplication risk (4.3) | Silent desync risk on Hunger/Energy/Hygiene/Health |
+| Added "reserved for hex board" stat list (4.2) | Keeps screen-button footprint small, per scope |
+| Marked base-method effects UNVERIFIED (1) | `Gotchi.cpp` not available at plan time |
+
+---
+
+## 10. Implementation Order
+
+1. **Grep gate** — reconcile section 1 base effects and resolve section 4.3 storage question.
+2. **Phase 1-2** — route buttons through `handleGotchiAction`, wire stat + mood writes.
+3. **Section 6** — add the action shader (both source copies), `triggerActionShader`, draw hook.
+4. **Phase 3-4** — cooldown + feedback timers and button dimming.
+5. **Section 5 decision** — pick Option A/B, add storage, wire hidden-driver deltas.
+6. **Section 8** — run the evidence-based checklist; paste output before marking done.
+
+---
+
+*End of Document*
