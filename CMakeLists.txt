@@ -271,6 +271,9 @@ if(RBUILD_DESKTOP)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_SOURCE_DIR}/assets.rres
             $<TARGET_FILE_DIR:game>/assets.rres
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/assets_manifest.txt
+            $<TARGET_FILE_DIR:game>/assets_manifest.txt
         )
     endif()
 endif()
