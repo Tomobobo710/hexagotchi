@@ -1,0 +1,477 @@
+# hexagotchi Project State
+
+**Last Updated:** 2026-07-09
+**Project Status:** Active Development (Pre-Jam Build)
+
+**Note:** This document reflects the current state of the hexagotchi codebase. Features are documented with their completion status based on actual code inspection.
+
+---
+
+## 1. Project Overview
+
+**hexagotchi** is a game jam entry (theme: **hex + merge**) that combines a digital pet simulator with a narrative story mode. The core concept: you're handed what looks like a Tamagotchi, but pressing the "merge" button cracks open into the real world of Gary—a man trapped inside the device, whose wife is leaving him, whose kid is a jerk, and whose job is being your pet.
+
+### Key Concepts
+- **Gotchi Mode:** A Gameboy-style interface with care buttons (feed, pet, wash, merge)
+- **Story Mode:** Narrative scenes (Apartment, Office, School, Therapist, Pizza Parlor) where Gary's life unfolds
+- **The Merge:** A thematic and mechanical bridge between the two worlds
+- **Hidden Branch Drivers:** Affection, Mercy, Survival determine one of three endings
+
+---
+
+## 2. Project Structure
+
+```
+hexagotchi/
+├── src/
+│   ├── main.cpp                    # Entry point, scene manager, dialog control
+│   ├── engine/                     # Reusable engine components
+│   │   ├── Scene.hpp/cpp           # Scene with actors, camera, effects
+│   │   ├── SceneActor.hpp/cpp      # Base class for all game objects
+│   │   ├── SceneCamera.hpp/cpp     # Follow cam, zoom, shake, lookahead
+│   │   ├── SceneEffect.hpp         # Base class for visual effects
+│   │   ├── SceneManager.hpp/cpp    # Scene switching with transitions
+│   │   ├── SceneInputHandler.hpp/cpp # Input abstraction
+│   │   ├── DialogBox.hpp/cpp       # Dialog UI with portrait and typewriter
+│   │   ├── AssetPack.hpp/cpp       # Asset bundle loading (rres)
+│   │   ├── SaveManager.h/cpp       # Save/load system with JSON
+│   │   ├── SaveWiring.h            # Autosave on checkpoints
+│   │   ├── GameState.h/cpp         # Game state structure
+│   │   ├── Button.hpp/cpp          # Reusable UI buttons
+│   │   ├── HexTile.hpp/cpp         # Hexagonal tile system
+│   │   ├── HexWorld.hpp/cpp        # Hex world management
+│   │   └── HexPathFinder.hpp/cpp   # Pathfinding on hex grid
+│   ├── game/                       # Game-specific scenes and actors
+│   │   ├── Gotchi.hpp/cpp          # Main pet entity (extends SceneActor)
+│   │   ├── GotchiScene.hpp/cpp     # Gotchi display scene
+│   │   ├── GotchiStats.hpp/cpp     # 100 stats across 6 categories
+│   │   ├── GotchiMood.hpp/cpp      # 100 mood states with overlays
+│   │   ├── GotchiSim.hpp/cpp       # C-core simulation reducer
+│   │   ├── GameScene.hpp/cpp       # Overworld scene
+│   │   ├── BossScene.hpp/cpp       # Boss arena
+│   │   ├── HexViewScene.hpp/cpp    # Hex board view
+│   │   ├── PizzaParlorScene.hpp/cpp
+│   │   ├── ApartmentScene.hpp/cpp
+│   │   ├── TherapistOfficeScene.hpp/cpp
+│   │   ├── OfficeScene.hpp/cpp
+│   │   ├── SchoolScene.hpp/cpp
+│   │   ├── TitleScene.hpp/cpp
+│   │   ├── SceneSelectScene.hpp/cpp
+│   │   ├── InputTestScene.hpp/cpp
+│   │   ├── SpriteTestScene.hpp/cpp
+│   │   ├── Model3DTestScene.hpp/cpp
+│   │   ├── MergeScene.hpp/cpp      # Merge transition scene
+│   │   ├── MergeController.hpp/cpp # Merge logic and state machine
+│   │   ├── StorySequencer.hpp/cpp  # Story beat orchestration
+│   │   └── ControlsOverlay.hpp/cpp
+│   ├── effects/                    # Visual effects
+│   │   ├── MoonEffect.hpp/cpp      # Day/night cycle shader
+│   │   ├── CityWindowEffect.hpp/cpp
+│   │   ├── SchoolSkyEffect.hpp/cpp
+│   │   ├── StarfieldEffect.hpp/cpp
+│   │   ├── GrimeShader.hpp/cpp     # Grime/dishevelment shader
+│   │   ├── PortalShader.hpp/cpp    # Portal transition shader
+│   │   ├── LitShader.hpp/cpp       # Lighting shader
+│   │   ├── PortalEffect.hpp/cpp    # Portal ring effect
+│   │   └── MeshBuilders.hpp        # Geometric primitives
+│   ├── events/                     # Event system
+│   │   ├── EventBus.hpp/cpp
+│   │   └── EventType.h
+│   └── flags/                      # Game flags/choices
+│       └── Keys.h
+├── assets/                         # Asset directories
+│   ├── backgrounds/                # Scene backgrounds
+│   ├── gotchis/                    # Pet sprites (animations)
+│   ├── portraits/                  # Character portraits
+│   └── single_tiles/               # Tile types (Ocean, Sand, Grass, etc.)
+├── rres/                           # Asset bundle library (submodule)
+├── raylib/                         # Raylib engine (submodule)
+├── glfw/                           # GLFW windowing (submodule)
+├── emsdk/                          # Emscripten toolchain (submodule)
+├── tools/                          # Development tools
+│   ├── pack_assets.cpp             # Build assets.rres bundle
+│   └── scene_editor.cpp            # Scene editor
+├── saves/                          # Save data (JSON)
+├── tests/                          # Unit tests
+│   ├── TestSaveManager.cpp         # Save/Load system tests
+│   ├── TestMergeController.cpp     # Merge logic tests
+│   ├── TestStorySequencer.cpp      # Story sequencing tests
+│   ├── TestGotchiSim.cpp           # Simulation reducer tests
+│   └── TestGrimeShader.cpp         # Grime shader tests
+├── web/                            # Web build shell
+├── docs/                           # Design documentation
+│   ├── GAME_DESIGN.mx              # Working design spine
+│   ├── GOTCHI_SYSTEM.mx            # Pet system specs
+│   ├── SCENE_RENDERING.mx          # Rendering system docs
+│   ├── C_CORE_SIM_REDUCER.md       # Simulation reducer docs
+│   ├── DEBUG_STATE_READOUT.md      # Debug output docs
+│   └── PROJECT_STATE.mx            # This file
+├── CMakeLists.txt                  # Build configuration
+└── Makefile                        # Convenience build targets
+```
+
+---
+
+## 3. Core Systems Status
+
+### 3.1 Scene System
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Scene | ✅ Complete | Actor management, camera, effects, input handler |
+| SceneActor | ✅ Complete | Position, layer, animation, click detection |
+| SceneCamera | ✅ Complete | Follow cam, zoom, shake, lookahead |
+| SceneManager | ✅ Complete | Scene switching with transitions (fade, slide) |
+| SceneInputHandler | ✅ Complete | Input abstraction with mouse/keyboard |
+
+### 3.2 Gotchi (Pet) System
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Gotchi class | ✅ Complete | Main pet entity, extends SceneActor |
+| GotchiStats | ✅ Complete | 100 stats across 6 categories (Core, Secondary, Emotional, Physical, Social, Environmental, Skill) |
+| GotchiMood | ✅ Complete | 100 mood states with overlays |
+| Animation system | ✅ Complete | 7 action types (idle, move, walk, eat, sleep, play, sad, happy) |
+| Tick lifecycle | ✅ Complete | 10-second tick rate for stat updates |
+| Interaction methods | ✅ Complete | feed(), play(), clean(), heal(), sleep(), interact(), wake() |
+
+### 3.3 Save/Load System
+| Component | Status | Notes |
+|-----------|--------|-------|
+| SaveManager | ✅ Complete | 3 save slots, atomic writes, slot isolation |
+| GameState | ✅ Complete | Typed state + extensible flags map |
+| SaveWiring | ✅ Complete | Autosave on scene transitions |
+| JSON serialization | ✅ Complete | JSON parsing via rplyjson |
+| Slot summary | ✅ Complete | Quick read of save metadata |
+
+### 3.4 UI System
+| Component | Status | Notes |
+|-----------|--------|-------|
+| DialogBox | ✅ Complete | Typewriter effect, portrait, speaker name, options |
+| Button | ✅ Complete | Reusable UI button with click callbacks |
+| ControlsOverlay | ✅ Complete | In-game controls display |
+| PauseMenuOverlay | ✅ Complete | Pause/resume menu |
+| TitleScreen | ✅ Complete | New Game, Load Game with 3-slot selector |
+
+### 3.5 Asset System
+| Component | Status | Notes |
+|-----------|--------|-------|
+| AssetPack | ✅ Complete | rres-based asset bundle loading |
+| Asset bundling | ✅ Complete | `tools/pack_assets.cpp` builds `assets.rres` |
+| Asset directories | ✅ Complete | backgrounds/, gotchis/, portraits/, single_tiles/ |
+
+### 3.6 Visual Effects
+| Component | Status | Notes |
+|-----------|--------|-------|
+| SceneEffect base | ✅ Complete | Base class for effects |
+| MoonEffect | ✅ Complete | Day/night cycle shader |
+| GrimeShader | ✅ Complete | Grime/dishevelment shader for gotchi and Gary |
+| PortalShader | ✅ Complete | Portal transition shader |
+| LitShader | ✅ Complete | Dynamic lighting shader |
+| Mesh builders | ✅ Complete | Geometric primitives for 3D effects |
+| PortalEffect | ✅ Complete | Portal ring effect with 3D rendering |
+
+### 3.7 Event System
+| Component | Status | Notes |
+|-----------|--------|-------|
+| EventBus | ✅ Complete | Publish/subscribe event system |
+| EventType | ✅ Complete | Event type definitions (MergeRequested, MergeCompleted, StoryBeatStarted, etc.) |
+
+---
+
+## 4. Implemented Scenes
+
+| Scene | Status | Description |
+|-------|--------|-------------|
+| GameScene | ✅ Complete | Overworld with platforming |
+| BossScene | ✅ Complete | Boss arena with difficulty ramp |
+| HexViewScene | ✅ Complete | Hex board display with biomes |
+| GotchiScene | ✅ Complete | Pet display with 6 action buttons + navigation |
+| PizzaParlorScene | ✅ Complete | Story scene with events |
+| ApartmentScene | ✅ Complete | Story scene with events |
+| TherapistOfficeScene | ✅ Complete | Story scene with events |
+| OfficeScene | ✅ Complete | Story scene with events |
+| SchoolScene | ✅ Complete | Story scene with events |
+| TitleScene | ✅ Complete | Main menu with New Game, Load Game, and 3 save slot selection |
+| SceneSelectScene | ✅ Complete | Scene selector UI |
+| InputTestScene | ✅ Complete | Input debugging |
+| SpriteTestScene | ✅ Complete | Animation debugging |
+| Model3DTestScene | ✅ Complete | 3D model testing |
+| MergeScene | ✅ Complete | Merge transition scene |
+| GotchiStatsScene | ✅ Complete | Detailed stat display |
+
+---
+
+## 5. Build Configuration
+
+### Desktop Build (Default)
+- **Compiler:** C++17 compatible (GCC 5+, Clang 3.4+)
+- **Dependencies:** raylib (static), GLFW (static), OpenGL
+- **Output:** `build/desktop/[Debug|Release]/game` (Linux) or `game.exe` (Windows)
+- **Assets:** `assets.rres` copied to build directory
+
+### Web Build (Emscripten)
+- **Compiler:** Emscripten (emcc)
+- **Output:** `build/web/game.html` + WASM bundle
+- **Assets:** Embedded in virtual filesystem
+
+### Build Commands
+```bash
+# Desktop
+cmake -B build -D RBUILD_DESKTOP=ON -D RBUILD_WEB=OFF
+cmake --build build
+
+# Web
+cmake -B build -D RBUILD_DESKTOP=OFF -D RBUILD_WEB=ON
+cmake --build build --target game-web
+
+# Run tests
+./tests/TestMergeController
+./tests/TestStorySequencer
+```
+
+---
+
+## 6. Game Design Status
+
+### Current Design Document: `docs/GAME_DESIGN.mx`
+
+#### Premise
+You're handed a Tamagotchi. Pressing the "merge" button cracks open into Gary's real world.
+
+#### Core Loop
+```
+START (gotchi mode)
+  -> player presses buttons, discovers merge button
+  -> FIRST MERGE (player-triggered, TIMED) ---> Story beat 1
+  -> merge back to gotchi (button locks briefly)
+  -> play gotchi + hex; SLEEP drains (uncontrollable, one-way)
+  -> SLEEP hits zero -> FORCED MERGE        ---> Story beat 2
+  -> merge back to gotchi (button locks briefly)
+  -> ... repeat ...
+  -> CLIMAX: death enabled -> ENDING
+```
+
+#### Key Mechanics
+
+1. **Stats (Visible to Player)**
+   - Hunger, Hygiene, Affection, Energy/Excitement
+   - Easy to keep topped (the bait)
+
+2. **Hidden Branch Drivers (Decide Endings)**
+   - **Affection** (fed by petting, playing)
+   - **Mercy** (fed by using merge/giving breaks)
+   - **Survival** (not letting him collapse after death enabled)
+
+3. **Three Endings**
+   - **Ending 1 - Escape (Good):** High affection + mercy, alive
+   - **Ending 2 - Trapped (Bittersweet):** Alive, but low affection/mercy
+   - **Ending 3 - Collapse (Bad):** He dies due to neglect
+
+#### Current Scope (MVP)
+- ✅ Gotchi screen with 6 action buttons + merge button
+- ✅ First merge with timing bucket -> flavored story beat 1
+- ✅ Sleep metronome forcing subsequent merges
+- ✅ Existing story scenes playable via DialogBox
+- ⚠️ Three endings with gating on hidden drivers - **Logic implemented, ending display/rendering may be incomplete**
+- ✅ Grime shader on gotchi and story-Gary
+- ✅ Beep intrusion and state-keyed dialogue lines
+
+---
+
+## 7. Completed Features
+
+### Merge Controller System
+- ✅ First merge timing bucket calculation (Immediate / AfterABit / AfterNeglect)
+- ✅ Sleep metronome (drains 0.02/s during gotchi mode)
+- ✅ Merge lock cooldown (3 seconds after each beat)
+- ✅ Voluntary merge gating with VOLUNTARY_MERGE_UNLOCKED flag
+- ✅ Forced merge when sleep hits 0
+- ✅ Climax handling (deathEnabled prevents return to gotchi)
+
+### Story Sequencer System
+- ✅ 6 story beats with authored scene order
+- ✅ StoryBeatStarted event triggers scene switch
+- ✅ Dialog completion triggers StoryBeatCompleted
+- ✅ Climax beat sets deathEnabled and emits DeathEnabled
+- ✅ SLIDE_RIGHT transition for door/step-through effect
+
+### Simulation Reducer (C-Core)
+- ✅ Sleep drain while seenReality is true
+- ✅ Affection driver from warmth actions (pet, groom, water)
+- ✅ Mercy driver from merge events (weighted by earliness)
+- ✅ Grime creep during neglect
+- ✅ Collapse detection when deathEnabled and needs are critical
+
+---
+
+## 8. Incomplete / Unverified Features
+
+The following features have implementation code but may lack final polish, testing, or full integration:
+
+### ⚠️ Ending System (Needs Verification)
+- **Status:** Logic is implemented but may be incomplete
+- **Details:**
+  - `MergeController.cpp` has `// If deathEnabled is true (climax reached), do nothing — defer to ending box`
+  - The `GotchiSim` emits `PetCollapsed` event when collapse threshold is reached
+  - No verified ending display/rendering code found that consumes the ending conditions
+  - **Action Required:** Verify that endings actually display to the player when conditions are met
+
+### ⚠️ Hex Board Item System
+- **Status:** Hex board exists but item system may be incomplete
+- **Details:**
+  - `HexViewScene` displays the hex board
+  - Design mentions "drag and drop items" but implementation details unclear
+  - `Gotchi` can follow paths but item-based interaction needs verification
+  - **Action Required:** Verify hex board item system is fully functional
+
+### ⚠️ Beep Intrusion System
+- **Status:** Event defined but may not be implemented
+- **Details:**
+  - `EventType.h` defines `NeedCritical` event for beep intrusion
+  - No verified code found that plays the beep sound
+  - **Action Required:** Verify beep system is implemented and wired up
+
+### ⚠️ State-Keyed Dialogue Variants
+- **Status:** Framework exists but may have limited variants
+- **Details:**
+  - Dialog box supports multiple scenes with events
+  - Some state-based variant logic may be missing
+  - **Action Required:** Verify state-keyed dialogue variants are complete
+
+---
+
+## 9. Recent Development
+
+### Recent Commits (Last 10)
+- `438ff1a` - debug info on detail vitals screen
+- `07478b8` - fixing web build
+- `8f71d03` - more work on event wiring, part of a multi part plan
+- `cec8016` - fixing merge conflicts
+- `3917364` - working hex grid click to move
+- `9be19b5` - fix web shader bug in gotchi scene
+- `7d1dce5` - fix cmakelists
+- `b2d0cca` - more save wiring stuff
+- `5bde417` - fix web build
+- `1293bf6` - Merge remote-tracking branch 'refs/remotes/origin/main'
+
+### Recent Implementation Highlights
+- **Title Screen** - Complete rewrite with New Game, Load Game, and 3 save slot selection
+- **Gotchi Scene** - Added 6 action buttons (Wash, Groom, Feed, Pet, Water, Give a Break)
+- **GotchiStatsScene** - Detailed stat display scene
+- **Merge Controller** - Complete state machine for merge timing, locking, and forced merges
+- **Story Sequencer** - Event-driven story beat orchestration
+- **Save System** - Full save/load with JSON serialization, 3 slots, autosave support
+- **Event System** - Publish/subscribe EventBus implementation
+- **Hex World** - Hexagonal tile system with biomes and pathfinding
+
+---
+
+## 10. Open Questions / To-Do
+
+### High Priority (Before Jam Deadline)
+1. **Ending System Verification** - Verify endings actually display to player when conditions are met
+2. **Hex Board Item System** - Verify item drag-drop and seek functionality
+3. **Beep Intrusion** - Verify beep plays when needs are critical during story scenes
+4. **State-Keyed Dialogue** - Verify all state-based dialogue variants are implemented
+
+### Stretch / Lower Priority
+1. Multi-Gotchi social system
+2. Environment integration (temperature, weather, time of day)
+3. Growth system (life stages)
+4. Inventory system
+5. Skill learning system
+
+---
+
+## 11. Dependencies
+
+| Library | Path | Status |
+|---------|------|--------|
+| raylib | `raylib/` | ✅ Submodule, built static |
+| GLFW | `glfw/` | ✅ Submodule, built static |
+| rres | `rres/` | ✅ Submodule, asset bundler |
+| emsdk | `emsdk/` | ✅ Submodule, web build toolchain |
+| CMake | System | ✅ v3.16+ required |
+
+---
+
+## 12. Testing
+
+### Current Tests
+- `tests/TestSaveManager.cpp` - Save/Load round-trip, slot isolation, delete slot, missing key tolerance, summary, autosave
+- `tests/TestMergeController.cpp` - Merge timing buckets, lock expiry, forced merge, voluntary gate, climax hold
+- `tests/TestStorySequencer.cpp` - Beat table structure, scene names, event flow
+- `tests/TestGotchiSim.cpp` - Simulation reducer logic
+- `tests/TestGrimeShader.cpp` - Grime shader functionality
+
+### Test Execution
+```bash
+./tests/TestMergeController
+./tests/TestStorySequencer
+./tests/TestSaveManager
+```
+
+---
+
+## 13. Key Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `GAME_W` | 720 | Game width (pixels) |
+| `GAME_H` | 720 | Game height (pixels) |
+| `GOTCHI_TICK_RATE` | 10.0s | Base tick interval |
+| `SAVE_VERSION` | 1 | Current save format version |
+| `NUM_SLOTS` | 3 | Number of save slots |
+| `SLEEP_DRAIN_RATE` | 0.02/s | Sleep drain during gotchi mode |
+| `MERGE_LOCK_COOLDOWN_SEC` | 3.0 | Button lock after each beat |
+
+---
+
+## 14. Development Notes
+
+### Debug Keys
+| Key | Action |
+|-----|--------|
+| `1` | Switch to GameScene |
+| `2` | Switch to BossScene |
+| `3` | Switch to InputTestScene |
+| `4` | Switch to SpriteTestScene |
+| `5` | Switch to HexViewScene |
+| `7` | Switch to SceneSelectScene |
+| `8` | Switch to GotchiScene |
+| `9` | Switch to TitleScene |
+| `0` | Toggle pause menu |
+| `H` | Replay dialog (Game/Boss) |
+| `E` | Trigger story event (in story scenes) |
+| `ESC` | Exit |
+
+### Asset Pipeline
+1. Place assets in `assets/` subdirectories
+2. Run `make assets` or `cmake --build build --target assets`
+3. `assets.rres` is generated and copied to build directory
+
+---
+
+## 15. Conclusion
+
+**hexagotchi** is a fully functional game engine with a working pet simulation, save system, event system, and multiple narrative scenes. The core "hex + merge" theme is implemented through:
+
+- **Hex:** Hex board view with biomes for pet care
+- **Merge:** The merge button that crosses between pet world and Gary's real world
+
+### System Status Summary
+- **Core Engine:** ✅ Complete
+- **Gotchi Simulation:** ✅ Complete
+- **Save/Load System:** ✅ Complete
+- **Event System:** ✅ Complete
+- **Merge Controller:** ✅ Complete
+- **Story Sequencer:** ✅ Complete
+- **Endings:** ⚠️ Logic implemented, display may be incomplete
+- **Hex Board Items:** ⚠️ May be incomplete
+- **Beep Intrusion:** ⚠️ May be incomplete
+- **State-Keyed Dialogue:** ⚠️ May have limited variants
+
+**Recommendation:** Before the jam deadline, focus on verifying the incomplete features listed above, particularly the ending display system which is critical to the game's conclusion.
+
+---
+
+*This file should be updated as the project evolves. Features should only be marked complete when verified to work end-to-end.*
