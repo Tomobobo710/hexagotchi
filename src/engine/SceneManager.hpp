@@ -31,7 +31,7 @@ public:
     std::string getCurrentSceneName() const;
     
     // Scene switching
-    void switchScene(const std::string& sceneName, TransitionEffect effect = TransitionEffect::FADE, float duration = SCENE_TRANSITION_DURATION);
+    virtual void switchScene(const std::string& sceneName, TransitionEffect effect = TransitionEffect::FADE, float duration = SCENE_TRANSITION_DURATION);
     void switchSceneImmediate(const std::string& sceneName);
     
     // Lifecycle

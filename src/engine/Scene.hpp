@@ -71,6 +71,11 @@ public:
     void setSceneManager(void* manager);
     void* getSceneManager() const;
 
+    // Story event trigger — called by StorySequencer to play a beat's dialog
+    // Override in subclasses to trigger their specific scripted event
+    // Default implementation does nothing (for non-story scenes like GameScene, BossScene)
+    virtual void triggerStoryEvent(int eventIndex);
+
 protected:
     std::vector<SceneActor*> actors;
     std::vector<SceneActor*> actorsToRemove;

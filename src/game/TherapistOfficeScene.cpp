@@ -112,6 +112,10 @@ void TherapistOfficeScene::triggerEvent(int index) {
     playLine(events[activeEvent][lineIndex]);
 }
 
+void TherapistOfficeScene::triggerStoryEvent(int eventIndex) {
+    triggerEvent(eventIndex);
+}
+
 bool TherapistOfficeScene::isPlayingEvent() const {
     return activeEvent >= 0;
 }
