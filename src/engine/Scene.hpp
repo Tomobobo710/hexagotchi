@@ -66,7 +66,16 @@ public:
 
     // Input
     SceneInputHandler* getInputHandler();
-    
+
+    // Scene manager access
+    void setSceneManager(void* manager);
+    void* getSceneManager() const;
+
+    // Story event trigger — called by StorySequencer to play a beat's dialog
+    // Override in subclasses to trigger their specific scripted event
+    // Default implementation does nothing (for non-story scenes like GameScene, BossScene)
+    virtual void triggerStoryEvent(int eventIndex);
+
 protected:
     std::vector<SceneActor*> actors;
     std::vector<SceneActor*> actorsToRemove;
@@ -76,6 +85,7 @@ protected:
     bool paused;
     Color backgroundColor;
     float width, height;
+    void* sceneMgr_;  // Pointer to SceneManager (opaque for header-only dependency)
     
     // Helper methods
     void processRemovals();

@@ -123,10 +123,12 @@ void PizzaParlorScene::update(float deltaTime) {
             }
         }
 
-        // Slow establishing drift across the whole set
-        float t = (float)GetTime() * 0.05f;
-        getCamera()->setPosition(512.0f + sinf(t) * 60.0f, 288.0f);
-        getCamera()->setZoom(1.0f);
+        if (!getCamera()->isWideViewEnabled()) {
+            // Slow establishing drift across the whole set
+            float t = (float)GetTime() * 0.05f;
+            getCamera()->setPosition(512.0f + sinf(t) * 60.0f, 288.0f);
+            getCamera()->setZoom(1.0f);
+        }
     }
 
     if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
@@ -178,6 +180,10 @@ void PizzaParlorScene::triggerEvent(int index) {
     activeEvent = index;
     lineIndex = 0;
     playLine(events[activeEvent][lineIndex]);
+}
+
+void PizzaParlorScene::triggerStoryEvent(int eventIndex) {
+    triggerEvent(eventIndex);
 }
 
 bool PizzaParlorScene::isPlayingEvent() const {

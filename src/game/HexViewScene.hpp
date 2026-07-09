@@ -4,6 +4,8 @@
 #include "Scene.hpp"
 #include "HexWorld.hpp"
 #include "Gotchi.hpp"
+#include "GotchiStats.hpp"
+#include "GotchiMood.hpp"
 #include <memory>
 
 class PauseMenuOverlay;
@@ -35,6 +37,10 @@ private:
 
     // World config (stored after init)
     float hexSize_;
+
+    // Fallback vitals and mood for Gotchi (used if no gameState available)
+    GotchiStats defaultStats_;
+    GotchiMood defaultMood_;
 
     // Visual probe for click target
     bool  hasClickMarker_ = false;

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(hexagotchi CXX C)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set essential CMake variables for C compilation and static library creation
@@ -19,13 +19,96 @@ option(RBUILD_WEB "Build WebAssembly target" OFF)
 
 if(RBUILD_DESKTOP)
     # Include directories
-    include_directories(src/engine src/game src/effects raylib/src glfw/include rres/src)
+    include_directories(src/engine src/game src/effects src/events src/flags raylib/src glfw/include rres/src)
 
     # Source files
     file(GLOB ENGINE_SRCS "src/engine/*.cpp" "src/engine/*/*.cpp")
     file(GLOB GAME_SRCS "src/game/*.cpp")
     file(GLOB EFFECTS_SRCS "src/effects/*.cpp")
-    set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS})
+    file(GLOB EVENT_SRCS "src/events/*.cpp")
+    file(GLOB TEST_SRCS "tests/*.cpp")
+
+    # Only include TestGrimeShader.cpp for the tests build
+    # TestSaveManager.cpp has complex dependencies (GameState, SaveManager)
+    set(GRIME_TEST_SRCS "")
+    foreach(f ${TEST_SRCS})
+        if(f MATCHES "TestGrimeShader")
+            list(APPEND GRIME_TEST_SRCS ${f})
+        endif()
+    endforeach()
+
+    set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS} ${EVENT_SRCS})
+
+    # Test executable for MergeController
+    set(TEST_ENGINE_SRCS
+        src/engine/DialogBox.cpp
+        src/engine/GameState.cpp
+        src/engine/SaveManager.cpp
+        src/engine/Scene.cpp
+        src/engine/SceneActor.cpp
+        src/engine/SceneCamera.cpp
+        src/engine/SceneInputHandler.cpp
+        src/engine/SceneManager.cpp
+    )
+    set(TEST_EVENT_SRCS
+        src/events/EventBus.cpp
+    )
+    set(TEST_GAME_SRCS
+        src/game/MergeController.cpp
+        src/game/StorySequencer.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
+    )
+    set(TEST_EVENT_SRCS
+        src/events/EventBus.cpp
+    )
+    set(TEST_SRCS
+        tests/TestMergeController.cpp
+        ${TEST_ENGINE_SRCS}
+        ${TEST_EVENT_SRCS}
+        ${TEST_GAME_SRCS}
+    )
+    add_executable(test_merge_controller ${TEST_SRCS})
+    target_include_directories(test_merge_controller PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+    target_link_libraries(test_merge_controller PRIVATE raylib glfw)
+
+    # Test executable for StorySequencer
+    add_executable(test_story_sequencer
+        tests/TestStorySequencer.cpp
+        ${TEST_ENGINE_SRCS}
+        ${TEST_EVENT_SRCS}
+        ${TEST_GAME_SRCS}
+    )
+    target_include_directories(test_story_sequencer PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+    target_link_libraries(test_story_sequencer PRIVATE raylib glfw)
+
+    # Test executable for SaveManager
+    set(SAVE_TEST_SRCS
+        tests/TestSaveManager.cpp
+        src/engine/SaveManager.cpp
+        src/engine/GameState.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
+    )
+    add_executable(test_save_manager ${SAVE_TEST_SRCS})
+    target_include_directories(test_save_manager PRIVATE . src src/engine src/game raylib/src rres/src)
+    target_link_libraries(test_save_manager PRIVATE raylib glfw)
+
+    # Test executable for SaveWiring (includes SaveManager tests)
+    set(SAVE_WIRING_TEST_SRCS
+        tests/TestSaveWiring.cpp
+        src/engine/SaveManager.cpp
+        src/engine/GameState.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
+        src/events/EventBus.cpp
+    )
+    add_executable(test_save_wiring ${SAVE_WIRING_TEST_SRCS})
+    target_include_directories(test_save_wiring PRIVATE . src src/engine src/game src/events src/flags raylib/src rres/src)
+    target_link_libraries(test_save_wiring PRIVATE raylib glfw)
+
+    # Test executable for MergeController
+
 
     # Build raylib as a static library
     add_library(raylib STATIC
@@ -161,8 +244,10 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/AssetPack.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/GameState.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexTile.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexWorld.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/SaveManager.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Scene.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneActor.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneCamera.cpp
@@ -179,6 +264,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/HexBoard.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexViewScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/MergeController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PizzaParlorScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
@@ -186,19 +272,28 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/OfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/CityWindowEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/SchoolSkyEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/LitShader.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/MergeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
-        ${CMAKE_SOURCE_DIR}/src/game/ScenePreviewScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalBaseMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalRingMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalShader.cpp
+        ${CMAKE_SOURCE_DIR}/src/events/EventBus.cpp
     )
     add_custom_target(game-web ALL
-        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
+        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/src/events -I ${CMAKE_SOURCE_DIR}/src/flags -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
         DEPENDS raylib-web ${WEB_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )

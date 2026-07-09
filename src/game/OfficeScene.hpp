@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "PortalEffect.hpp"
 #include <vector>
 #include <string>
 
@@ -28,6 +29,7 @@ public:
     void cleanup() override;
 
     void triggerEvent(int index);
+    void triggerStoryEvent(int eventIndex) override;
     bool isPlayingEvent() const;
 
 private:
@@ -52,6 +54,13 @@ private:
     void drawTom(Vector2 pos);
     void drawBoss(Vector2 pos);
     void drawOffice();
+
+    // The merge-machine/teleporter, drawn in front of the background art but
+    // behind the actors (see OfficeScene::draw() -- it's a SceneEffect but
+    // called directly here instead of via addEffect()'s normal background/
+    // foreground split, since neither of those slots alone gives that
+    // ordering).
+    PortalEffect* portal = nullptr;
 };
 
 #endif // OFFICE_SCENE_HPP

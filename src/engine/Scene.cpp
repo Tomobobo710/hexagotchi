@@ -2,7 +2,7 @@
 #include "rlgl.h"
 
 Scene::Scene(float w, float h, Color bgColor)
-    : paused(false), backgroundColor(bgColor), width(w), height(h) {
+    : paused(false), backgroundColor(bgColor), width(w), height(h), sceneMgr_(nullptr) {
     // Create default camera
     camera = new SceneCamera(w / 2.0f, h / 2.0f, 1.0f);
     inputHandler.setCamera(camera);
@@ -76,6 +76,15 @@ void Scene::update(float deltaTime) {
     inputHandler.update();
 
     if (paused) return;
+
+    // Wide view toggle (Numpad 0): zooms out to see the whole scene's
+    // boundary rect at once, for eyeballing a 3D effect's placement across
+    // the full scene instead of just the scene's normal gameplay framing.
+    // Handled once here so every scene gets it for free instead of each
+    // scene wiring its own zoomed-out preview mode.
+    if (camera && IsKeyPressed(KEY_KP_0)) {
+        camera->toggleWideView();
+    }
 
     // Update camera
     if (camera) {
@@ -193,6 +202,19 @@ std::vector<SceneActor*> Scene::findActorsInRect(Rectangle rect) {
 
 SceneInputHandler* Scene::getInputHandler() {
     return &inputHandler;
+}
+
+void Scene::setSceneManager(void* manager) {
+    sceneMgr_ = manager;
+}
+
+void* Scene::getSceneManager() const {
+    return sceneMgr_;
+}
+
+// Default implementation: do nothing. Override in story scenes.
+void Scene::triggerStoryEvent(int eventIndex) {
+    (void)eventIndex;
 }
 
 void Scene::processRemovals() {

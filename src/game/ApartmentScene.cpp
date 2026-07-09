@@ -1,6 +1,7 @@
 #include "ApartmentScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
+#include "SceneDebugCamera.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR      = {139, 172, 15, 255};
@@ -52,6 +53,8 @@ void ApartmentScene::init() {
 void ApartmentScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
+    updateSceneDebugCamera(cityWindow, getCamera(), deltaTime);
+
     if (cityWindow && cityWindow->consumeTrainShakeRequest()) {
         // Duration computed by the effect itself from the actual visible
         // window/lead-in/trail-out timing, not a fixed guess -- see
@@ -65,15 +68,14 @@ void ApartmentScene::update(float deltaTime) {
         tomSlumpTimer += deltaTime * 1.2f;
         tom->setPosition({470.0f, 380.0f + sinf(tomSlumpTimer) * 3.0f});
 
-        // setPosition() hard-resets camera position every single frame --
-        // if that ran while a shake (from the train passing) is mid-flight,
-        // it would stomp the shake's per-frame random offset right back to
-        // this fixed point before it was ever visible. Skip the re-pin for
-        // the shake's duration so the train's camera hit actually reads.
-        if (!getCamera()->isShaking()) {
+        // setPosition()/setZoom() hard-reset the camera every single frame --
+        // skip the re-pin while a shake (from the train passing) is mid-
+        // flight, or while wide view is active, so those don't get stomped
+        // back out before ever being visible (same reason as isShaking()).
+        if (!getCamera()->isShaking() && !getCamera()->isWideViewEnabled()) {
             getCamera()->setPosition(512.0f, 288.0f);
+            getCamera()->setZoom(1.0f);
         }
-        getCamera()->setZoom(1.0f);
     }
 
     if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
@@ -96,6 +98,8 @@ void ApartmentScene::draw() {
     }
     drawTom(tom->getPosition());
     EndMode2D();
+
+    drawSceneDebugCameraReadout(cityWindow, 16, 16);
 }
 
 void ApartmentScene::cleanup() {
@@ -117,6 +121,10 @@ void ApartmentScene::triggerEvent(int index) {
     activeEvent = index;
     lineIndex = 0;
     playLine(events[activeEvent][lineIndex]);
+}
+
+void ApartmentScene::triggerStoryEvent(int eventIndex) {
+    triggerEvent(eventIndex);
 }
 
 bool ApartmentScene::isPlayingEvent() const {

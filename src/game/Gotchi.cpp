@@ -9,10 +9,12 @@ const float GOTCHI_WIDTH = 64.0f;
 const float GOTCHI_HEIGHT = 64.0f;
 const float GOTCHI_MOVE_SPEED = 50.0f;
 const float GOTCHI_WANDER_SPEED = 20.0f;
-const float GOTCHI_TICK_RATE = 1.0f;  // Base tick rate in seconds
+const float GOTCHI_TICK_RATE = 10.0f;  // Base tick rate in seconds
 
-Gotchi::Gotchi(Vector2 position)
+Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
     : SceneActor(position, GOTCHI_WIDTH, GOTCHI_HEIGHT),
+      stats_(statsRef),
+      mood_(moodRef),
       active_(true),
       sleeping_(false),
       dead_(false),
@@ -45,10 +47,11 @@ Gotchi::Gotchi(Vector2 position)
 
 
 void Gotchi::init() {
-    // Initialize stats with defaults
-    stats_.reset();
+    // NOTE: Vitals are now owned by GameState and persist across scenes.
+    // We only set the mood and action here, NOT reset stats.
+    // The stats_ reference points to GameState::vitals which is shared.
 
-    // Initialize mood
+    // Initialize mood to a default state
     mood_.setCurrentMood(GotchiMoodType::MOOD_00_HAPPY);
 
     // Set initial action
@@ -57,7 +60,7 @@ void Gotchi::init() {
     // Debug info
     if (debugMode_) {
         std::cout << "[Gotchi] Initialized at (" << position.x << ", " << position.y << ")\n";
-        std::cout << "[Gotchi] Stats reset. Current mood: " << mood_.getMoodName() << "\n";
+        std::cout << "[Gotchi] Vitals shared with GameState. Current mood: " << mood_.getMoodName() << "\n";
     }
 }
 

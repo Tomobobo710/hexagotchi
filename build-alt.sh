@@ -38,7 +38,7 @@ mkdir -p "$OBJ"
 for f in src/main.cpp src/engine/*.cpp src/game/*.cpp src/effects/*.cpp; do
   n=$(basename "$f" .cpp)
   echo "  CC  $f"
-  timeout 120 $GPP $SYS -std=c++11 $INC -c "$f" -o "$OBJ/$n.o"
+  timeout 120 $GPP $SYS -std=c++17 $INC -c "$f" -o "$OBJ/$n.o"
 done
 
 echo "  LD  build/desktop/game.exe"

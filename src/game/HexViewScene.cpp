@@ -55,7 +55,7 @@ void HexViewScene::init() {
     // Place it at the center hex (q=16, r=9) by converting to pixel coordinates
     HexCoords startHex(16, 9);
     Vector2 gotchiPos = startHex.toPixel(hexSize_);
-    gotchi = new Gotchi(gotchiPos);
+    gotchi = new Gotchi(gotchiPos, defaultStats_, defaultMood_);
     gotchi->setHexSize(hexSize_);
     gotchi->init();
     gotchi->loadAnimationFrames("gotchis/001");

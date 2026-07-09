@@ -14,10 +14,17 @@
 #include "game/OfficeScene.hpp"
 #include "game/SchoolScene.hpp"
 #include "game/Model3DTestScene.hpp"
-#include "game/ScenePreviewScene.hpp"
+#include "game/MergeScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/TitleScene.hpp"
+#include "game/GotchiStatsScene.hpp"
+#include "game/MergeController.hpp"
+#include "game/StorySequencer.hpp"
 #include "game/DialogSequences.hpp"
+#include "engine/GameState.h"
+#include "engine/SaveManager.h"
+#include "engine/SaveWiring.h"
+#include "events/EventBus.h"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -25,6 +32,22 @@
 
 // Global exit request flag
 bool exitRequested = false;
+
+// Global game state and event bus
+GameState globalGameState;
+EventBus  globalEventBus;
+
+// MergeController - created in main() and used in UpdateDrawFrame
+MergeController* mergeController = nullptr;
+
+// StorySequencer - created in main() and used in UpdateDrawFrame
+StorySequencer* storySequencer = nullptr;
+
+// SaveManager - handles save/load/delete operations
+SaveManager saveManager;
+
+// SaveWiring - subscribes to checkpoint events for autosave
+SaveWiring* saveWiring = nullptr;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -104,6 +127,11 @@ void UpdateDrawFrame() {
             dialog->hide();
         }
         lastScene = currentScene;
+
+        // Autosave on scene transition (if active slot is set)
+        if (saveWiring) {
+            saveWiring->onSceneTransition();
+        }
     }
 
     // These standalone debug/demo scenes never use the shared dialog box at
@@ -185,6 +213,12 @@ void UpdateDrawFrame() {
     }
 
     sceneManager->update(dt);
+    if (mergeController) {
+        mergeController->update(dt);
+    }
+    if (storySequencer) {
+        storySequencer->update(dt);
+    }
     dialog->update(dt);
 
     BeginTextureMode(gameTarget);
@@ -282,7 +316,8 @@ int main() {
     sceneManager->registerScene("boss", new BossScene());
     sceneManager->registerScene("hexboard", new HexViewScene());
     sceneManager->registerScene("input_test", new InputTestScene());
-    sceneManager->registerScene("gotchi", new GotchiScene());
+    GotchiScene* gotchiScene = new GotchiScene();
+    sceneManager->registerScene("gotchi", gotchiScene);
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
     sceneManager->registerScene("pizza_parlor", new PizzaParlorScene(dialog));
     sceneManager->registerScene("apartment", new ApartmentScene(dialog));
@@ -290,15 +325,35 @@ int main() {
     sceneManager->registerScene("office", new OfficeScene(dialog));
     sceneManager->registerScene("school", new SchoolScene(dialog));
     sceneManager->registerScene("model3d_test", new Model3DTestScene());
-    sceneManager->registerScene("scene_preview", new ScenePreviewScene());
+    sceneManager->registerScene("merge", new MergeScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     sceneManager->registerScene("title", new TitleScene());
+    GotchiStatsScene* gotchiStatsScene = new GotchiStatsScene();
+    sceneManager->registerScene("gotchi_stats", gotchiStatsScene);
+
+    // Wire up shared GameState to scenes (vitals and mood are now shared)
+    gotchiScene->setGameState(&globalGameState);
+    gotchiStatsScene->setGameState(&globalGameState);
+
+    // Initialize save directory
+    saveManager.initSaveDir();
+
+    // Wire up the merge controller
+    mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);
+    gotchiScene->setEventBus(&globalEventBus);
+
+    // Wire up the story sequencer
+    storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);
+
+    // Wire up SaveWiring for autosave on checkpoints
+    saveWiring = new SaveWiring(saveManager, globalEventBus);
+    saveWiring->setGameState(&globalGameState);
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
-        (shotScene && shotScene[0]) ? shotScene : "game");
+        (shotScene && shotScene[0]) ? shotScene : "scene_select");
 #else
-    sceneManager->switchSceneImmediate("game");
+    sceneManager->switchSceneImmediate("scene_select");
 #endif
 
     dialog->setAnchor("bottom");
@@ -341,8 +396,18 @@ int main() {
         }
 #endif
     }
+
+    // Shutdown autosave (if active slot is set)
+    if (saveManager.activeSlot() >= 0) {
+        saveManager.autosave(globalGameState);
+        std::cout << "[Shutdown] Autosaved GameState to slot " << saveManager.activeSlot() << std::endl << std::flush;
+    }
+
     UnloadRenderTexture(gameTarget);
     delete dialog;
+    delete mergeController;
+    delete storySequencer;
+    delete saveWiring;
     delete sceneManager;
     CloseWindow();
 #endif
