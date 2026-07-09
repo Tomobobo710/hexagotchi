@@ -4,6 +4,8 @@
 #include "GotchiStats.hpp"
 #include "GotchiMood.hpp"
 #include "SceneManager.hpp"
+#include "EventBus.h"
+#include "MergeController.hpp"
 #include <iostream>
 #include <sstream>
 
@@ -181,7 +183,7 @@ void GotchiScene::addButtons() {
     buttonFeedbackTimer_ = 0.0f;
 
     // Add action buttons at the bottom
-    // Six buttons: Wash, Groom, Feed, Pet, Water, Give a Break
+    // Six buttons: Wash, Groom, Feed, Pet, Water, Give a Break (merge button)
     float buttonWidth = 80.0f;
     float buttonHeight = 32.0f;
     float totalWidth = 6 * buttonWidth + 5 * 10.0f;  // 6 buttons + 5 gaps
@@ -191,14 +193,15 @@ void GotchiScene::addButtons() {
     std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Water", "Give a Break"};
     for (size_t i = 0; i < labels.size(); i++) {
         float x = startX + i * (buttonWidth + 10.0f);
-        addButton(labels[i], x, y);
+        // The 6th button (index 5) is the merge button
+        addButton(labels[i], x, y, (i == 5));
     }
 
     // Add "Detailed Vitals" button at bottom center
     addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 80);
 }
 
-void GotchiScene::addButton(const std::string& label, float x, float y) {
+void GotchiScene::addButton(const std::string& label, float x, float y, bool isMergeButton) {
     float buttonWidth = 80.0f;
     float buttonHeight = 32.0f;
     Button* btn = new Button({x, y}, buttonWidth, buttonHeight, label);
@@ -208,8 +211,28 @@ void GotchiScene::addButton(const std::string& label, float x, float y) {
     btn->setHoverColor({100, 100, 160, 240});
     btn->setBorderColor({150, 150, 200, 255});
 
-    btn->setOnClick([this, label]() { handleGotchiAction(label); });
+    if (isMergeButton) {
+        // Merge button emits MergeRequested on the event bus
+        btn->setOnClick([this]() {
+            onMergeButtonClicked();
+        });
+    } else {
+        // Other buttons trigger gotchi actions
+        btn->setOnClick([this, label]() {
+            handleGotchiAction(label);
+        });
+    }
     buttons.push_back(std::unique_ptr<Button>(btn));
+}
+
+// The merge button callback - emits MergeRequested on the bus
+// This is the "Give a Break" button which becomes "Merge" after first merge
+void GotchiScene::onMergeButtonClicked() {
+    // Emit MergeRequested event
+    // The MergeController will decide whether to honor this request based on game state
+    if (eventBus_) {
+        eventBus_->emit(Event::mergeRequested());
+    }
 }
 
 void GotchiScene::update(float deltaTime) {

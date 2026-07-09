@@ -119,6 +119,10 @@ void ApartmentScene::triggerEvent(int index) {
     playLine(events[activeEvent][lineIndex]);
 }
 
+void ApartmentScene::triggerStoryEvent(int eventIndex) {
+    triggerEvent(eventIndex);
+}
+
 bool ApartmentScene::isPlayingEvent() const {
     return activeEvent >= 0;
 }
