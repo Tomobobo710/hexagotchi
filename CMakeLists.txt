@@ -257,6 +257,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/GameState.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/HexPathFinder.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexTile.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexWorld.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SaveManager.cpp
@@ -285,6 +286,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiSim.cpp
         ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
