@@ -36,7 +36,7 @@ void TherapistOfficeScene::init() {
     // line-for-line -- the digital-pet metaphor breakdown, ending on the
     // copay hike. NARRATOR lines have no speaking actor, matching how the
     // apartment scene handles them.
-    events.push_back({
+    scenarios.push_back({
         { "Narrator",  "Tom's last covered therapy session.\nHe has been saving the hard stuff for today.",
           NARRATOR_COLOR, -1, false },
         { "Therapist", "So Tom, how have you been\nprocessing the divorce?",
@@ -66,26 +66,29 @@ void TherapistOfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
     if (windowEffect) windowEffect->update(deltaTime);
-    updateSceneDebugCamera(windowEffect, getCamera(), deltaTime);
 
-    if (windowEffect) {
-        // Dial-in controls for the backdrop quad's center -- I/K: Y, J/L: X,
-        // U/O: Z. Temporary, for finding the right placement to bake into
-        // the scene as a fixed value once dialed in (roadOrigin/treeOrigin
-        // already went through this same process and are now baked
-        // constants in TherapistWindowEffect.hpp).
-        Vector3 origin = windowEffect->getBackdropOrigin();
-        float moveSpeed = 4.0f * deltaTime;
-        if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
-        if (IsKeyDown(KEY_I)) origin.y += moveSpeed;
-        if (IsKeyDown(KEY_J)) origin.x -= moveSpeed;
-        if (IsKeyDown(KEY_L)) origin.x += moveSpeed;
-        if (IsKeyDown(KEY_U)) origin.z -= moveSpeed;
-        if (IsKeyDown(KEY_O)) origin.z += moveSpeed;
-        windowEffect->setBackdropOrigin(origin);
+    if (getEntrySceneName() == "scene_select") {
+        updateSceneDebugCamera(windowEffect, getCamera(), deltaTime);
+
+        if (windowEffect) {
+            // Dial-in controls for the backdrop quad's center -- I/K: Y, J/L: X,
+            // U/O: Z. Temporary, for finding the right placement to bake into
+            // the scene as a fixed value once dialed in (roadOrigin/treeOrigin
+            // already went through this same process and are now baked
+            // constants in TherapistWindowEffect.hpp).
+            Vector3 origin = windowEffect->getBackdropOrigin();
+            float moveSpeed = 4.0f * deltaTime;
+            if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
+            if (IsKeyDown(KEY_I)) origin.y += moveSpeed;
+            if (IsKeyDown(KEY_J)) origin.x -= moveSpeed;
+            if (IsKeyDown(KEY_L)) origin.x += moveSpeed;
+            if (IsKeyDown(KEY_U)) origin.z -= moveSpeed;
+            if (IsKeyDown(KEY_O)) origin.z += moveSpeed;
+            windowEffect->setBackdropOrigin(origin);
+        }
     }
 
-    if (activeEvent < 0) {
+    if (activeScenario < 0) {
         // Ambient: both sitting, small idle motion -- Tom fidgets slightly
         // more than the therapist, who stays composed/still.
         tomFidgetTimer += deltaTime * 2.5f;
@@ -100,7 +103,7 @@ void TherapistOfficeScene::update(float deltaTime) {
         }
     }
 
-    if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
+    if (activeScenario >= 0 && dialog->isVisible() && dialog->isFinished()) {
         SceneInputHandler* ih = getInputHandler();
         if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
             advanceLine();
@@ -119,17 +122,18 @@ void TherapistOfficeScene::draw() {
     drawTherapist(therapist->getPosition());
     EndMode2D();
 
-    // y=40, not 16 -- main.cpp draws a full-width HUD bar over y:0-32 on top
-    // of every scene's own draw(), so a readout at the usual y=16 offset
-    // would sit partly underneath it.
-    drawSceneDebugCameraReadout(windowEffect, 16, 40);
+    // y=40, not 16 -- avoids overlapping other on-screen debug text at the
+    // usual y=16 offset.
+    if (getEntrySceneName() == "scene_select") {
+        drawSceneDebugCameraReadout(windowEffect, 16, 40);
 
-    if (windowEffect) {
-        Vector3 origin = windowEffect->getBackdropOrigin();
-        const char* txt = TextFormat("backdropOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
-            origin.x, origin.y, origin.z);
-        DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
-        DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
+        if (windowEffect) {
+            Vector3 origin = windowEffect->getBackdropOrigin();
+            const char* txt = TextFormat("backdropOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
+                origin.x, origin.y, origin.z);
+            DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
+            DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
+        }
     }
 }
 
@@ -138,37 +142,38 @@ void TherapistOfficeScene::cleanup() {
     windowEffect = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     // init() re-runs on every re-entry to this scene and unconditionally
-    // push_back()s the event table -- reset so events doesn't accumulate
-    // duplicates and a mid-event exit doesn't permanently block triggerEvent().
-    events.clear();
-    activeEvent = -1;
+    // push_back()s the scenario table -- reset so scenarios doesn't
+    // accumulate duplicates and a mid-scenario exit doesn't permanently
+    // block triggerScenario().
+    scenarios.clear();
+    activeScenario = -1;
     lineIndex = 0;
 }
 
-void TherapistOfficeScene::triggerEvent(int index) {
-    if (activeEvent >= 0) return;
-    if (index < 0 || index >= (int)events.size()) return;
+void TherapistOfficeScene::triggerScenario(int index) {
+    if (activeScenario >= 0) return;
+    if (index < 0 || index >= (int)scenarios.size()) return;
 
-    activeEvent = index;
+    activeScenario = index;
     lineIndex = 0;
-    playLine(events[activeEvent][lineIndex]);
+    playLine(scenarios[activeScenario][lineIndex]);
 }
 
-void TherapistOfficeScene::triggerStoryEvent(int eventIndex) {
-    triggerEvent(eventIndex);
+void TherapistOfficeScene::triggerStoryEvent(int scenarioIndex) {
+    triggerScenario(scenarioIndex);
 }
 
-bool TherapistOfficeScene::isPlayingEvent() const {
-    return activeEvent >= 0;
+bool TherapistOfficeScene::isPlayingScenario() const {
+    return activeScenario >= 0;
 }
 
 void TherapistOfficeScene::advanceLine() {
-    if (activeEvent < 0) return;
+    if (activeScenario < 0) return;
 
     lineIndex++;
-    auto& seq = events[activeEvent];
+    auto& seq = scenarios[activeScenario];
     if (lineIndex >= (int)seq.size()) {
-        endEvent();
+        endScenario();
         return;
     }
     playLine(seq[lineIndex]);
@@ -182,8 +187,8 @@ void TherapistOfficeScene::playLine(const TherapistLine& line) {
     focusCameraOn(line.focusActor, line.shake);
 }
 
-void TherapistOfficeScene::endEvent() {
-    activeEvent = -1;
+void TherapistOfficeScene::endScenario() {
+    activeScenario = -1;
     lineIndex = 0;
     dialog->hide();
     getCamera()->zoomTo(1.0f, 0.6f);

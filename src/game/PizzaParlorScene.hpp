@@ -24,8 +24,9 @@ struct PizzaLine {
 // Recurring "check in on the gotchi's world" hangout location. Most visits
 // are ambient -- the cast just idles and the Pokemon chirps its name -- but
 // callers (the tomagotchi/stat side, owned by Bazola) can invoke
-// triggerEvent() to play a scripted story beat instead. This scene owns no
-// tomagotchi stat logic itself; it only reacts to being told to play an event.
+// triggerScenario() to play a scripted story beat instead. This scene owns
+// no tomagotchi stat logic itself; it only reacts to being told to play a
+// scenario.
 //
 // Uses the same shared DialogBox the rest of the game drives (see main.cpp's
 // `dialog` global) rather than owning a private one, matching how
@@ -39,14 +40,23 @@ public:
     void draw() override;
     void cleanup() override;
 
-    // Starts scripted event `index` (0-based into the internal event table).
-    // Safe to call while ambient; ignored if an event is already playing.
-    void triggerEvent(int index);
+    // Starts scripted scenario `index` (0-based into the internal scenario
+    // table). Safe to call while ambient; ignored if a scenario is already
+    // playing.
+    void triggerScenario(int index);
 
-    // Scene override: calls triggerEvent
-    void triggerStoryEvent(int eventIndex) override;
+    // Scene override: calls triggerScenario
+    void triggerStoryEvent(int scenarioIndex) override;
 
-    bool isPlayingEvent() const override;
+    bool isPlayingScenario() const override;
+
+    // The instant the last dialog line is dismissed, this scene's own black
+    // overlay starts ramping 0->255 and keeps ramping continuously for
+    // END_FADE_DURATION seconds -- no dead/held time before it starts.
+    // isPlayingScenario() stays true for that whole span, so StorySequencer
+    // doesn't react (and start its own scene-switch FADE) until the screen
+    // here is already fully black.
+    static constexpr float END_FADE_DURATION = 1.5f;
 
 private:
     SceneActor* tom    = nullptr;
@@ -70,14 +80,18 @@ private:
     float wifeTapTimer = 0.0f;
     float pokemonHopTimer = 0.0f;
 
-    // --- Event playback ---
-    std::vector<std::vector<PizzaLine>> events;
-    int activeEvent = -1;
+    // --- Scenario playback ---
+    std::vector<std::vector<PizzaLine>> scenarios;
+    int activeScenario = -1;
     int lineIndex = 0;
+
+    // Counts UP from 0 once endScenario() fires, 0..END_FADE_DURATION.
+    // Negative (-1) means no fade-out is in progress.
+    float endElapsed = -1.0f;
 
     void advanceLine();
     void playLine(const PizzaLine& line);
-    void endEvent();
+    void endScenario();
     void focusCameraOn(int actorIndex, bool shake);
 
     // Per-character silhouette drawing (shapes only -- no art yet)

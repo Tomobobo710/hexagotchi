@@ -47,7 +47,7 @@ void StorySequencer::update(float dt) {
     if (phase_ == Phase::EnteringStep) {
         // Wait for SceneManager to actually flip currentScene and init() it
         // (happens at the transition's halfway point) before triggering the
-        // scenario -- triggering any earlier hits an empty/stale events
+        // scenario -- triggering any earlier hits an empty/stale scenarios
         // table and silently no-ops.
         if (scenes_.isTransitioning()) return;
 
@@ -61,12 +61,12 @@ void StorySequencer::update(float dt) {
     if (phase_ == Phase::PlayingStep) {
         const SequenceStep& step = sequence_[activeStepIndex_];
         Scene* scene = scenes_.getScene(step.sceneName);
-        // isPlayingEvent() is the scenario-level "still going" signal (true
-        // from triggerStoryEvent() until the scene ends its own event), NOT
-        // DialogBox's per-line onFinished -- that fires the instant each
-        // individual line finishes typing out and would end the step after
-        // just its first line instead of its last.
-        if (scene && !scene->isPlayingEvent()) {
+        // isPlayingScenario() is the scenario-level "still going" signal
+        // (true from triggerStoryEvent() until the scene ends its own
+        // scenario), NOT DialogBox's per-line onFinished -- that fires the
+        // instant each individual line finishes typing out and would end
+        // the step after just its first line instead of its last.
+        if (scene && !scene->isPlayingScenario()) {
             onStepFinished();
         }
     }
@@ -115,7 +115,11 @@ void StorySequencer::startMergeTransition(Phase phase) {
     phase_ = phase;
     MergeScene::Mode visualMode = (phase == Phase::MergeIn) ? MergeScene::Mode::MERGE_OUT : MergeScene::Mode::MERGE_IN;
 
-    scenes_.switchScene("merge", TransitionEffect::FADE, 0.3f);
+    // SCENE_TRANSITION_DURATION (0.6s) so a step's own pre-fade
+    // (PizzaParlorScene::END_FADE_DURATION, 1.5s) plus this transition's
+    // fade sums to the intended 2.1s total before the merge scene is fully
+    // visible.
+    scenes_.switchScene("merge");
     Scene* mergeScene = scenes_.getScene("merge");
     MergeScene* merge = static_cast<MergeScene*>(mergeScene);
     if (merge) merge->startMerge(visualMode);
@@ -140,10 +144,10 @@ void StorySequencer::startStep(int stepIndex) {
 
     // triggerStoryEvent() is NOT called here -- SceneManager only flips
     // currentScene and calls the new scene's init() at the transition's
-    // halfway point, so the scene's events table would still be empty/stale
-    // this frame. update()'s Phase::EnteringStep branch waits for the
-    // transition to finish before actually triggering the scenario.
-    scenes_.switchScene(step.sceneName, TransitionEffect::FADE, 0.5f);
+    // halfway point, so the scene's scenarios table would still be
+    // empty/stale this frame. update()'s Phase::EnteringStep branch waits
+    // for the transition to finish before actually triggering the scenario.
+    scenes_.switchScene(step.sceneName);
 
     if (!scenes_.getScene(step.sceneName)) {
         if (DEBUG_LOG) {

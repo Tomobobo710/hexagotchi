@@ -259,6 +259,6 @@ void HexViewScene::onBackButtonClicked() {
     // Switch back to gotchi scene
     if (getSceneManager()) {
         SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
-        mgr->switchScene("gotchi", TransitionEffect::FADE, 0.5f);
+        mgr->switchScene("gotchi");
     }
 }

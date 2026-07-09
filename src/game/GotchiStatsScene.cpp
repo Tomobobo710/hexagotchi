@@ -103,7 +103,7 @@ void GotchiStatsScene::addNavigationButton(const std::string& label, const std::
     btn->setOnClick([this, targetScene]() {
         if (getSceneManager()) {
             SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
-            mgr->switchScene(targetScene, TransitionEffect::FADE, 0.5f);
+            mgr->switchScene(targetScene);
         }
     });
     buttons.push_back(std::unique_ptr<Button>(btn));

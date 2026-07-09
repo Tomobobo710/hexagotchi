@@ -22,7 +22,7 @@ struct ApartmentLine {
 // Tom alone in his apartment -- the other recurring "check in on the
 // gotchi's world" location, ported from the JS prototype's "Monday Morning"
 // intro episode. Ambient mode is just Tom being pathetic by himself with
-// no one else around; the scripted event is the ported episode almost
+// no one else around; the scripted scenario is the ported episode almost
 // line-for-line (alarm, mirror, Karen's text, the broken coffee machine).
 class ApartmentScene : public Scene {
 public:
@@ -33,9 +33,9 @@ public:
     void draw() override;
     void cleanup() override;
 
-    void triggerEvent(int index);
-    void triggerStoryEvent(int eventIndex) override;
-    bool isPlayingEvent() const override;
+    void triggerScenario(int index);
+    void triggerStoryEvent(int scenarioIndex) override;
+    bool isPlayingScenario() const override;
 
 private:
     SceneActor* tom = nullptr;
@@ -47,14 +47,14 @@ private:
     // --- Ambient behavior ---
     float tomSlumpTimer = 0.0f;
 
-    // --- Event playback ---
-    std::vector<std::vector<ApartmentLine>> events;
-    int activeEvent = -1;
+    // --- Scenario playback ---
+    std::vector<std::vector<ApartmentLine>> scenarios;
+    int activeScenario = -1;
     int lineIndex = 0;
 
     void advanceLine();
     void playLine(const ApartmentLine& line);
-    void endEvent();
+    void endScenario();
     void focusCameraOn(int actorIndex, bool shake);
 
     void drawTom(Vector2 pos);

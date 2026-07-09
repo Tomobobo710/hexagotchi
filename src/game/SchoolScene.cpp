@@ -47,7 +47,7 @@ void SchoolScene::init() {
     // almost line-for-line -- Karen needling Tom for being late, Jimmy's lost
     // tooth, the tooth fairy inflation joke, ending on Tom quietly giving up
     // his last $5.
-    events.push_back({
+    scenarios.push_back({
         { "Narrator", "Tom arrives at Jimmy's school.\n3:35 PM. Pickup was at 3:30.",
           NARRATOR_COLOR, -1, false },
         { "Karen", "You're late.",
@@ -78,7 +78,7 @@ void SchoolScene::init() {
 void SchoolScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
-    if (activeEvent < 0) {
+    if (activeScenario < 0) {
         // Ambient: Tom alone waiting outside, Karen and Jimmy only appear
         // during the scripted pickup itself.
         tomWaitTimer += deltaTime * 1.5f;
@@ -90,7 +90,7 @@ void SchoolScene::update(float deltaTime) {
         }
     }
 
-    if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
+    if (activeScenario >= 0 && dialog->isVisible() && dialog->isFinished()) {
         SceneInputHandler* ih = getInputHandler();
         if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
             advanceLine();
@@ -106,7 +106,7 @@ void SchoolScene::draw() {
     if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
     else drawSchoolYard();
     drawTom(tom->getPosition());
-    if (activeEvent >= 0) {
+    if (activeScenario >= 0) {
         drawKaren(karen->getPosition());
         drawJimmy(jimmy->getPosition());
     }
@@ -117,37 +117,38 @@ void SchoolScene::cleanup() {
     Scene::cleanup();
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     // init() re-runs on every re-entry to this scene and unconditionally
-    // push_back()s the event table -- reset so events doesn't accumulate
-    // duplicates and a mid-event exit doesn't permanently block triggerEvent().
-    events.clear();
-    activeEvent = -1;
+    // push_back()s the scenario table -- reset so scenarios doesn't
+    // accumulate duplicates and a mid-scenario exit doesn't permanently
+    // block triggerScenario().
+    scenarios.clear();
+    activeScenario = -1;
     lineIndex = 0;
 }
 
-void SchoolScene::triggerEvent(int index) {
-    if (activeEvent >= 0) return;
-    if (index < 0 || index >= (int)events.size()) return;
+void SchoolScene::triggerScenario(int index) {
+    if (activeScenario >= 0) return;
+    if (index < 0 || index >= (int)scenarios.size()) return;
 
-    activeEvent = index;
+    activeScenario = index;
     lineIndex = 0;
-    playLine(events[activeEvent][lineIndex]);
+    playLine(scenarios[activeScenario][lineIndex]);
 }
 
-void SchoolScene::triggerStoryEvent(int eventIndex) {
-    triggerEvent(eventIndex);
+void SchoolScene::triggerStoryEvent(int scenarioIndex) {
+    triggerScenario(scenarioIndex);
 }
 
-bool SchoolScene::isPlayingEvent() const {
-    return activeEvent >= 0;
+bool SchoolScene::isPlayingScenario() const {
+    return activeScenario >= 0;
 }
 
 void SchoolScene::advanceLine() {
-    if (activeEvent < 0) return;
+    if (activeScenario < 0) return;
 
     lineIndex++;
-    auto& seq = events[activeEvent];
+    auto& seq = scenarios[activeScenario];
     if (lineIndex >= (int)seq.size()) {
-        endEvent();
+        endScenario();
         return;
     }
     playLine(seq[lineIndex]);
@@ -161,8 +162,8 @@ void SchoolScene::playLine(const SchoolLine& line) {
     focusCameraOn(line.focusActor, line.shake);
 }
 
-void SchoolScene::endEvent() {
-    activeEvent = -1;
+void SchoolScene::endScenario() {
+    activeScenario = -1;
     lineIndex = 0;
     dialog->hide();
     getCamera()->zoomTo(1.0f, 0.6f);

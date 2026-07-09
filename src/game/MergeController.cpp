@@ -121,7 +121,7 @@ void MergeController::returnFromMerge() {
     state_.storyBeatIndex++;
 
     // Switch scene back to GotchiScene with a fade transition
-    scenes_.switchScene("gotchi", TransitionEffect::FADE, SCENE_TRANSITION_DURATION);
+    scenes_.switchScene("gotchi");
 
     // Set mode back to Gotchi
     state_.mode = Mode::Gotchi;

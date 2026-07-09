@@ -32,9 +32,11 @@ using Sequence = std::vector<SequenceStep>;
 
 namespace ScenarioDirector {
     // Picks this merge's sequence of scene/scenario steps from the current
-    // GameState. Today: always [{"pizza_parlor", 0}] (Scenario A) --
-    // GameState is unused for now but threaded through so callers/signature
-    // don't need to change once real selection logic lands here.
+    // GameState. Today: always [{"office", 1}, {"pizza_parlor", 0}]
+    // (Scenario C then Scenario A -- see SelectSequence()'s own comment for
+    // what those letters mean) -- GameState is unused for now but threaded
+    // through so callers/signature don't need to change once real selection
+    // logic lands here.
     Sequence SelectSequence(const GameState& state);
 }
 

@@ -8,7 +8,7 @@
 //
 // On StoryBeatStarted, asks ScenarioDirector for this merge's Sequence, then
 // walks: merge-in transition -> each {scene, scenarioId} step in order,
-// waiting for that step's Scene::isPlayingEvent() to go false before
+// waiting for that step's Scene::isPlayingScenario() to go false before
 // advancing -> merge-out transition -> emit StoryBeatCompleted.
 // MergeController only ever sees one StoryBeatStarted in, one
 // StoryBeatCompleted out, no matter how many steps the sequence contains.
@@ -35,8 +35,8 @@ public:
 
     // Drives the merge-in/step/merge-out state machine -- polls MergeScene's
     // isFinished() during the transition phases, and polls the active step's
-    // Scene::isPlayingEvent() during PlayingStep to know when that scenario
-    // (not just its current dialog line) has actually finished.
+    // Scene::isPlayingScenario() during PlayingStep to know when that
+    // scenario (not just its current dialog line) has actually finished.
     void update(float dt);
 
 private:
@@ -53,7 +53,7 @@ private:
                       // and triggering in the same call fires before the new
                       // scene's init() has run, since SceneManager only flips
                       // at the transition's halfway point -- silently a
-                      // no-op since the scene's events table is still empty)
+                      // no-op since the scene's scenario table is still empty)
         PlayingStep,  // current sequence step's scene/dialog is active
         MergeOut,     // sequence-end transition, after the last step
     };

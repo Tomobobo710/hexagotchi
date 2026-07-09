@@ -325,10 +325,6 @@ void GotchiScene::update(float deltaTime) {
 void GotchiScene::draw() {
     Scene::draw();
 
-    // Draw scene title and instructions
-    DrawText("GOTCHI SCENE", 16, 8, 18, {180, 180, 255, 255});
-    DrawText("1: Game  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
-
     if (!gotchi) return;
 
     // ==============================
@@ -560,7 +556,7 @@ void GotchiScene::addNavigationButton(const std::string& label, const std::strin
     btn->setOnClick([this, targetScene]() {
         if (getSceneManager()) {
             SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
-            mgr->switchScene(targetScene, TransitionEffect::FADE, 0.5f);
+            mgr->switchScene(targetScene);
         }
     });
     buttons.push_back(std::unique_ptr<Button>(btn));
@@ -761,6 +757,6 @@ void GotchiScene::onExploreButtonClicked() {
     // Switch to hexboard scene
     if (getSceneManager()) {
         SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
-        mgr->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
+        mgr->switchScene("hexboard");
     }
 }

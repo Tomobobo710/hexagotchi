@@ -46,6 +46,7 @@ void SceneManager::switchSceneImmediate(const std::string& sceneName) {
     Scene* scene = getScene(sceneName);
     if (!scene || sceneName == currentSceneName) return;
     if (currentScene) currentScene->cleanup();
+    scene->setEntrySceneName(currentSceneName);
     currentScene = scene;
     currentSceneName = sceneName;
     currentScene->setSceneManager(this);
@@ -92,6 +93,7 @@ void SceneManager::updateTransition(float deltaTime) {
     float halfDuration = transitionDuration * 0.5f;
     if (transitionTimer >= halfDuration && currentScene != nextScene) {
         if (currentScene) currentScene->cleanup();
+        nextScene->setEntrySceneName(currentSceneName);
         currentScene = nextScene;
         currentSceneName = nextSceneName;
         currentScene->setSceneManager(this);

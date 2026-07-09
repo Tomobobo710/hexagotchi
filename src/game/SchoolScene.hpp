@@ -16,7 +16,7 @@ struct SchoolLine {
 
 // Jimmy's school pickup -- ported from the JS prototype's "The School Pickup
 // Incident" episode. Ambient mode is Tom waiting alone outside; the
-// scripted event is the ported pickup almost line-for-line (Karen needling
+// scripted scenario is the ported pickup almost line-for-line (Karen needling
 // him for being late, Jimmy's lost tooth, the inflation joke).
 class SchoolScene : public Scene {
 public:
@@ -27,9 +27,9 @@ public:
     void draw() override;
     void cleanup() override;
 
-    void triggerEvent(int index);
-    void triggerStoryEvent(int eventIndex) override;
-    bool isPlayingEvent() const override;
+    void triggerScenario(int index);
+    void triggerStoryEvent(int scenarioIndex) override;
+    bool isPlayingScenario() const override;
 
 private:
     SceneActor* tom  = nullptr;
@@ -42,13 +42,13 @@ private:
 
     float tomWaitTimer = 0.0f;
 
-    std::vector<std::vector<SchoolLine>> events;
-    int activeEvent = -1;
+    std::vector<std::vector<SchoolLine>> scenarios;
+    int activeScenario = -1;
     int lineIndex = 0;
 
     void advanceLine();
     void playLine(const SchoolLine& line);
-    void endEvent();
+    void endScenario();
     void focusCameraOn(int actorIndex, bool shake);
 
     void drawTom(Vector2 pos);

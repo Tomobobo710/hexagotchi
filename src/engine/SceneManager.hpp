@@ -16,7 +16,7 @@ enum class TransitionEffect {
     SLIDE_DOWN
 };
 
-const float SCENE_TRANSITION_DURATION = 0.5f;
+const float SCENE_TRANSITION_DURATION = 0.6f;
 
 class SceneManager {
 public:

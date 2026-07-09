@@ -81,8 +81,11 @@ void Scene::update(float deltaTime) {
     // boundary rect at once, for eyeballing a 3D effect's placement across
     // the full scene instead of just the scene's normal gameplay framing.
     // Handled once here so every scene gets it for free instead of each
-    // scene wiring its own zoomed-out preview mode.
-    if (camera && IsKeyPressed(KEY_KP_0)) {
+    // scene wiring its own zoomed-out preview mode. Gated to scenes entered
+    // via the scene_select debug hub -- entrySceneName_ is stamped by
+    // SceneManager on every switch -- so it's inert during the real
+    // sequencer/merge flow.
+    if (camera && entrySceneName_ == "scene_select" && IsKeyPressed(KEY_KP_0)) {
         camera->toggleWideView();
     }
 
@@ -213,8 +216,8 @@ void* Scene::getSceneManager() const {
 }
 
 // Default implementation: do nothing. Override in story scenes.
-void Scene::triggerStoryEvent(int eventIndex) {
-    (void)eventIndex;
+void Scene::triggerStoryEvent(int scenarioIndex) {
+    (void)scenarioIndex;
 }
 
 void Scene::processRemovals() {

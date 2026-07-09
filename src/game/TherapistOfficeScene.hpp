@@ -17,7 +17,7 @@ struct TherapistLine {
 
 // Tom's therapist's office -- ported from the JS prototype's "The Last
 // Session" episode. Ambient mode is just the two of them sitting quietly;
-// the scripted event is the ported session almost line-for-line (the
+// the scripted scenario is the ported session almost line-for-line (the
 // digital-pet metaphor breakdown, ending on the copay hike).
 class TherapistOfficeScene : public Scene {
 public:
@@ -28,9 +28,9 @@ public:
     void draw() override;
     void cleanup() override;
 
-    void triggerEvent(int index);
-    void triggerStoryEvent(int eventIndex) override;
-    bool isPlayingEvent() const override;
+    void triggerScenario(int index);
+    void triggerStoryEvent(int scenarioIndex) override;
+    bool isPlayingScenario() const override;
 
 private:
     SceneActor* tom      = nullptr;
@@ -43,13 +43,13 @@ private:
     float tomFidgetTimer = 0.0f;
     float therapistNodTimer = 0.0f;
 
-    std::vector<std::vector<TherapistLine>> events;
-    int activeEvent = -1;
+    std::vector<std::vector<TherapistLine>> scenarios;
+    int activeScenario = -1;
     int lineIndex = 0;
 
     void advanceLine();
     void playLine(const TherapistLine& line);
-    void endEvent();
+    void endScenario();
     void focusCameraOn(int actorIndex, bool shake);
 
     void drawTom(Vector2 pos);

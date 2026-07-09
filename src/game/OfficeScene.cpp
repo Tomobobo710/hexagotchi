@@ -55,8 +55,8 @@ void OfficeScene::init() {
     boss->setVisible(false);
     addActor(boss);
 
-    // --- Event 0: "Performance Review", ported almost line-for-line ---
-    events.push_back({
+    // --- Scenario 0: "Performance Review", ported almost line-for-line ---
+    scenarios.push_back({
         { "Narrator", "Tom arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
           NARRATOR_COLOR, -1, false },
         { "Boss",  "Tom. My office.\nBring the Hendricks file.",
@@ -77,8 +77,8 @@ void OfficeScene::init() {
           TOM_COLOR, 0, true },
     });
 
-    // --- Event 1: "The Promotion (Sort Of)", ported almost line-for-line ---
-    events.push_back({
+    // --- Scenario 1 (Scenario C): "The Promotion (Sort Of)", ported almost line-for-line ---
+    scenarios.push_back({
         { "Narrator", "Tom's boss calls him in.\nThis time it's different.",
           NARRATOR_COLOR, -1, false },
         { "Boss",  "Tom we're expanding your role.\nCongratulations.",
@@ -109,29 +109,38 @@ void OfficeScene::init() {
 void OfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
-    if (portal) portal->update(deltaTime);
-    updateSceneDebugCamera(portal, getCamera(), deltaTime);
-
-    if (portal) {
-        // Numpad +/-: uniform scale. Numpad 4/6: yaw (rotate around Y).
-        // PortalEffect-specific (not part of SceneEffect's generic
-        // debug-camera interface), so handled directly here rather than
-        // through SceneDebugCamera.hpp.
-        float scale = portal->getObjectScale();
-        if (IsKeyDown(KEY_KP_ADD)) scale += 0.6f * deltaTime;
-        if (IsKeyDown(KEY_KP_SUBTRACT)) scale -= 0.6f * deltaTime;
-        if (scale < 0.1f) scale = 0.1f;
-        portal->setObjectScale(scale);
-
-        float yaw = portal->getObjectYaw();
-        if (IsKeyDown(KEY_KP_6)) yaw += 60.0f * deltaTime;
-        if (IsKeyDown(KEY_KP_4)) yaw -= 60.0f * deltaTime;
-        portal->setObjectYaw(yaw);
+    if (endElapsed >= 0.0f) {
+        endElapsed += deltaTime;
+        if (endElapsed > END_FADE_DURATION) endElapsed = END_FADE_DURATION;
     }
 
-    if (activeEvent < 0) {
+    if (portal) portal->update(deltaTime);
+
+    bool fromDebugHub = getEntrySceneName() == "scene_select";
+    if (fromDebugHub) {
+        updateSceneDebugCamera(portal, getCamera(), deltaTime);
+
+        if (portal) {
+            // Numpad +/-: uniform scale. Numpad 4/6: yaw (rotate around Y).
+            // PortalEffect-specific (not part of SceneEffect's generic
+            // debug-camera interface), so handled directly here rather than
+            // through SceneDebugCamera.hpp.
+            float scale = portal->getObjectScale();
+            if (IsKeyDown(KEY_KP_ADD)) scale += 0.6f * deltaTime;
+            if (IsKeyDown(KEY_KP_SUBTRACT)) scale -= 0.6f * deltaTime;
+            if (scale < 0.1f) scale = 0.1f;
+            portal->setObjectScale(scale);
+
+            float yaw = portal->getObjectYaw();
+            if (IsKeyDown(KEY_KP_6)) yaw += 60.0f * deltaTime;
+            if (IsKeyDown(KEY_KP_4)) yaw -= 60.0f * deltaTime;
+            portal->setObjectYaw(yaw);
+        }
+    }
+
+    if (activeScenario < 0) {
         // Ambient: Tom balancing/wobbling on the yoga ball, boss absent
-        // (only appears during the scripted events, called into "his office").
+        // (only appears during the scripted scenarios, called into "his office").
         tomWobbleTimer += deltaTime * 3.0f;
         tom->setPosition({420.0f, 400.0f + sinf(tomWobbleTimer) * 6.0f});
 
@@ -141,7 +150,7 @@ void OfficeScene::update(float deltaTime) {
         }
     }
 
-    if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
+    if (activeScenario >= 0 && dialog->isVisible() && dialog->isFinished()) {
         SceneInputHandler* ih = getInputHandler();
         if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
             advanceLine();
@@ -206,55 +215,73 @@ void OfficeScene::draw() {
     // Actors last, on top of the portal.
     BeginMode2D(cam);
     drawTom(tom->getPosition());
-    if (activeEvent >= 0) drawBoss(boss->getPosition());
+    if (activeScenario >= 0) drawBoss(boss->getPosition());
     EndMode2D();
 
-    drawSceneDebugCameraReadout(portal, 16, 16);
-    if (portal) {
-        const char* txt = TextFormat("scale: %.2f (Numpad +/-)   yaw: %.1f deg (Numpad 4/6)",
-            portal->getObjectScale(), portal->getObjectYaw());
-        DrawText(txt, 16, 60, 18, Color{255, 220, 140, 255});
+    if (getEntrySceneName() == "scene_select") {
+        drawSceneDebugCameraReadout(portal, 16, 16);
+        if (portal) {
+            const char* txt = TextFormat("scale: %.2f (Numpad +/-)   yaw: %.1f deg (Numpad 4/6)",
+                portal->getObjectScale(), portal->getObjectYaw());
+            DrawText(txt, 16, 60, 18, Color{255, 220, 140, 255});
+        }
+    }
+
+    // Starts ramping immediately when endScenario() fires (endElapsed jumps
+    // to 0.0f right then) and climbs continuously to fully opaque over
+    // END_FADE_DURATION seconds -- no held/dead time before it starts.
+    // isPlayingScenario() (below) stays true for that whole span, so
+    // StorySequencer doesn't react and start its own scene-switch FADE until
+    // this screen is already fully black -- that transition's fade-in half
+    // then continues seamlessly straight out of this one.
+    if (endElapsed >= 0.0f) {
+        float t = endElapsed / END_FADE_DURATION;
+        if (t > 1.0f) t = 1.0f;
+        unsigned char alpha = (unsigned char)(t * 255.0f);
+        DrawRectangle(0, 0, (int)getWidth(), (int)getHeight(), Color{0, 0, 0, alpha});
     }
 }
 
 void OfficeScene::cleanup() {
     Scene::cleanup();
     // init() re-runs on every re-entry to this scene and unconditionally
-    // push_back()s the event table -- reset so events doesn't accumulate
-    // duplicates and a mid-event exit doesn't permanently block triggerEvent().
-    events.clear();
-    activeEvent = -1;
+    // push_back()s the scenario table -- reset so scenarios doesn't
+    // accumulate duplicates and a mid-scenario exit doesn't permanently
+    // block triggerScenario().
+    scenarios.clear();
+    activeScenario = -1;
     lineIndex = 0;
+    endElapsed = -1.0f;
 
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
 
     if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
 }
 
-void OfficeScene::triggerEvent(int index) {
-    if (activeEvent >= 0) return;
-    if (index < 0 || index >= (int)events.size()) return;
+void OfficeScene::triggerScenario(int index) {
+    if (activeScenario >= 0) return;
+    if (index < 0 || index >= (int)scenarios.size()) return;
 
-    activeEvent = index;
+    activeScenario = index;
     lineIndex = 0;
-    playLine(events[activeEvent][lineIndex]);
+    playLine(scenarios[activeScenario][lineIndex]);
 }
 
-void OfficeScene::triggerStoryEvent(int eventIndex) {
-    triggerEvent(eventIndex);
+void OfficeScene::triggerStoryEvent(int scenarioIndex) {
+    triggerScenario(scenarioIndex);
 }
 
-bool OfficeScene::isPlayingEvent() const {
-    return activeEvent >= 0;
+bool OfficeScene::isPlayingScenario() const {
+    return activeScenario >= 0 || (endElapsed >= 0.0f && endElapsed < END_FADE_DURATION);
 }
 
 void OfficeScene::advanceLine() {
-    if (activeEvent < 0) return;
+    if (activeScenario < 0) return;
 
     lineIndex++;
-    auto& seq = events[activeEvent];
+    auto& seq = scenarios[activeScenario];
     if (lineIndex >= (int)seq.size()) {
-        endEvent();
+        endScenario();
         return;
     }
     playLine(seq[lineIndex]);
@@ -268,9 +295,10 @@ void OfficeScene::playLine(const OfficeLine& line) {
     focusCameraOn(line.focusActor, line.shake);
 }
 
-void OfficeScene::endEvent() {
-    activeEvent = -1;
+void OfficeScene::endScenario() {
+    activeScenario = -1;
     lineIndex = 0;
+    endElapsed = 0.0f;
     dialog->hide();
     getCamera()->zoomTo(1.0f, 0.6f);
 }

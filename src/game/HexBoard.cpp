@@ -47,10 +47,6 @@ void HexBoard::draw() {
         DrawText(label, (int)center.x - 15, (int)center.y - 4, 8, Color{200, 200, 200, 255});
     }
 
-    // Draw instructions
-    DrawText("HEX BOARD", 14, 8, 18, Color{180, 180, 255, 255});
-    DrawText("Mouse to select hex", 14, 32, 12, Color{140, 140, 180, 255});
-    DrawText("1: Overworld  2: Boss  3: Hexboard  4: Input Test  ESC: Exit", 720 - 340, 8, 12, Color{140, 140, 180, 255});
 }
 
 void HexBoard::update(float deltaTime) {

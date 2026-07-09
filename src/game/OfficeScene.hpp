@@ -17,8 +17,8 @@ struct OfficeLine {
 
 // Datatek Solutions -- ported from the JS prototype's "Performance Review"
 // and "The Promotion (Sort Of)" episodes. Ambient mode is Tom alone at his
-// (nonexistent) desk, i.e. a yoga ball; the two scripted events cover both
-// office beats and are selected by index like the other world-scenes.
+// (nonexistent) desk, i.e. a yoga ball; the two scripted scenarios cover
+// both office beats and are selected by index like the other world-scenes.
 class OfficeScene : public Scene {
 public:
     OfficeScene(DialogBox* sharedDialog);
@@ -28,9 +28,17 @@ public:
     void draw() override;
     void cleanup() override;
 
-    void triggerEvent(int index);
-    void triggerStoryEvent(int eventIndex) override;
-    bool isPlayingEvent() const override;
+    void triggerScenario(int index);
+    void triggerStoryEvent(int scenarioIndex) override;
+    bool isPlayingScenario() const override;
+
+    // The instant the last dialog line is dismissed, this scene's own black
+    // overlay starts ramping 0->255 and keeps ramping continuously for
+    // END_FADE_DURATION seconds -- no dead/held time before it starts.
+    // isPlayingScenario() stays true for that whole span, so StorySequencer
+    // doesn't react (and start its own scene-switch FADE) until the screen
+    // here is already fully black. Same pattern as PizzaParlorScene.
+    static constexpr float END_FADE_DURATION = 1.5f;
 
 private:
     Texture2D background = {0};
@@ -42,13 +50,17 @@ private:
 
     float tomWobbleTimer = 0.0f;
 
-    std::vector<std::vector<OfficeLine>> events;
-    int activeEvent = -1;
+    std::vector<std::vector<OfficeLine>> scenarios;
+    int activeScenario = -1;
     int lineIndex = 0;
+
+    // Counts UP from 0 once endScenario() fires, 0..END_FADE_DURATION.
+    // Negative (-1) means no fade-out is in progress.
+    float endElapsed = -1.0f;
 
     void advanceLine();
     void playLine(const OfficeLine& line);
-    void endEvent();
+    void endScenario();
     void focusCameraOn(int actorIndex, bool shake);
 
     void drawTom(Vector2 pos);

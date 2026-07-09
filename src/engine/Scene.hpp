@@ -71,17 +71,25 @@ public:
     void setSceneManager(void* manager);
     void* getSceneManager() const;
 
-    // Story event trigger — called by StorySequencer to play a beat's dialog
-    // Override in subclasses to trigger their specific scripted event
+    // Name of the scene we were switched in FROM, stamped by SceneManager
+    // right before init() runs on every entry. Lets a scene gate debug-only
+    // affordances (raw-key event triggers, camera-tuning keys, etc) to only
+    // work when reached via the "scene_select" debug hub, not via the real
+    // sequencer/merge flow.
+    void setEntrySceneName(const std::string& name) { entrySceneName_ = name; }
+    const std::string& getEntrySceneName() const { return entrySceneName_; }
+
+    // Scenario trigger — called by StorySequencer to play a beat's dialog.
+    // Override in subclasses to trigger their specific scripted scenario.
     // Default implementation does nothing (for non-story scenes like GameScene, BossScene)
-    virtual void triggerStoryEvent(int eventIndex);
+    virtual void triggerStoryEvent(int scenarioIndex);
 
     // True while a triggerStoryEvent()'d scenario is still playing out (dialog
     // lines not yet exhausted). StorySequencer polls this to know when a
     // sequence step is actually done, rather than reacting to DialogBox's
     // per-line onFinished callback (which fires once per line typed out, not
     // once per scenario). Default false for non-story scenes.
-    virtual bool isPlayingEvent() const { return false; }
+    virtual bool isPlayingScenario() const { return false; }
 
 protected:
     std::vector<SceneActor*> actors;
@@ -93,7 +101,8 @@ protected:
     Color backgroundColor;
     float width, height;
     void* sceneMgr_;  // Pointer to SceneManager (opaque for header-only dependency)
-    
+    std::string entrySceneName_;  // See getEntrySceneName() above
+
     // Helper methods
     void processRemovals();
     void sortActorsByLayer();

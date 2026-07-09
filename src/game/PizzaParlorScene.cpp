@@ -15,7 +15,7 @@ static const Color WIFE_BODY_COLOR    = CharacterRegistry::get(CharacterId::Kare
 static const Color POKEMON_BODY_COLOR = CharacterRegistry::get(CharacterId::Ronzer).bodyColor;
 
 // Ambient-only lines the Pokemon shouts unprompted, popped through the same
-// shared DialogBox as scripted events. Its entire personality is its own name.
+// shared DialogBox as scripted scenarios. Its entire personality is its own name.
 static const char* POKEMON_QUIPS[] = {
     "Ronzer!",
     "Ronzer Ronzer!",
@@ -69,11 +69,11 @@ void PizzaParlorScene::init() {
     portraits[2][1] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Mid);
     portraits[2][2] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Happy);
 
-    // --- Event 0: the wife needling Tom while the Pokemon heckles from the sideline ---
-    events.push_back({
+    // --- Scenario 0: the wife needling Tom while the Pokemon heckles from the sideline ---
+    scenarios.push_back({
         { "Tom",    "Oh -- hey. I didn't know you two ate here too.",
           TOM_COLOR, 0, false, 0, 1 },
-        { "Karen",   "We come here every Tuesday, Tom. We've come here every\nTuesday for six years.",
+        { "Karen",   "We come here every Tuesday, Tom. We've come here every\nTuesday for six weeks.",
           WIFE_COLOR, 1, false, 1, 1 },
         { "Ronzer",  "Ronzer.", POKEMON_COLOR, 2, false, 2, 2 },
         { "Tom",    "Right. Tuesdays. I knew that.",
@@ -102,7 +102,12 @@ void PizzaParlorScene::init() {
 void PizzaParlorScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
-    if (sunEffect) {
+    if (endElapsed >= 0.0f) {
+        endElapsed += deltaTime;
+        if (endElapsed > END_FADE_DURATION) endElapsed = END_FADE_DURATION;
+    }
+
+    if (sunEffect && getEntrySceneName() == "scene_select") {
         updateSceneDebugCamera(sunEffect, getCamera(), deltaTime);
 
         // Dial-in controls, now targeting the pine tree's position -- I/K: Y,
@@ -111,7 +116,8 @@ void PizzaParlorScene::update(float deltaTime) {
         // TherapistWindowEffect's roadOrigin/treeOrigin/backdropOrigin went
         // through, and sunOrigin already went through here -- see that
         // scene's update()/draw()). Repurposed from sunOrigin now that the
-        // sun's position is baked.
+        // sun's position is baked. Gated to the scene_select debug hub so it
+        // doesn't eat I/J/K/L/U/O during real sequencer-driven playthroughs.
         Vector3 origin = sunEffect->getTreeOrigin();
         float moveSpeed = 4.0f * deltaTime;
         if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
@@ -123,7 +129,7 @@ void PizzaParlorScene::update(float deltaTime) {
         sunEffect->setTreeOrigin(origin);
     }
 
-    if (activeEvent < 0) {
+    if (activeScenario < 0) {
         // --- Ambient idle: gentle bob/sway per character, slow camera drift ---
         tomBobTimer += deltaTime * 2.0f;
         wifeTapTimer += deltaTime * 3.0f;
@@ -162,7 +168,7 @@ void PizzaParlorScene::update(float deltaTime) {
         }
     }
 
-    if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
+    if (activeScenario >= 0 && dialog->isVisible() && dialog->isFinished()) {
         SceneInputHandler* ih = getInputHandler();
         if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
             advanceLine();
@@ -181,14 +187,30 @@ void PizzaParlorScene::draw() {
     drawPokemon(pokemon->getPosition());
     EndMode2D();
 
-    drawSceneDebugCameraReadout(sunEffect, 16, 40);
+    if (getEntrySceneName() == "scene_select") {
+        drawSceneDebugCameraReadout(sunEffect, 16, 40);
 
-    if (sunEffect) {
-        Vector3 origin = sunEffect->getTreeOrigin();
-        const char* txt = TextFormat("treeOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
-            origin.x, origin.y, origin.z);
-        DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
-        DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
+        if (sunEffect) {
+            Vector3 origin = sunEffect->getTreeOrigin();
+            const char* txt = TextFormat("treeOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
+                origin.x, origin.y, origin.z);
+            DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
+            DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
+        }
+    }
+
+    // Starts ramping immediately when endScenario() fires (endElapsed jumps
+    // to 0.0f right then) and climbs continuously to fully opaque over
+    // END_FADE_DURATION seconds -- no held/dead time before it starts.
+    // isPlayingScenario() (below) stays true for that whole span, so
+    // StorySequencer doesn't react and start its own scene-switch FADE until
+    // this screen is already fully black -- that transition's fade-in half
+    // then continues seamlessly straight out of this one.
+    if (endElapsed >= 0.0f) {
+        float t = endElapsed / END_FADE_DURATION;
+        if (t > 1.0f) t = 1.0f;
+        unsigned char alpha = (unsigned char)(t * 255.0f);
+        DrawRectangle(0, 0, (int)getWidth(), (int)getHeight(), Color{0, 0, 0, alpha});
     }
 }
 
@@ -207,40 +229,41 @@ void PizzaParlorScene::cleanup() {
     if (portraits[2][2].id != 0) UnloadTexture(portraits[2][2]);
 
     // init() re-runs on every re-entry to this scene (SceneManager re-inits
-    // scenes on switch) and unconditionally push_back()s the event table --
-    // without resetting these, events accumulates duplicates and activeEvent
-    // can be left >= 0 if the player left mid-event, permanently blocking
-    // triggerEvent()'s guard on every future visit.
-    events.clear();
-    activeEvent = -1;
+    // scenes on switch) and unconditionally push_back()s the scenario table
+    // -- without resetting these, scenarios accumulates duplicates and
+    // activeScenario can be left >= 0 if the player left mid-scenario,
+    // permanently blocking triggerScenario()'s guard on every future visit.
+    scenarios.clear();
+    activeScenario = -1;
     lineIndex = 0;
+    endElapsed = -1.0f;
 }
 
-void PizzaParlorScene::triggerEvent(int index) {
-    if (activeEvent >= 0) return;
-    if (index < 0 || index >= (int)events.size()) return;
+void PizzaParlorScene::triggerScenario(int index) {
+    if (activeScenario >= 0) return;
+    if (index < 0 || index >= (int)scenarios.size()) return;
 
     quipTimer = 0.0f;
-    activeEvent = index;
+    activeScenario = index;
     lineIndex = 0;
-    playLine(events[activeEvent][lineIndex]);
+    playLine(scenarios[activeScenario][lineIndex]);
 }
 
-void PizzaParlorScene::triggerStoryEvent(int eventIndex) {
-    triggerEvent(eventIndex);
+void PizzaParlorScene::triggerStoryEvent(int scenarioIndex) {
+    triggerScenario(scenarioIndex);
 }
 
-bool PizzaParlorScene::isPlayingEvent() const {
-    return activeEvent >= 0;
+bool PizzaParlorScene::isPlayingScenario() const {
+    return activeScenario >= 0 || (endElapsed >= 0.0f && endElapsed < END_FADE_DURATION);
 }
 
 void PizzaParlorScene::advanceLine() {
-    if (activeEvent < 0) return;
+    if (activeScenario < 0) return;
 
     lineIndex++;
-    auto& seq = events[activeEvent];
+    auto& seq = scenarios[activeScenario];
     if (lineIndex >= (int)seq.size()) {
-        endEvent();
+        endScenario();
         return;
     }
     playLine(seq[lineIndex]);
@@ -267,9 +290,10 @@ void PizzaParlorScene::playLine(const PizzaLine& line) {
     focusCameraOn(line.focusActor, line.shake);
 }
 
-void PizzaParlorScene::endEvent() {
-    activeEvent = -1;
+void PizzaParlorScene::endScenario() {
+    activeScenario = -1;
     lineIndex = 0;
+    endElapsed = 0.0f;
     dialog->hide();
     dialog->clearPortraitTexture();
     getCamera()->zoomTo(1.0f, 0.6f);
@@ -359,3 +383,4 @@ void PizzaParlorScene::drawPokemon(Vector2 pos) {
     DrawEllipse((int)(cx - 8), (int)(cy + 18), 6, 4, POKEMON_BODY_COLOR);
     DrawEllipse((int)(cx + 8), (int)(cy + 18), 6, 4, POKEMON_BODY_COLOR);
 }
+

@@ -15,7 +15,7 @@ void SceneSelectScene::addSceneButton(const std::string& label, const std::strin
     btn->setAnchor("center");
     SceneManager* mgr = sceneManager;
     btn->setOnClick([mgr, sceneName]() {
-        mgr->switchScene(sceneName, TransitionEffect::FADE, 0.5f);
+        mgr->switchScene(sceneName);
     });
     buttons.push_back(std::unique_ptr<Button>(btn));
 }

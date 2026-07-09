@@ -31,7 +31,7 @@ void ApartmentScene::init() {
     // adapted into our speaker/text/focus/shake line format. Karen's text
     // plays through a "KAREN (TEXT)" speaker, matching the original's PHONE
     // insert convention.
-    events.push_back({
+    scenarios.push_back({
         { "Tom", "Ugh. 6:47 AM. Already late.",
           TOM_COLOR, 0, false },
         { "Tom", "The alarm has been going off for 40 minutes.\nI just... couldn't.",
@@ -54,7 +54,7 @@ void ApartmentScene::init() {
 void ApartmentScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
-    updateSceneDebugCamera(cityWindow, getCamera(), deltaTime);
+    if (getEntrySceneName() == "scene_select") updateSceneDebugCamera(cityWindow, getCamera(), deltaTime);
 
     if (cityWindow && cityWindow->consumeTrainShakeRequest()) {
         // Duration computed by the effect itself from the actual visible
@@ -63,7 +63,7 @@ void ApartmentScene::update(float deltaTime) {
         getCamera()->shake(6.0f, cityWindow->getShakeDuration());
     }
 
-    if (activeEvent < 0) {
+    if (activeScenario < 0) {
         // Ambient: slow slumped sway, nothing else in the room moving --
         // this is meant to feel emptier and quieter than the pizza parlor.
         tomSlumpTimer += deltaTime * 1.2f;
@@ -79,7 +79,7 @@ void ApartmentScene::update(float deltaTime) {
         }
     }
 
-    if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
+    if (activeScenario >= 0 && dialog->isVisible() && dialog->isFinished()) {
         SceneInputHandler* ih = getInputHandler();
         if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
             advanceLine();
@@ -100,7 +100,7 @@ void ApartmentScene::draw() {
     drawTom(tom->getPosition());
     EndMode2D();
 
-    drawSceneDebugCameraReadout(cityWindow, 16, 16);
+    if (getEntrySceneName() == "scene_select") drawSceneDebugCameraReadout(cityWindow, 16, 16);
 }
 
 void ApartmentScene::cleanup() {
@@ -108,37 +108,38 @@ void ApartmentScene::cleanup() {
     cityWindow = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     // init() re-runs on every re-entry to this scene and unconditionally
-    // push_back()s the event table -- reset so events doesn't accumulate
-    // duplicates and a mid-event exit doesn't permanently block triggerEvent().
-    events.clear();
-    activeEvent = -1;
+    // push_back()s the scenario table -- reset so scenarios doesn't
+    // accumulate duplicates and a mid-scenario exit doesn't permanently
+    // block triggerScenario().
+    scenarios.clear();
+    activeScenario = -1;
     lineIndex = 0;
 }
 
-void ApartmentScene::triggerEvent(int index) {
-    if (activeEvent >= 0) return;
-    if (index < 0 || index >= (int)events.size()) return;
+void ApartmentScene::triggerScenario(int index) {
+    if (activeScenario >= 0) return;
+    if (index < 0 || index >= (int)scenarios.size()) return;
 
-    activeEvent = index;
+    activeScenario = index;
     lineIndex = 0;
-    playLine(events[activeEvent][lineIndex]);
+    playLine(scenarios[activeScenario][lineIndex]);
 }
 
-void ApartmentScene::triggerStoryEvent(int eventIndex) {
-    triggerEvent(eventIndex);
+void ApartmentScene::triggerStoryEvent(int scenarioIndex) {
+    triggerScenario(scenarioIndex);
 }
 
-bool ApartmentScene::isPlayingEvent() const {
-    return activeEvent >= 0;
+bool ApartmentScene::isPlayingScenario() const {
+    return activeScenario >= 0;
 }
 
 void ApartmentScene::advanceLine() {
-    if (activeEvent < 0) return;
+    if (activeScenario < 0) return;
 
     lineIndex++;
-    auto& seq = events[activeEvent];
+    auto& seq = scenarios[activeScenario];
     if (lineIndex >= (int)seq.size()) {
-        endEvent();
+        endScenario();
         return;
     }
     playLine(seq[lineIndex]);
@@ -152,8 +153,8 @@ void ApartmentScene::playLine(const ApartmentLine& line) {
     focusCameraOn(line.focusActor, line.shake);
 }
 
-void ApartmentScene::endEvent() {
-    activeEvent = -1;
+void ApartmentScene::endScenario() {
+    activeScenario = -1;
     lineIndex = 0;
     dialog->hide();
     getCamera()->zoomTo(1.0f, 0.6f);

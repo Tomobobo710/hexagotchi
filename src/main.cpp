@@ -108,8 +108,8 @@ void UpdateDrawFrame() {
     if (currentScene != lastScene) {
         dialogIndex = 0;
         // The Tom world-scenes (pizza_parlor/apartment/etc.) drive the shared
-        // dialog box themselves via triggerEvent()/DialogBox::show() -- only
-        // force-hide it once, on the frame we transition in, so a stale
+        // dialog box themselves via triggerScenario()/DialogBox::show() --
+        // only force-hide it once, on the frame we transition in, so a stale
         // line doesn't linger. Do NOT hide it every frame here or
         // it fights with the scene's own show() calls and the dialog can
         // never stay visible (softlock: it disappears the instant it shows).
@@ -134,15 +134,15 @@ void UpdateDrawFrame() {
     }
 
     if (IsKeyPressed(KEY_THREE) && currentScene != "input_test")
-        sceneManager->switchScene("input_test", TransitionEffect::FADE, 0.5f);
+        sceneManager->switchScene("input_test");
     if (IsKeyPressed(KEY_FOUR) && currentScene != "sprite_test")
-        sceneManager->switchScene("sprite_test", TransitionEffect::FADE, 0.5f);
+        sceneManager->switchScene("sprite_test");
     if (IsKeyPressed(KEY_FIVE) && currentScene != "hexboard")
-        sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
+        sceneManager->switchScene("hexboard");
     if (IsKeyPressed(KEY_NINE) && currentScene != "title")
-        sceneManager->switchScene("title", TransitionEffect::FADE, 0.5f);
+        sceneManager->switchScene("title");
     if (IsKeyPressed(KEY_SEVEN) && currentScene != "scene_select")
-        sceneManager->switchScene("scene_select", TransitionEffect::FADE, 0.5f);
+        sceneManager->switchScene("scene_select");
 
     // Pause key (0) is reserved for future use - no scene supports it yet
 
@@ -150,25 +150,31 @@ void UpdateDrawFrame() {
     // invoked by the tomagotchi/stat side, not by a raw key). Pizza Parlor
     // is now driven entirely by StorySequencer -- see startStep()/update()'s
     // Phase::EnteringStep -- so it no longer needs this manual E-press hook.
-    if (IsKeyPressed(KEY_E) && currentScene == "apartment") {
-        ApartmentScene* apartment = (ApartmentScene*)sceneManager->getCurrentScene();
-        if (apartment && !apartment->isPlayingEvent()) apartment->triggerEvent(0);
+    // Gated to scenes entered via the scene_select debug hub (key 7) --
+    // Scene::getEntrySceneName() is stamped by SceneManager on every switch
+    // -- so this never fires when a scene is reached through the real
+    // sequencer/merge flow.
+    Scene* curScene = sceneManager->getCurrentScene();
+    bool fromDebugHub = curScene && curScene->getEntrySceneName() == "scene_select";
+    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "apartment") {
+        ApartmentScene* apartment = (ApartmentScene*)curScene;
+        if (apartment && !apartment->isPlayingScenario()) apartment->triggerScenario(0);
     }
-    if (IsKeyPressed(KEY_E) && currentScene == "therapist_office") {
-        TherapistOfficeScene* office = (TherapistOfficeScene*)sceneManager->getCurrentScene();
-        if (office && !office->isPlayingEvent()) office->triggerEvent(0);
+    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "therapist_office") {
+        TherapistOfficeScene* office = (TherapistOfficeScene*)curScene;
+        if (office && !office->isPlayingScenario()) office->triggerScenario(0);
     }
-    if (IsKeyPressed(KEY_E) && currentScene == "office") {
-        static int nextOfficeEvent = 0;
-        OfficeScene* office = (OfficeScene*)sceneManager->getCurrentScene();
-        if (office && !office->isPlayingEvent()) {
-            office->triggerEvent(nextOfficeEvent);
-            nextOfficeEvent = (nextOfficeEvent + 1) % 2;
+    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "office") {
+        static int nextOfficeScenario = 0;
+        OfficeScene* office = (OfficeScene*)curScene;
+        if (office && !office->isPlayingScenario()) {
+            office->triggerScenario(nextOfficeScenario);
+            nextOfficeScenario = (nextOfficeScenario + 1) % 2;
         }
     }
-    if (IsKeyPressed(KEY_E) && currentScene == "school") {
-        SchoolScene* school = (SchoolScene*)sceneManager->getCurrentScene();
-        if (school && !school->isPlayingEvent()) school->triggerEvent(0);
+    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "school") {
+        SchoolScene* school = (SchoolScene*)curScene;
+        if (school && !school->isPlayingScenario()) school->triggerScenario(0);
     }
 
     sceneManager->update(dt);
@@ -191,41 +197,6 @@ void UpdateDrawFrame() {
         ClearBackground(BLACK);
         sceneManager->draw();
         dialog->draw();
-        DrawRectangle(0, 0, GAME_W, 32, {0, 0, 0, 160});
-        if (currentScene == "hexboard") {
-            DrawText("HEXBOARD", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "input_test") {
-            DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "sprite_test") {
-            // SpriteTestScene draws its own "SPRITE TEST" title, skip the overlay title here.
-            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "gotchi") {
-            DrawText("GOTCHI", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  0: Menu  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "pizza_parlor") {
-            DrawText("PIZZA PARLOR", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "apartment") {
-            DrawText("APARTMENT", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "therapist_office") {
-            DrawText("THERAPIST'S OFFICE", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "office") {
-            DrawText("DATATEK SOLUTIONS", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("E: Trigger event (cycles)  7: Scene Select  ESC: Exit", GAME_W - 380, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "school") {
-            DrawText("SCHOOL PICKUP", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "scene_select") {
-            DrawText("SCENE SELECT", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("Click a scene  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
-        } else if (currentScene == "title") {
-            DrawText("TITLE SCREEN", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("ESC: Exit", GAME_W - 220, 8, 12, {140, 140, 180, 255});
-        }
     EndTextureMode();
 
     Rectangle dest = GetLetterboxRect();
