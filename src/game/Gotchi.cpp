@@ -43,6 +43,18 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
     animBounce_.clear();
     animHurt_.clear();
     animWalk_.clear();
+    animDie_.clear();
+    animDieTwo_.clear();
+    animDieThree_.clear();
+    animRun_.clear();
+    animArmswap_.clear();
+    animEyetwitch_.clear();
+    animGlitch_.clear();
+    animLeaking_.clear();
+    animLeanover_.clear();
+    animSpin_.clear();
+    animWiggle_.clear();
+    animWobble_.clear();
 }
 
 
@@ -57,11 +69,6 @@ void Gotchi::init() {
     // Set initial action
     setAction("idle");
 
-    // Debug info
-    if (debugMode_) {
-        std::cout << "[Gotchi] Initialized at (" << position.x << ", " << position.y << ")\n";
-        std::cout << "[Gotchi] Vitals shared with GameState. Current mood: " << mood_.getMoodName() << "\n";
-    }
 }
 
 void Gotchi::update(float deltaTime) {
@@ -266,6 +273,17 @@ void Gotchi::draw() {
     } else if (texture.id != 0) {
         drawTexture = &texture;
         src = { 0.0f, 0.0f, (float)texture.width, (float)texture.height };
+    }
+
+    // Check if animFrames has valid textures
+    bool validFrame = false;
+    if (animating && animIsFrameList && !animFrames.empty()) {
+        int idx = currentFrame % static_cast<int>(animFrames.size());
+        if (idx >= 0 && idx < (int)animFrames.size()) {
+            if (animFrames[idx].id != 0) {
+                validFrame = true;
+            }
+        }
     }
 
     if (drawTexture && drawTexture->id != 0) {
@@ -563,13 +581,16 @@ void Gotchi::setAction(const std::string& action) {
             play();
         }
     } else if (action == "play") {
-        // Map 'play' to 'bounce' animation
+        // Map 'play' to available animation (bounce doesn't exist, use idle as fallback)
         clearAnimation();
         if (!animPlay_.empty()) {
             setAnimationFrames(animPlay_, 0.1f, false);
             play();
         } else if (!animBounce_.empty()) {
             setAnimationFrames(animBounce_, 0.1f, false);
+            play();
+        } else if (!animIdle_.empty()) {
+            setAnimationFrames(animIdle_, 0.15f, true);
             play();
         }
     } else if (action == "sad") {
@@ -580,6 +601,9 @@ void Gotchi::setAction(const std::string& action) {
             play();
         } else if (!animHurt_.empty()) {
             setAnimationFrames(animHurt_, 0.25f, true);
+            play();
+        } else if (!animIdle_.empty()) {
+            setAnimationFrames(animIdle_, 0.25f, true);
             play();
         }
     } else if (action == "happy") {
@@ -593,6 +617,137 @@ void Gotchi::setAction(const std::string& action) {
             play();
         } else if (!animIdle_.empty()) {
             setAnimationFrames(animIdle_, 0.15f, true);
+            play();
+        }
+    } else if (action == "die") {
+        // Death animation - try specific variants first, then fallback
+        clearAnimation();
+        if (!animDie_.empty()) {
+            setAnimationFrames(animDie_, 0.2f, false);
+            play();
+        } else if (!animDieTwo_.empty()) {
+            setAnimationFrames(animDieTwo_, 0.2f, false);
+            play();
+        } else if (!animDieThree_.empty()) {
+            setAnimationFrames(animDieThree_, 0.2f, false);
+            play();
+        }
+    } else if (action == "die_two") {
+        clearAnimation();
+        if (!animDieTwo_.empty()) {
+            setAnimationFrames(animDieTwo_, 0.2f, false);
+            play();
+        } else if (!animDie_.empty()) {
+            setAnimationFrames(animDie_, 0.2f, false);
+            play();
+        }
+    } else if (action == "die_three") {
+        clearAnimation();
+        if (!animDieThree_.empty()) {
+            setAnimationFrames(animDieThree_, 0.2f, false);
+            play();
+        } else if (!animDie_.empty()) {
+            setAnimationFrames(animDie_, 0.2f, false);
+            play();
+        }
+    } else if (action == "run") {
+        clearAnimation();
+        if (!animRun_.empty()) {
+            setAnimationFrames(animRun_, 0.1f, true);
+            play();
+        } else if (!animWalk_.empty()) {
+            setAnimationFrames(animWalk_, 0.1f, true);
+            play();
+        }
+    } else if (action == "armswap") {
+        clearAnimation();
+        if (!animArmswap_.empty()) {
+            setAnimationFrames(animArmswap_, 0.15f, false);
+            play();
+        }
+    } else if (action == "eyetwitch") {
+        clearAnimation();
+        if (!animEyetwitch_.empty()) {
+            setAnimationFrames(animEyetwitch_, 0.1f, false);
+            play();
+        }
+    } else if (action == "glitch") {
+        clearAnimation();
+        if (!animGlitch_.empty()) {
+            setAnimationFrames(animGlitch_, 0.1f, false);
+            play();
+        }
+    } else if (action == "leaking") {
+        clearAnimation();
+        if (!animLeaking_.empty()) {
+            setAnimationFrames(animLeaking_, 0.15f, true);
+            play();
+        }
+    } else if (action == "leanover") {
+        clearAnimation();
+        if (!animLeanover_.empty()) {
+            setAnimationFrames(animLeanover_, 0.15f, true);
+            play();
+        }
+    } else if (action == "spin") {
+        clearAnimation();
+        if (!animSpin_.empty()) {
+            setAnimationFrames(animSpin_, 0.15f, true);
+            play();
+        }
+    } else if (action == "wiggle") {
+        clearAnimation();
+        if (!animWiggle_.empty()) {
+            setAnimationFrames(animWiggle_, 0.15f, false);
+            play();
+        }
+    } else if (action == "wobble") {
+        clearAnimation();
+        if (!animWobble_.empty()) {
+            setAnimationFrames(animWobble_, 0.15f, false);
+            play();
+        }
+    } else if (action == "attack") {
+        // Map attack to glitch or die animation (no exact attack exists)
+        clearAnimation();
+        if (!animGlitch_.empty()) {
+            setAnimationFrames(animGlitch_, 0.1f, false);
+            play();
+        } else if (!animDie_.empty()) {
+            setAnimationFrames(animDie_, 0.15f, false);
+            play();
+        } else if (!animHurt_.empty()) {
+            setAnimationFrames(animHurt_, 0.15f, false);
+            play();
+        }
+    } else if (action == "blink") {
+        // Map blink to eyetwitch or idle animation
+        clearAnimation();
+        if (!animEyetwitch_.empty()) {
+            setAnimationFrames(animEyetwitch_, 0.1f, false);
+            play();
+        } else if (!animIdle_.empty()) {
+            setAnimationFrames(animIdle_, 0.2f, true);
+            play();
+        }
+    } else if (action == "bounce") {
+        // Map bounce to idle animation (no exact bounce exists)
+        clearAnimation();
+        if (!animBounce_.empty()) {
+            setAnimationFrames(animBounce_, 0.15f, false);
+            play();
+        } else if (!animIdle_.empty()) {
+            setAnimationFrames(animIdle_, 0.15f, false);
+            play();
+        }
+    } else if (action == "sleep") {
+        // Fallback to idle if sleep not available
+        clearAnimation();
+        if (!animSleep_.empty()) {
+            setAnimationFrames(animSleep_, 0.3f, true);
+            play();
+        } else if (!animIdle_.empty()) {
+            setAnimationFrames(animIdle_, 0.3f, true);
             play();
         }
     }
@@ -611,6 +766,21 @@ bool Gotchi::loadAnimationFrames(const std::string& basePath) {
     animPlay_.clear();
     animSad_.clear();
     animHappy_.clear();
+    animBounce_.clear();
+    animHurt_.clear();
+    animWalk_.clear();
+    animDie_.clear();
+    animDieTwo_.clear();
+    animDieThree_.clear();
+    animRun_.clear();
+    animArmswap_.clear();
+    animEyetwitch_.clear();
+    animGlitch_.clear();
+    animLeaking_.clear();
+    animLeanover_.clear();
+    animSpin_.clear();
+    animWiggle_.clear();
+    animWobble_.clear();
 
     // Load animation frames using AssetPack
     // Expected format: basePath_action_00.png, basePath_action_01.png, etc.
@@ -618,14 +788,27 @@ bool Gotchi::loadAnimationFrames(const std::string& basePath) {
 
     animIdle_ = AssetPack::loadFrames(basePath, "idle");
     animMove_ = AssetPack::loadFrames(basePath, "walk");  // Map move to walk
-    animEat_ = AssetPack::loadFrames(basePath, "bounce");  // Map eat to bounce
-    animSleep_ = AssetPack::loadFrames(basePath, "sleep");
-    animPlay_ = AssetPack::loadFrames(basePath, "bounce");  // Map play to bounce
-    animSad_ = AssetPack::loadFrames(basePath, "hurt");  // Map sad to hurt
-    animHappy_ = AssetPack::loadFrames(basePath, "happy");
-    animBounce_ = AssetPack::loadFrames(basePath, "bounce");
+    animEat_ = AssetPack::loadFrames(basePath, "bounce");  // Map eat to bounce (doesn't exist, returns empty)
+    animSleep_ = AssetPack::loadFrames(basePath, "sleep"); // Doesn't exist, returns empty
+    animPlay_ = AssetPack::loadFrames(basePath, "bounce"); // Map play to bounce (doesn't exist, returns empty)
+    animSad_ = AssetPack::loadFrames(basePath, "hurt");
+    animHappy_ = AssetPack::loadFrames(basePath, "happy"); // Doesn't exist, returns empty
+    animBounce_ = AssetPack::loadFrames(basePath, "bounce"); // Doesn't exist, returns empty
     animHurt_ = AssetPack::loadFrames(basePath, "hurt");
     animWalk_ = AssetPack::loadFrames(basePath, "walk");
+    animDie_ = AssetPack::loadFrames(basePath, "die");
+    animDieTwo_ = AssetPack::loadFrames(basePath, "die_two");
+    animDieThree_ = AssetPack::loadFrames(basePath, "die_three");
+    animRun_ = AssetPack::loadFrames(basePath, "run");
+    animArmswap_ = AssetPack::loadFrames(basePath, "armswap");
+    animEyetwitch_ = AssetPack::loadFrames(basePath, "eyetwitch");
+    animGlitch_ = AssetPack::loadFrames(basePath, "glitch");
+    animLeaking_ = AssetPack::loadFrames(basePath, "leaking");
+    animLeanover_ = AssetPack::loadFrames(basePath, "leanover");
+    animSpin_ = AssetPack::loadFrames(basePath, "spin");
+    animWiggle_ = AssetPack::loadFrames(basePath, "wiggle");
+    animWobble_ = AssetPack::loadFrames(basePath, "wobble");
+
 
     // Return true if at least idle frames were loaded
     return !animIdle_.empty();
@@ -642,6 +825,18 @@ void Gotchi::unloadAnimations() {
     animBounce_.clear();
     animHurt_.clear();
     animWalk_.clear();
+    animDie_.clear();
+    animDieTwo_.clear();
+    animDieThree_.clear();
+    animRun_.clear();
+    animArmswap_.clear();
+    animEyetwitch_.clear();
+    animGlitch_.clear();
+    animLeaking_.clear();
+    animLeanover_.clear();
+    animSpin_.clear();
+    animWiggle_.clear();
+    animWobble_.clear();
 }
 
 std::string Gotchi::serialize() const {

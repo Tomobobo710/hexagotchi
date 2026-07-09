@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -40,6 +41,7 @@ static std::vector<std::string> FindPngsRecursive(const std::string& root) {
         DIR* d = opendir(dir.c_str());
         if (!d) continue;
         struct dirent* entry;
+        std::vector<std::string> entries;
         while ((entry = readdir(d)) != nullptr) {
             std::string name = entry->d_name;
             if (name == "." || name == "..") continue;
@@ -54,6 +56,10 @@ static std::vector<std::string> FindPngsRecursive(const std::string& root) {
         }
         closedir(d);
     }
+
+    // Sort the found files for deterministic output
+    std::sort(found.begin(), found.end());
+
     return found;
 }
 
@@ -117,6 +123,9 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Skipping (failed to load): %s\n", fullPath.c_str());
             continue;
         }
+
+        // Convert to RGBA format (8 bits per channel) for compatibility with AssetPack
+        ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
 
         unsigned int rawSize = (unsigned int)GetPixelDataSize(img.width, img.height, img.format);
         std::string key = ToRelativeKey(fullPath, assetsDir);

@@ -43,7 +43,36 @@ std::vector<Texture2D> loadFrames(const std::string& dir, const std::string& pre
     char fmt[16];
     snprintf(fmt, sizeof(fmt), "%%0%dd", digits);
 
-    for (int i = 0; ; i++) {
+    // Try to find the first valid frame index
+    // Some asset sequences start at index 0, others at index 1
+    int startIdx = 0;
+
+    // Check if index 0 exists
+    snprintf(numbuf, sizeof(numbuf), fmt, startIdx);
+    std::string key0 = dir + "/" + prefix + "_" + numbuf + ".png";
+    Texture2D tex0 = loadTexture(key0);
+
+    if (tex0.id == 0) {
+        // Index 0 not found, try index 1 as start
+        startIdx = 1;
+        snprintf(numbuf, sizeof(numbuf), fmt, startIdx);
+        std::string key1 = dir + "/" + prefix + "_" + numbuf + ".png";
+        Texture2D tex1 = loadTexture(key1);
+
+        if (tex1.id == 0) {
+            // Neither index 0 nor 1 exists, return empty
+            return frames;
+        }
+
+        // Add index 1 and continue
+        frames.push_back(tex1);
+    } else {
+        // Index 0 exists, add it
+        frames.push_back(tex0);
+    }
+
+    // Continue from the next index after startIdx
+    for (int i = startIdx + 1; ; i++) {
         snprintf(numbuf, sizeof(numbuf), fmt, i);
         std::string key = dir + "/" + prefix + "_" + numbuf + ".png";
 

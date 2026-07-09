@@ -129,6 +129,18 @@ private:
     std::vector<Texture2D> animBounce_;    // available animation
     std::vector<Texture2D> animHurt_;      // available animation
     std::vector<Texture2D> animWalk_;      // available animation
+    std::vector<Texture2D> animDie_;       // death animation
+    std::vector<Texture2D> animDieTwo_;    // death animation variant 2
+    std::vector<Texture2D> animDieThree_;  // death animation variant 3
+    std::vector<Texture2D> animRun_;       // running animation
+    std::vector<Texture2D> animArmswap_;   // armswap animation
+    std::vector<Texture2D> animEyetwitch_; // eyetwitch animation
+    std::vector<Texture2D> animGlitch_;    // glitch animation
+    std::vector<Texture2D> animLeaking_;   // leaking animation
+    std::vector<Texture2D> animLeanover_;  // leanover animation
+    std::vector<Texture2D> animSpin_;      // spin animation
+    std::vector<Texture2D> animWiggle_;    // wiggle animation
+    std::vector<Texture2D> animWobble_;    // wobble animation
 
 private:
     // Path-based movement state

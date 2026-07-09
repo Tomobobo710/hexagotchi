@@ -96,6 +96,8 @@ if(RBUILD_DESKTOP)
     set(TEST_GAME_SRCS
         src/game/MergeController.cpp
         src/game/StorySequencer.cpp
+        src/game/MergeScene.cpp
+        src/game/ScenarioDirector.cpp
         src/game/GotchiSim.cpp
         src/game/GotchiStats.cpp
         src/game/GotchiMood.cpp
@@ -108,6 +110,10 @@ if(RBUILD_DESKTOP)
         src/effects/LitShader.cpp
         src/effects/PortalRingMesh.cpp
         src/effects/PortalBaseMesh.cpp
+        src/effects/MoonEffect.cpp
+    )
+    set(TEST_EVENT_SRCS
+        src/events/EventBus.cpp
     )
     set(TEST_SRCS
         tests/TestMergeController.cpp
@@ -205,6 +211,11 @@ if(RBUILD_DESKTOP)
     # Build glfw as a static library
     add_subdirectory(glfw)
 
+    # Build pack_assets tool (C++ version for Linux/macOS)
+    add_executable(pack_assets tools/pack_assets.cpp)
+    target_include_directories(pack_assets PRIVATE raylib/src rres/src)
+    target_link_libraries(pack_assets PRIVATE raylib glfw)
+
     # Main game executable
     add_executable(game ${SOURCES})
 
@@ -239,17 +250,28 @@ if(RBUILD_DESKTOP)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build/desktop/$<CONFIG>
     )
 
-    # Copy assets.rres to the build output directory on Linux/Windows
+    # Build assets.rres automatically before building the game
     if(NOT RBUILD_WEB)
-        if(EXISTS ${CMAKE_SOURCE_DIR}/assets.rres)
-            add_custom_command(TARGET game POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${CMAKE_SOURCE_DIR}/assets.rres
-                $<TARGET_FILE_DIR:game>/assets.rres
-            )
-        else()
-            message(WARNING "assets.rres not found. Run tools/pack_assets.sh to build it.")
-        endif()
+        # Ensure pack_assets is built before assets.rres
+        add_dependencies(pack_assets raylib glfw)
+
+        # Add a custom target to build assets.rres using the pack_assets tool
+        # The pack_assets executable is built by the pack_assets target
+        add_custom_target(assets.rres ALL
+            COMMAND ${CMAKE_COMMAND} -E echo "Building assets.rres..."
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/devtools
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:pack_assets> ${CMAKE_BINARY_DIR}/devtools/pack_assets
+            COMMAND ${CMAKE_BINARY_DIR}/devtools/pack_assets ${CMAKE_SOURCE_DIR}/assets ${CMAKE_SOURCE_DIR}/assets.rres
+            DEPENDS pack_assets
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+
+        # Copy assets.rres to the build output directory
+        add_custom_command(TARGET game POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/assets.rres
+            $<TARGET_FILE_DIR:game>/assets.rres
+        )
     endif()
 endif()
 
@@ -359,6 +381,9 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/PortalShader.cpp
         ${CMAKE_SOURCE_DIR}/src/events/EventBus.cpp
     )
+    # Ensure assets.rres is built before web build (rebuild target added in desktop section)
+    add_dependencies(game-web assets.rres)
+
     add_custom_target(game-web ALL
         COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/src/events -I ${CMAKE_SOURCE_DIR}/src/flags -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
         DEPENDS raylib-web ${WEB_SOURCES}
