@@ -8,10 +8,10 @@
 //
 // On StoryBeatStarted, asks ScenarioDirector for this merge's Sequence, then
 // walks: merge-in transition -> each {scene, scenarioId} step in order,
-// waiting for that step's dialog to finish before advancing -> merge-out
-// transition -> emit StoryBeatCompleted. MergeController only ever sees one
-// StoryBeatStarted in, one StoryBeatCompleted out, no matter how many steps
-// the sequence actually contains.
+// waiting for that step's Scene::isPlayingEvent() to go false before
+// advancing -> merge-out transition -> emit StoryBeatCompleted.
+// MergeController only ever sees one StoryBeatStarted in, one
+// StoryBeatCompleted out, no matter how many steps the sequence contains.
 
 #include "ScenarioDirector.hpp"
 #include <string>
@@ -34,13 +34,10 @@ public:
     ~StorySequencer();
 
     // Drives the merge-in/step/merge-out state machine -- polls MergeScene's
-    // isFinished() during the transition phases, otherwise idle (dialog
-    // completion is callback-driven via onDialogFinished()).
+    // isFinished() during the transition phases, and polls the active step's
+    // Scene::isPlayingEvent() during PlayingStep to know when that scenario
+    // (not just its current dialog line) has actually finished.
     void update(float dt);
-
-    // Public for tests to simulate dialog completion
-    // Call this when the active step's dialog finishes playing
-    void onDialogFinished();
 
 private:
     // Phases of one sequence playthrough, one merge's worth of content --
@@ -49,9 +46,16 @@ private:
     // kept separate).
     enum class Phase {
         Idle,
-        MergeIn,     // sequence-start transition, before the first step
-        PlayingStep, // current sequence step's scene/dialog is active
-        MergeOut,    // sequence-end transition, after the last step
+        MergeIn,      // sequence-start transition, before the first step
+        EnteringStep, // step's scene switch in progress -- waiting for
+                      // SceneManager to actually flip currentScene/init() it
+                      // before triggerStoryEvent() is safe to call (switching
+                      // and triggering in the same call fires before the new
+                      // scene's init() has run, since SceneManager only flips
+                      // at the transition's halfway point -- silently a
+                      // no-op since the scene's events table is still empty)
+        PlayingStep,  // current sequence step's scene/dialog is active
+        MergeOut,     // sequence-end transition, after the last step
     };
 
     // Event handlers
@@ -61,6 +65,7 @@ private:
     void startSequence();
     void startMergeTransition(Phase phase); // phase: MergeIn (sequence start) or MergeOut (sequence end)
     void startStep(int stepIndex);
+    void onStepFinished();
     void finishSequence();
 
     // State

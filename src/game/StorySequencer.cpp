@@ -41,6 +41,34 @@ void StorySequencer::update(float dt) {
             // Merge-out transition done -- whole sequence is over.
             finishSequence();
         }
+        return;
+    }
+
+    if (phase_ == Phase::EnteringStep) {
+        // Wait for SceneManager to actually flip currentScene and init() it
+        // (happens at the transition's halfway point) before triggering the
+        // scenario -- triggering any earlier hits an empty/stale events
+        // table and silently no-ops.
+        if (scenes_.isTransitioning()) return;
+
+        const SequenceStep& step = sequence_[activeStepIndex_];
+        Scene* scene = scenes_.getScene(step.sceneName);
+        if (scene) scene->triggerStoryEvent(step.scenarioId);
+        phase_ = Phase::PlayingStep;
+        return;
+    }
+
+    if (phase_ == Phase::PlayingStep) {
+        const SequenceStep& step = sequence_[activeStepIndex_];
+        Scene* scene = scenes_.getScene(step.sceneName);
+        // isPlayingEvent() is the scenario-level "still going" signal (true
+        // from triggerStoryEvent() until the scene ends its own event), NOT
+        // DialogBox's per-line onFinished -- that fires the instant each
+        // individual line finishes typing out and would end the step after
+        // just its first line instead of its last.
+        if (scene && !scene->isPlayingEvent()) {
+            onStepFinished();
+        }
     }
 }
 
@@ -100,7 +128,7 @@ void StorySequencer::startMergeTransition(Phase phase) {
 
 void StorySequencer::startStep(int stepIndex) {
     activeStepIndex_ = stepIndex;
-    phase_ = Phase::PlayingStep;
+    phase_ = Phase::EnteringStep;
 
     const SequenceStep& step = sequence_[stepIndex];
 
@@ -110,39 +138,25 @@ void StorySequencer::startStep(int stepIndex) {
                   << ", scenarioId=" << step.scenarioId << std::endl;
     }
 
-    // Switch to the story scene with a door/step-through transition
-    // Use SLIDE_RIGHT as a "stepping through a door" effect (design §6)
-    scenes_.switchScene(step.sceneName, TransitionEffect::SLIDE_RIGHT, 0.5f);
+    // triggerStoryEvent() is NOT called here -- SceneManager only flips
+    // currentScene and calls the new scene's init() at the transition's
+    // halfway point, so the scene's events table would still be empty/stale
+    // this frame. update()'s Phase::EnteringStep branch waits for the
+    // transition to finish before actually triggering the scenario.
+    scenes_.switchScene(step.sceneName, TransitionEffect::FADE, 0.5f);
 
-    // Looked up by name rather than getCurrentScene() -- SceneManager only
-    // flips currentScene at the transition's halfway point (see
-    // SceneManager::updateTransition()), so getCurrentScene() here could
-    // still be the PREVIOUS scene depending on timing. getScene(name) reads
-    // straight from the registry and isn't affected by transition state.
-    Scene* scene = scenes_.getScene(step.sceneName);
-    if (!scene) {
+    if (!scenes_.getScene(step.sceneName)) {
         if (DEBUG_LOG) {
             std::cout << "[StorySequencer] No scene registered for '" << step.sceneName << "'!" << std::endl;
         }
-        return;
     }
-
-    scene->triggerStoryEvent(step.scenarioId);
-
-    dialog_.setOnFinished([this]() {
-        this->onDialogFinished();
-    });
 }
 
-void StorySequencer::onDialogFinished() {
-    if (activeStepIndex_ < 0 || phase_ != Phase::PlayingStep) {
-        return;
-    }
-
+void StorySequencer::onStepFinished() {
     const SequenceStep& step = sequence_[activeStepIndex_];
 
     if (DEBUG_LOG) {
-        std::cout << "[StorySequencer] Dialog finished for step " << activeStepIndex_ << std::endl;
+        std::cout << "[StorySequencer] Step " << activeStepIndex_ << " finished" << std::endl;
     }
 
     if (step.isClimax) {

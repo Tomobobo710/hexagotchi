@@ -30,7 +30,7 @@ public:
 
     void triggerEvent(int index);
     void triggerStoryEvent(int eventIndex) override;
-    bool isPlayingEvent() const;
+    bool isPlayingEvent() const override;
 
 private:
     SceneActor* tom      = nullptr;

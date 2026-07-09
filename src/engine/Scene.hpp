@@ -76,6 +76,13 @@ public:
     // Default implementation does nothing (for non-story scenes like GameScene, BossScene)
     virtual void triggerStoryEvent(int eventIndex);
 
+    // True while a triggerStoryEvent()'d scenario is still playing out (dialog
+    // lines not yet exhausted). StorySequencer polls this to know when a
+    // sequence step is actually done, rather than reacting to DialogBox's
+    // per-line onFinished callback (which fires once per line typed out, not
+    // once per scenario). Default false for non-story scenes.
+    virtual bool isPlayingEvent() const { return false; }
+
 protected:
     std::vector<SceneActor*> actors;
     std::vector<SceneActor*> actorsToRemove;

@@ -146,12 +146,10 @@ void UpdateDrawFrame() {
 
     // Pause key (0) is reserved for future use - no scene supports it yet
 
-    // Debug trigger for the pizza parlor's / apartment's scripted story beat
-    // (normally invoked by the tomagotchi/stat side, not by a raw key).
-    if (IsKeyPressed(KEY_E) && currentScene == "pizza_parlor") {
-        PizzaParlorScene* pizza = (PizzaParlorScene*)sceneManager->getCurrentScene();
-        if (pizza && !pizza->isPlayingEvent()) pizza->triggerEvent(0);
-    }
+    // Debug trigger for the apartment's/etc scripted story beat (normally
+    // invoked by the tomagotchi/stat side, not by a raw key). Pizza Parlor
+    // is now driven entirely by StorySequencer -- see startStep()/update()'s
+    // Phase::EnteringStep -- so it no longer needs this manual E-press hook.
     if (IsKeyPressed(KEY_E) && currentScene == "apartment") {
         ApartmentScene* apartment = (ApartmentScene*)sceneManager->getCurrentScene();
         if (apartment && !apartment->isPlayingEvent()) apartment->triggerEvent(0);

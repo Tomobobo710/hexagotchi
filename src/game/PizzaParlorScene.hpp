@@ -46,7 +46,7 @@ public:
     // Scene override: calls triggerEvent
     void triggerStoryEvent(int eventIndex) override;
 
-    bool isPlayingEvent() const;
+    bool isPlayingEvent() const override;
 
 private:
     SceneActor* tom    = nullptr;
