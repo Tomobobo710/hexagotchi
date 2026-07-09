@@ -50,13 +50,13 @@ void PizzaParlorScene::init() {
 
     // Portraits: [actor][emotion], sad/mid/happy. Ronzer only has a happy
     // shot, so its sad/mid slots just reuse that texture.
-    portraits[0][0] = AssetPack::loadTexture("portraits/gotchiportraitsad.png");
-    portraits[0][1] = AssetPack::loadTexture("portraits/gotchiportraitmid.png");
-    portraits[0][2] = AssetPack::loadTexture("portraits/gotchiportraithappy.png");
-    portraits[1][0] = AssetPack::loadTexture("portraits/karensad.png");
-    portraits[1][1] = AssetPack::loadTexture("portraits/karenmid.png");
-    portraits[1][2] = AssetPack::loadTexture("portraits/karenhappy.png");
-    portraits[2][2] = AssetPack::loadTexture("portraits/ronzerhappy.png");
+    portraits[0][0] = AssetPack::loadTexture("portraits/tom/gotchiportraitsad.png");
+    portraits[0][1] = AssetPack::loadTexture("portraits/tom/gotchiportraitmid.png");
+    portraits[0][2] = AssetPack::loadTexture("portraits/tom/gotchiportraithappy.png");
+    portraits[1][0] = AssetPack::loadTexture("portraits/karen/karensad.png");
+    portraits[1][1] = AssetPack::loadTexture("portraits/karen/karenmid.png");
+    portraits[1][2] = AssetPack::loadTexture("portraits/karen/karenhappy.png");
+    portraits[2][2] = AssetPack::loadTexture("portraits/ronzer/ronzerhappy.png");
     portraits[2][0] = portraits[2][1] = portraits[2][2];
 
     // --- Event 0: the wife needling Tom while the Pokemon heckles from the sideline ---
@@ -65,7 +65,7 @@ void PizzaParlorScene::init() {
           TOM_COLOR, 0, false, 0, 1 },
         { "Karen",   "We come here every Tuesday, Tom. We've come here every\nTuesday for six years.",
           WIFE_COLOR, 1, false, 1, 1 },
-        { "Ronzer",  "Ronzer!", POKEMON_COLOR, 2, false, 2, 2 },
+        { "Ronzer",  "Ronzer.", POKEMON_COLOR, 2, false, 2, 2 },
         { "Tom",    "Right. Tuesdays. I knew that.",
           TOM_COLOR, 0, false, 0, 0 },
         { "Karen",   "Did you get my email about Jimmy's recital?",

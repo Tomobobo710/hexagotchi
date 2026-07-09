@@ -71,6 +71,7 @@ struct PlacedActor {
     Vector2 position;   // world-space, top-left
     float scale = 1.0f;
     int layer = 1;
+    bool flipX = false;  // mirror the texture horizontally when drawn
     Texture2D texture = {0};
 };
 
@@ -99,6 +100,7 @@ static void ExportLayout(const std::string& path, const std::vector<PlacedActor>
           << ", \"y\": " << a.position.y
           << ", \"scale\": " << a.scale
           << ", \"layer\": " << a.layer
+          << ", \"flipX\": " << (a.flipX ? "true" : "false")
           << " }";
         if (i + 1 < actors.size()) f << ",";
         f << "\n";
@@ -145,6 +147,15 @@ static bool ImportLayout(const std::string& path, std::vector<PlacedActor>& outA
             size_t colon = obj.find(':', k);
             return (float)atof(obj.c_str() + colon + 1);
         };
+        auto extractBool = [&](const char* key) -> bool {
+            std::string needle = std::string("\"") + key + "\"";
+            size_t k = obj.find(needle);
+            if (k == std::string::npos) return false;
+            size_t colon = obj.find(':', k);
+            size_t t = obj.find("true", colon);
+            size_t comma = obj.find(',', colon);
+            return t != std::string::npos && (comma == std::string::npos || t < comma);
+        };
 
         a.tag = extractString("tag");
         a.assetKey = extractString("asset");
@@ -153,6 +164,7 @@ static bool ImportLayout(const std::string& path, std::vector<PlacedActor>& outA
         a.scale = extractNumber("scale");
         if (a.scale == 0.0f) a.scale = 1.0f;
         a.layer = (int)extractNumber("layer");
+        a.flipX = extractBool("flipX");
 
         if (!a.assetKey.empty()) outActors.push_back(a);
     }
@@ -486,7 +498,7 @@ int main(int argc, char** argv) {
         for (int idx : order) {
             PlacedActor& a = actors[idx];
             if (a.texture.id == 0) continue;
-            Rectangle src = {0, 0, (float)a.texture.width, (float)a.texture.height};
+            Rectangle src = {0, 0, a.flipX ? -(float)a.texture.width : (float)a.texture.width, (float)a.texture.height};
             Rectangle dest = {a.position.x, a.position.y, a.texture.width * a.scale, a.texture.height * a.scale};
             DrawTexturePro(a.texture, src, dest, {0, 0}, 0.0f, WHITE);
             if (idx == selectedActorIndex) {
@@ -606,8 +618,20 @@ int main(int argc, char** argv) {
                 a.layer += (int)deltas[3];
             }
 
+            // Flip X checkbox -- mirrors the actor's texture horizontally.
+            Rectangle flipBox = {(float)(canvasX1 + 24), (float)(firstFieldY + 4 * rowH + 20), 48.0f, 48.0f};
+            bool overFlip = CheckCollisionPointRec(mouseScreen, flipBox);
+            DrawRectangleRec(flipBox, overFlip ? Color{90, 90, 130, 255} : Color{55, 55, 65, 255});
+            DrawRectangleLinesEx(flipBox, 2.0f, Color{80, 80, 100, 255});
+            if (a.flipX) {
+                DrawLineEx({flipBox.x + 8, flipBox.y + 8}, {flipBox.x + 40, flipBox.y + 40}, 3.0f, RAYWHITE);
+                DrawLineEx({flipBox.x + 40, flipBox.y + 8}, {flipBox.x + 8, flipBox.y + 40}, 3.0f, RAYWHITE);
+            }
+            DrawText("Flip X", (int)(flipBox.x + 60), (int)(flipBox.y + 12), 26, RAYWHITE);
+            if (overFlip && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) a.flipX = !a.flipX;
+
             // Delete button -- mouse-only, no keyboard shortcut needed.
-            Rectangle deleteBtn = {(float)(canvasX1 + 24), (float)(firstFieldY + 4 * rowH + 20), (float)fieldW, 70.0f};
+            Rectangle deleteBtn = {(float)(canvasX1 + 24), (float)(firstFieldY + 4 * rowH + 90), (float)fieldW, 70.0f};
             bool overDelete = CheckCollisionPointRec(mouseScreen, deleteBtn);
             DrawRectangleRec(deleteBtn, overDelete ? Color{140, 50, 50, 255} : Color{90, 40, 40, 255});
             DrawRectangleLinesEx(deleteBtn, 2.0f, Color{180, 80, 80, 255});

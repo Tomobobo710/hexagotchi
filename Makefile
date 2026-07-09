@@ -10,7 +10,7 @@ LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lw
 
 WEBINCLUDES = -I src/engine -I src/game -I src/effects -I src/events -I src/flags -I $(RL) -I rres/src
 WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)
-WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++11
+WEBLINK     = -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS -DPLATFORM_WEB -Os -std=c++17
 
 DESKTOP_OUT = build/desktop
 WEB_OUT     = build/web
@@ -47,6 +47,31 @@ $(RL)/libraylib.web.a:
 	$(EMCC) -c $(RL)/raudio.c    -Os -DPLATFORM_WEB -I $(RL) -o $(RL)/raudio.wasm.o
 	$(EMAR) rcs $@ $(RL)/rcore.wasm.o $(RL)/rshapes.wasm.o $(RL)/rtextures.wasm.o $(RL)/rtext.wasm.o $(RL)/rmodels.wasm.o $(RL)/raudio.wasm.o
 
+# Scene layout editor (tools/scene_editor.cpp) -- standalone GUI tool, not
+# part of the game itself. Own subfolder with its own copy of assets.rres +
+# the manifest (built via tools/pack_assets.sh, same file build-alt.sh keeps
+# up to date for the desktop build) so this tool works regardless of the
+# caller's cwd instead of assuming repo root.
+SCENE_EDITOR_OUT = build/scene_editor
+SCENE_EDITOR_BIN = $(SCENE_EDITOR_OUT)/scene_editor.exe
+
+scene-editor: $(SCENE_EDITOR_BIN) $(SCENE_EDITOR_OUT)/assets.rres $(SCENE_EDITOR_OUT)/assets_manifest.txt
+
+$(SCENE_EDITOR_BIN): tools/scene_editor.cpp
+	mkdir -p $(SCENE_EDITOR_OUT)
+	$(CXX) -std=c++11 -I raylib/src -I rres/src tools/scene_editor.cpp -o $(SCENE_EDITOR_BIN) $(LDFLAGS)
+
+build/assets.rres: tools/pack_assets.sh tools/pack_assets.cpp
+	tools/pack_assets.sh assets build/assets.rres
+
+$(SCENE_EDITOR_OUT)/assets.rres: build/assets.rres
+	mkdir -p $(SCENE_EDITOR_OUT)
+	cp build/assets.rres $(SCENE_EDITOR_OUT)/assets.rres
+
+$(SCENE_EDITOR_OUT)/assets_manifest.txt: build/assets.rres
+	mkdir -p $(SCENE_EDITOR_OUT)
+	cp build/assets_manifest.txt $(SCENE_EDITOR_OUT)/assets_manifest.txt
+
 # Dependencies
 deps:
 	make -C raylib/src
@@ -64,4 +89,4 @@ clean:
 clean-web:
 	rm -rf $(WEB_OUT) $(RL)/*.wasm.o $(RL)/libraylib.web.a
 
-.PHONY: all web deps emsdk-setup clean clean-web
+.PHONY: all web deps emsdk-setup clean clean-web scene-editor
