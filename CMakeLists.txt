@@ -26,6 +26,17 @@ if(RBUILD_DESKTOP)
     file(GLOB GAME_SRCS "src/game/*.cpp")
     file(GLOB EFFECTS_SRCS "src/effects/*.cpp")
     file(GLOB EVENT_SRCS "src/events/*.cpp")
+    file(GLOB TEST_SRCS "tests/*.cpp")
+
+    # Only include TestGrimeShader.cpp for the tests build
+    # TestSaveManager.cpp has complex dependencies (GameState, SaveManager)
+    set(GRIME_TEST_SRCS "")
+    foreach(f ${TEST_SRCS})
+        if(f MATCHES "TestGrimeShader")
+            list(APPEND GRIME_TEST_SRCS ${f})
+        endif()
+    endforeach()
+
     set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS} ${EVENT_SRCS})
 
     # Test executable for MergeController
@@ -56,6 +67,18 @@ if(RBUILD_DESKTOP)
 
     # Test executable for SaveManager (keep existing)
     # (This test requires additional files that are not in the test source list)
+    # Build test executable if test sources exist
+    if(GRIME_TEST_SRCS)
+        add_executable(tests ${GRIME_TEST_SRCS})
+        target_include_directories(tests PRIVATE
+            src
+            raylib/src
+            rres/src
+        )
+        # Include the grime shader source for the test
+        target_sources(tests PRIVATE ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp)
+        target_link_libraries(tests PRIVATE raylib glfw)
+    endif()
 
     # Build raylib as a static library
     add_library(raylib STATIC
@@ -225,6 +248,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/SchoolSkyEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/LitShader.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ScenePreviewScene.cpp
