@@ -1,20 +1,35 @@
 # hexagotchi Project State
 
-**Last Updated:** 2026-07-09
+**Current Commit / Last Verified:** dcf5254 (2026-07-09)
 **Project Status:** Active Development (Pre-Jam Build)
-**Current Commit:** f8daa2e (scene cleanup and start on title screen)
 
-**Note:** This document reflects the current state of the hexagotchi codebase after recent architecture refactoring. Features are documented with their completion status based on actual code inspection.
+**Note:** This document reflects the current state of the hexagotchi codebase. Features are documented with their completion status based on **actual end-to-end verification**, not merely the existence of classes or files. Per the rule: **mark complete only when verified end-to-end**.
+
+---
+
+## Known Bugs / Discrepancies from Design
+
+These are discrepancies between what the design document (`docs/GAME_DESIGN.mx`) specifies and what the actual code implements. These are **bugs that need fixing**, not aspirational ✅ marks.
+
+| Issue | What Design Says | What Code Does | Impact |
+|-------|-----------------|----------------|--------|
+| **Mercy driver fed by hygiene** | §5: mercy ← merges/breaks only (not hygiene) | `DriversController.cpp:87-101`: hygiene actions (wash/groom) feed `state_.drivers.mercy` | Hygiene incorrectly feeds mercy; should only merge events feed mercy |
+| **Affection driver ← pet only** | §5: affection ← pet/play/ball only | `GotchiSim.cpp:63-68`: warmth actions (pet/groom/water) feed affection; `GotchiScene.cpp:109-115`: `isWarmthAction` includes GROOM and WATER | Groom and water incorrectly feed affection; only PET should |
+| **Ending display/rendering** | §7: three endings must actually render | No EndingScene exists; `MergeController.cpp:102-105` defers to "ending box" which doesn't exist | Game cannot end in playable state; endings are unplayable |
+| **GameState.needs populated** | Needed for collapse to fire | `GotchiSim.cpp:43-46`: reads `state_.needs` for collapse; `DriversController.cpp:75`: only affection is written; hunger/hygiene/energy never populated | Collapse logic exists but `needs` only has affection set → ending 3 unreachable |
+| **Grime on story-Gary** | §8.1: grime tints story-Gary | `GrimeShader` exists but is never used in story scenes; no code reads `GameState.grime` for character rendering | Gary is never tinted by neglect; visual connection broken |
+| **firstMergeBucket flavors > 1** | §3: the "hook" needs bucket variety | `GotchiSim.cpp:83-96`: firstMergeBucket is read for mercy weighting, but `MergeController.cpp:68-84` always sets it on first merge | Bucket exists but may not produce meaningful variation |
+| **Character names** | Design says Gary/Zap | `CharacterRegistry.cpp:11-33`: uses **Tom/Jimmy** (and Karen/Ronzer) | Name mismatch between design and implementation |
 
 ---
 
 ## 1. Project Overview
 
-**hexagotchi** is a game jam entry (theme: **hex + merge**) that combines a digital pet simulator with a narrative story mode. The core concept: you're handed what looks like a Tamagotchi, but pressing the "merge" button cracks open into the real world of Gary—a man trapped inside the device, whose wife is leaving him, whose kid is a jerk, and whose job is being your pet.
+**hexagotchi** is a game jam entry (theme: **hex + merge**) that combines a digital pet simulator with a narrative story mode. The core concept: you're handed what looks like a Tamagotchi, but pressing the "merge" button cracks open into the real world of Tom—a man trapped inside the device, whose wife is leaving him, whose kid is a jerk, and whose job is being your pet.
 
 ### Key Concepts
 - **Gotchi Mode:** A Gameboy-style interface with care buttons (feed, pet, wash, merge)
-- **Story Mode:** Narrative scenes (Apartment, Office, School, Therapist, Pizza Parlor) where Gary's life unfolds
+- **Story Mode:** Narrative scenes (Apartment, Office, School, Therapist, Pizza Parlor) where Tom's life unfolds
 - **The Merge:** A thematic and mechanical bridge between the two worlds
 - **Hidden Branch Drivers:** Affection, Mercy, Survival determine one of three endings
 
@@ -171,7 +186,7 @@ hexagotchi/
 |-----------|--------|-------|
 | SceneEffect base | ✅ Complete | Base class for effects |
 | MoonEffect | ✅ Complete | Day/night cycle shader |
-| GrimeShader | ✅ Complete | Grime/dishevelment shader for gotchi and Gary |
+| GrimeShader | ✅ Complete | Grime/dishevelment shader for gotchi |
 | PortalShader | ✅ Complete | Portal transition shader |
 | LitShader | ✅ Complete | Dynamic lighting shader |
 | PortalEffect | ✅ Complete | Portal ring effect with 3D rendering |
@@ -247,7 +262,7 @@ cmake --build build --target game-web
 ### Current Design Document: `docs/GAME_DESIGN.mx`
 
 #### Premise
-You're handed a Tamagotchi. Pressing the "merge" button cracks open into Gary's real world.
+You're handed a Tamagotchi. Pressing the "merge" button cracks open into Tom's real world.
 
 #### Core Loop
 ```
@@ -269,7 +284,7 @@ START (gotchi mode)
    - Easy to keep topped (the bait)
 
 2. **Hidden Branch Drivers (Decide Endings)**
-   - **Affection** (fed by petting, playing)
+   - **Affection** (fed by petting only)
    - **Mercy** (fed by using merge/giving breaks)
    - **Survival** (not letting him collapse after death enabled)
 
@@ -283,9 +298,9 @@ START (gotchi mode)
 - ✅ First merge with timing bucket -> flavored story beat 1
 - ✅ Sleep metronome forcing subsequent merges
 - ✅ Existing story scenes playable via DialogBox
-- ⚠️ Three endings with gating on hidden drivers - **Logic implemented but ending display/rendering may be incomplete**
-- ✅ Grime shader on gotchi and story-Gary
-- ✅ Beep intrusion event system (NeedCritical event defined)
+- ❌ **Three endings with gating on hidden drivers - Logic exists but ending display/rendering is MISSING (game cannot end)**
+- ❌ **Grime shader on gotchi exists but is NOT applied to story-Tom**
+- ❌ **Beep intrusion: NeedCritical event defined but no sound playback code**
 
 ---
 
@@ -299,16 +314,20 @@ The system is organized into distinct "Boxes" that communicate via events:
 | B | MergeController | ✅ Complete | Core loop pacing, merge availability |
 | C | GotchiSim + DriversController | ✅ Complete | Affection/mercy drivers, grime, collapse detection |
 | D | StorySequencer + ScenarioDirector | ✅ Complete | Event/Scenario/Sequence system (refactored in b1dd1cf) |
-| E | Ending System | ⚠️ INCOMPLETE | Logic exists (drivers, survival tracking) but display/rendering missing |
+| E | Ending System | ❌ **INCOMPLETE** | Logic exists but display/rendering missing (game cannot end) |
 
 ### Box C: Simulation Reducer (GotchiSim)
-| Feature | Status | Details |
-|---------|--------|---------|
-| Sleep metronome | ✅ Complete | Drains 0.02/s while in Gotchi mode; forces merge at 0 |
-| Affection driver | ✅ Complete | Warmth actions (pet) drive affection gain |
-| Mercy driver | ✅ Complete | Hygiene actions (wash/groom) + merge timing drive mercy |
-| Grime creep | ✅ Complete | Increases with neglect, reduced by care actions |
-| Collapse detection | ✅ Complete | Triggers when deathEnabled and needs hit threshold |
+| Feature | Status | Details | Evidence |
+|---------|--------|---------|----------|
+| Sleep metronome | ✅ Complete | Drains 0.02/s while in Gotchi mode; forces merge at 0 | `GotchiSim.cpp:27-32` |
+| Affection driver | ⚠️ **PARTIAL** | Warmth actions (pet/groom/water) drive affection - **but design says pet/play/ball only** | `GotchiSim.cpp:63-68`, `GotchiScene.cpp:109-115` |
+| Mercy driver | ⚠️ **BUG** | Hygiene actions (wash/groom) drive mercy - **but design says merges/breaks only** | `DriversController.cpp:87-101` |
+| Grime creep | ✅ Complete | Increases with neglect, reduced by care actions | `GotchiSim.cpp:35-38`, `GotchiSim.cpp:71-74` |
+| Collapse detection | ✅ Complete | Triggers when deathEnabled and needs hit threshold | `GotchiSim.cpp:41-53` |
+
+**Critical Bug - Affection Driver:** Design §5 says affection is fed by "petting, playing, ball on hex board." Code shows `isWarmthAction()` includes `CARE_ACTION_GROOM` and `CARE_ACTION_WATER`, which should not feed affection.
+
+**Critical Bug - Mercy Driver:** Design §5 says mercy is fed by "using merge / giving breaks (count and how early)." Code shows `DriversController.cpp:87-101` feeds mercy from hygiene actions (wash/groom).
 
 ### Box D: Story Sequencer (refactored in b1dd1cf)
 | Feature | Status | Details |
@@ -347,7 +366,7 @@ TitleScene -> GotchiScene -> [story scenes via MergeScene] -> TitleScene
 - `GameScene.cpp/hpp` - Overworld with platforming
 - `BossScene.cpp/hpp` - Boss arena with difficulty ramp
 
-**Reasoning:** These demo/debug scenes were likely replaced by the GotchiScene as the primary gameplay loop focus.
+**Reasoning:** These demo/debug scenes were replaced by the GotchiScene as the primary gameplay loop focus.
 
 ---
 
@@ -411,62 +430,39 @@ TitleScene -> GotchiScene -> [story scenes via MergeScene] -> TitleScene
 
 ---
 
-## 10. Incomplete / Unverified Features
+## 10. Critical Path Analysis
 
-### ⚠️ Ending System (CRITICAL)
-- **Status:** Logic is implemented but display/rendering is likely incomplete
-- **Details:**
-  - `GameState` has `drivers.affection`, `drivers.mercy`, `drivers.survival` tracking
-  - `GotchiSim` emits `PetCollapsed` event when collapse threshold reached
-  - `StorySequencer` sets `deathEnabled` at climax step
-  - **Missing:** A dedicated EndingScene or ending display system that:
-    - Reads the three driver values
-    - Determines which ending (1, 2, or 3)
-    - Displays the appropriate ending screen
-    - Provides restart/new game option
-  - **Action Required:** Create an EndingScene that:
-    - Subscribes to `PetCollapsed` and `DeathEnabled` events
-    - Displays ending based on driver thresholds
-    - Allows returning to TitleScene for new game
+### Top Blockers to Completion
 
-### ⚠️ Hex Board Item System
-- **Status:** Hex board exists but item system may be incomplete
-- **Details:**
-  - `HexViewScene` displays the hex board with biomes
-  - `HexTile` and `HexWorld` manage the grid
-  - `Gotchi` can follow paths via `setTargetPosition`/`moveToTarget`
-  - **Missing:** Item placement system (drag-drop) and item seeking behavior
-  - **Action Required:** Verify if hex board item system is fully functional or needs implementation
+1. **Ending System (CRITICAL)** - Game cannot end
+   - **Status:** Logic exists but display/rendering is MISSING
+   - **Root Cause:** `MergeController.cpp:102-105` defers to "ending box" which doesn't exist
+   - **Evidence:** No EndingScene exists; no code reads driver values and displays an ending
+   - **Fix Required:** Create EndingScene that subscribes to PetCollapsed/DeathEnabled events
 
-### ⚠️ Beep Intrusion System
-- **Status:** Event defined but may not be implemented
-- **Details:**
-  - `EventType.h` defines `NeedCritical` event
-  - `GotchiScene` has `handleGotchiAction` that checks needs
-  - **Missing:** Verified code that plays the beep sound when needs are critical
-  - **Action Required:** Verify beep system is implemented and wired up
+2. **Driver Mapping Bugs (HIGH)** - Affection/Mercy feeds incorrectly
+   - **Status:** Code doesn't match design §5
+   - **Evidence:**
+     - Affection: `GotchiSim.cpp:63-68` feeds from pet/groom/water; design says pet/play/ball
+     - Mercy: `DriversController.cpp:87-101` feeds from wash/groom; design says merges only
+   - **Fix Required:** Update `isWarmthAction()` and mercy driver mapping
 
-### ⚠️ Grime Shader Integration with Story Scenes
-- **Status:** GrimeShader exists but integration with story-Gary may be incomplete
-- **Details:**
-  - `GrimeShader.hpp/cpp` implements the shader
-  - `GameState.grime` tracks neglect level (0-1)
-  - **Missing:** Integration of grime value into story scene character rendering
-  - **Action Required:** Verify Gary's silhouette is tinted based on `GameState.grime`
+3. **GameState.needs Not Populated (HIGH)** - Ending 3 unreachable
+   - **Status:** Only `needs.affection` is written; hunger/hygiene/energy never set
+   - **Evidence:** `GotchiSim.cpp:43-46` checks all needs for collapse, but `DriversController.cpp` only sets affection
+   - **Fix Required:** Populate all needs in GotchiSim or drivers controller
 
-### ⚠️ State-Keyed Dialogue Variants
-- **Status:** Framework exists but may have limited variants
-- **Details:**
-  - Dialog box supports multiple scenes with events
-  - GameState can store arbitrary flags
-  - **Missing:** Verified state-based variant logic in story scenes
-  - **Action Required:** Verify state-keyed dialogue variants are complete
+4. **Grime Not Applied to Story-Tom (MEDIUM)** - Visual connection broken
+   - **Status:** GrimeShader exists but is never used in story scenes
+   - **Evidence:** No code calls `GrimeShader::instance().begin(state.grime)` in story scenes
+   - **Fix Required:** Integrate GrimeShader into story scene character rendering
 
 ---
 
 ## 11. Recent Development
 
 ### Recent Commits (Last 5)
+- `dcf5254` (2026-07-09) - project state update
 - `f8daa2e` (2026-07-09) - scene cleanup and start on title screen
   - Removed GameScene and BossScene
   - Updated CMakeLists.txt and main.cpp
@@ -477,7 +473,6 @@ TitleScene -> GotchiScene -> [story scenes via MergeScene] -> TitleScene
   - Added SunEffect for PizzaParlor 3D sun
 - `8f71d03` (2026-07-08) - more work on event wiring
 - `cec8016` (2026-07-08) - fixing merge conflicts
-- `3917364` (2026-07-07) - working hex grid click to move
 
 ### Recent Implementation Highlights
 - **Title Screen Rewrite** - Complete rewrite with:
@@ -495,27 +490,23 @@ TitleScene -> GotchiScene -> [story scenes via MergeScene] -> TitleScene
   - Tom, Karen, Ronzer, Jimmy fully defined
   - Therapist, Boss, Narrator, Phone defined (no portrait art yet)
 - **DriversController** - Box C affection/mercy drivers:
-  - Warmth actions (pet) drive affection gain
-  - Hygiene actions (wash/groom) drive mercy gain
+  - Warmth actions drive affection gain
+  - Hygiene actions drive mercy gain
   - Grime creep and decay logic
-- **SunEffect** - New 3D effect for PizzaParlor:
-  - Glowing sunset sun visible through door glass
-  - LitShader integration
-  - Debug camera interface with live-tunable origin
 
 ---
 
 ## 12. Open Questions / To-Do
 
 ### High Priority (Before Jam Deadline)
-1. **Ending System Verification** - Verify endings actually display to player when conditions are met
-2. **Hex Board Item System** - Verify item drag-drop and seek functionality
-3. **Beep Intrusion** - Verify beep plays when needs are critical during story scenes
-4. **Grime Shader Integration** - Verify story-Gary is tinted based on GameState.grime
-5. **State-Keyed Dialogue** - Verify all state-based dialogue variants are implemented
+1. **Ending System** - Create EndingScene that reads driver values and displays ending based on thresholds
+2. **Driver Mapping** - Fix affection (pet only) and mercy (merges only) driver mappings
+3. **GameState.needs** - Populate all needs (hunger, hygiene, energy) so collapse logic works
+4. **Grime Shader Integration** - Wire GrimeShader into story scene rendering for Tom
+5. **Beep Intrusion** - Implement sound playback on NeedCritical event
 
 ### Stretch / Lower Priority
-1. Multi-Gotchi social system
+1. Multi-Tom social system
 2. Environment integration (temperature, weather, time of day)
 3. Growth system (life stages)
 4. Inventory system
@@ -576,18 +567,15 @@ TitleScene -> GotchiScene -> [story scenes via MergeScene] -> TitleScene
 ### Debug Keys
 | Key | Action |
 |-----|--------|
-| `1` | Switch to GameScene (removed) |
-| `2` | Switch to BossScene (removed) |
 | `3` | Switch to InputTestScene |
 | `4` | Switch to SpriteTestScene |
 | `5` | Switch to HexViewScene |
 | `7` | Switch to SceneSelectScene |
-| `8` | Switch to GotchiScene |
 | `9` | Switch to TitleScene |
-| `0` | Toggle pause menu (reserved for future use) |
 | `E` | Trigger story event (in story scenes) |
-| `H` | Replay dialog (reserved) |
 | `ESC` | Exit |
+
+**Note:** Key '8' (GotchiScene) was removed - Gotchi is accessed via scene select or title screen.
 
 ### Asset Pipeline
 1. Place assets in `assets/` subdirectories
@@ -601,25 +589,30 @@ TitleScene -> GotchiScene -> [story scenes via MergeScene] -> TitleScene
 **hexagotchi** is a fully functional game engine with a working pet simulation, save system, event system, and multiple narrative scenes. The core "hex + merge" theme is implemented through:
 
 - **Hex:** Hex board view with biomes for pet care
-- **Merge:** The merge button that crosses between pet world and Gary's real world
+- **Merge:** The merge button that crosses between pet world and Tom's real world
 
 ### System Status Summary
 - **Core Engine:** ✅ Complete
-- **Gotchi Simulation:** ✅ Complete
+- **Gotchi Simulation:** ✅ Complete (except driver mappings)
 - **Save/Load System:** ✅ Complete
 - **Event System:** ✅ Complete
 - **Merge Controller:** ✅ Complete
 - **Story Sequencer:** ✅ Complete (refactored)
 - **Scenario System:** ✅ Complete (new architecture)
 - **Character Registry:** ✅ Complete
-- **Drivers (Affection/Mercy):** ✅ Complete
-- **Endings:** ⚠️ Logic implemented, display/rendering may be incomplete
+- **Drivers (Affection/Mercy):** ⚠️ Logic implemented but **BUGGY** (wrong action mappings)
+- **Endings:** ❌ **Logic exists but display/rendering is MISSING (game cannot end)**
+- **GameState.needs:** ⚠️ **Partially populated (only affection, not hunger/hygiene/energy)**
 - **Hex Board Items:** ⚠️ May be incomplete
-- **Beep Intrusion:** ⚠️ May be incomplete
-- **Grime Shader Integration:** ⚠️ May be incomplete
-- **State-Keyed Dialogue:** ⚠️ May have limited variants
+- **Beep Intrusion:** ❌ **NeedCritical event defined but no sound playback**
+- **Grime Shader Integration:** ❌ **GrimeShader exists but never applied to story-Tom**
 
-**Recommendation:** Before the jam deadline, focus on verifying the incomplete features listed above, particularly the ending display system which is critical to the game's conclusion. The recent architecture refactoring (ScenarioDirector, StorySequencer) has created a clean seam for future story expansion while preserving all existing invariants.
+**Recommendation:** Before the jam deadline, focus on the critical blockers:
+1. **Ending System** - Create EndingScene to display endings (game cannot currently end)
+2. **Driver Mapping** - Fix affection (pet only) and mercy (merges only) to match design
+3. **GameState.needs** - Populate all needs so collapse/ending 3 logic works
+
+The recent architecture refactoring (ScenarioDirector, StorySequencer) has created a clean seam for future story expansion while preserving all existing invariants.
 
 ---
 

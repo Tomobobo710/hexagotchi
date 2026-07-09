@@ -4,6 +4,11 @@
 
 The Hexagotchi rendering system is built around a modular scene architecture where each scene manages its own actors, effects, and rendering logic. The system uses Raylib for 2D rendering with a camera system, layer-based actor sorting, and scene transition effects.
 
+The game uses a **gotchi mode / story mode** core loop:
+- **Gotchi Mode**: Pet simulation with buttons (feed, pet, wash, merge) on `GotchiScene`
+- **Story Mode**: Narrative scenes (Pizza Parlor, Apartment, Office, etc.) accessed via merge transition
+- **Transitions**: `MergeScene` provides the literal door-through transition between modes
+
 ---
 
 ## Architecture Diagram
@@ -17,6 +22,8 @@ The Hexagotchi rendering system is built around a modular scene architecture whe
 │     ├─ SyncMouseToGameSpace()  ← Mouse coordinate correction                │
 │     ├─ sceneManager->update(dt)                                             │
 │     ├─ dialog->update(dt)                                                   │
+│     ├─ mergeController->update(dt)                                          │
+│     ├─ storySequencer->update(dt)                                           │
 │     └─ BeginTextureMode(gameTarget)                                         │
 │           ├─ sceneManager->draw()                                           │
 │           ├─ dialog->draw()                                                 │
@@ -44,6 +51,7 @@ All scenes inherit from the `Scene` base class which provides:
 | **Effects** | `addEffect()` for background/foreground visual effects |
 | **Input** | `getInputHandler()` for keyboard/mouse input |
 | **State** | `setPaused()`, `togglePause()` |
+| **Story Events** | `triggerStoryEvent()` for narrative scenes |
 
 ### Scene Constants
 
@@ -57,9 +65,9 @@ const float SCENE_DEFAULT_HEIGHT = 1080.0f;     // Default scene height
 
 | Scene Type | Width | Height | Background |
 |------------|-------|--------|------------|
-| Game/Boss Scenes | 4800/2400 | 900 | Dark blue gradient |
 | Gotchi/Pet Scenes | 720 | 720 | Dark purple |
-| Narrative Scenes | 1024 | 576 | Varies by scene |
+| Narrative Scenes | 720 | 720 | Varies by scene |
+| Title/Menu Scenes | 720 | 720 | Black |
 | Debug/Test Scenes | 720 | 720 | Varies |
 
 ---
@@ -85,6 +93,10 @@ const float SCENE_DEFAULT_HEIGHT = 1080.0f;     // Default scene height
 │  3. Update Phase                                                          │
 │     ├─ sceneManager->update(dt) - Update current scene                  │
 │     ├─ dialog->update(dt) - Update dialog box state                     │
+│     ├─ mergeController->update(dt) - Merge availability logic           │
+│     ├─ storySequencer->update(dt) - Story beat progression              │
+│     ├─ gotchiSim->update(dt) - Gotchi simulation reducer                │
+│     └─ driversController->update(dt) - Affection/Mercy computation      │
 │                                                                         │
 │  4. Render to Offscreen Texture (gameTarget)                             │
 │     ├─ ClearBackground(BLACK)                                           │
@@ -208,6 +220,7 @@ Features:
 | **Lookahead** | Camera looks ahead in direction of movement |
 | **Shake** | Screen shake effect with decay |
 | **Boundaries** | Clamp camera to world bounds |
+| **Wide View** | Toggle to see entire scene at once (for 3D placement) |
 
 ### Camera Constants
 
@@ -257,49 +270,23 @@ A parallax background effect with two layers:
 | Background stars | 200 | 0.1x | Single pixels |
 | Mid stars | 80 | 0.25x | Small circles (1.2px radius) |
 
-```cpp
-StarfieldEffect::drawBackground() {
-    float camX = camera->getRaylibCamera().target.x;
-
-    // Distant stars (slow parallax)
-    for (auto& s : stars) {
-        float sx = fmod(s.x - camX * 0.1f + 4800.0f, 4800.0f);
-        DrawPixel((int)sx, (int)s.y, {180, 180, 220, 120});
-    }
-
-    // Mid stars (faster parallax)
-    for (auto& s : midStars) {
-        float sx = fmod(s.x - camX * 0.25f + 4800.0f, 4800.0f);
-        DrawCircle((int)sx, (int)s.y, 1.2f, {220, 220, 255, 180});
-    }
-}
-```
-
 ### MoonEffect (`src/effects/MoonEffect.cpp`)
 
 A 3D-rendered moon with:
-
 - **Shader-based lighting**: Custom GLSL shaders for WebGL and desktop OpenGL
 - **Directional light**: Simulates sunlight from a moving source
 - **Animated rotation**: The moon slowly rotates
 - **Day/Night cycle**: Light position follows sine wave motion
 
-```cpp
-void MoonEffect::drawBackground() {
-    Camera3D cam3d = {
-        .position = {0.0f, 0.0f, 10.0f},
-        .target = {0.0f, 0.0f, 0.0f},
-        .up = {0.0f, 1.0f, 0.0f},
-        .fovy = 10.0f,
-        .projection = CAMERA_PERSPECTIVE
-    };
-    BeginMode3D(cam3d);
-        DrawModelEx(model, {0.8f, 0.7f, 0.0f},
-                    {0.0f, 1.0f, 0.3f}, rotation,
-                    {1.0f, 1.0f, 1.0f}, {220, 220, 180, 255});
-    EndMode3D();
-}
-```
+### GrimeShader (`src/effects/GrimeShader.hpp/cpp`)
+
+Applies a grime/dishevelment overlay to the gotchi based on neglect levels.
+
+### PortalShader / PortalEffect (`src/effects/PortalEffect.hpp/cpp`)
+
+The merge transition effect - a ring-shaped portal with 3D geometry. Used in both:
+- `MergeScene` for the literal transition
+- `OfficeScene` as a background element (pixel-locked to the scene)
 
 ---
 
@@ -315,6 +302,7 @@ A shared dialogue system used across narrative scenes.
 - Fade in/out transitions
 - Portrait display (optional texture or silhouette)
 - Text wrapping for multi-line dialogue
+- `setOnFinished()` callback for scene progression
 
 **Position**: Anchored at bottom of screen (y = GAME_H - 20)
 
@@ -400,130 +388,69 @@ enum class TransitionEffect {
 
 ### Core Gameplay Scenes
 
-#### 1. GameScene (`src/game/GameScene.cpp`)
+#### 1. GotchiScene (`src/game/GotchiScene.cpp`)
 
-**Purpose**: Overworld platformer level
+**Purpose**: Pet display and care interface - primary gameplay loop
 
-**Dimensions**: 4800×900 pixels
+**Dimensions**: 720×720 pixels
 
 **Actors**:
-- `player` - PlayerActor with physics and animation
-- `ground` - Base platform at y=440
-- `platform` - 14 floating platforms at various heights
-- `enemy` - 7 static enemies (bobbing animation)
-- `gem` - 8 collectible gems (pulsing animation)
+- `gotchi` - Main pet entity with stats, mood, and animations
+
+**Buttons** (6 action buttons + navigation):
+- Wash, Groom, Feed, Pet, Water, Give a Break (merge button)
+- DETAILED VITALS - switches to `GotchiStatsScene`
+- EXPLORE - switches to `HexViewScene`
 
 **Rendering Features**:
-- Custom gem rendering with pulsing rings
-- Enemy bobbing using sine wave
-- Platform highlight lines
-- Starfield and Moon effects
+- Gotchi with 4× scale (64×64 source → 256×256 display)
+- Vitals display (Health, Hunger, Energy, Thirst, Sleep, Hygiene)
+- Current mood display with color indicator
+- Mood drivers (Happiness, Excitement, Satisfaction, Energy, Health)
+- Action shader overlay (wash scrub, groom sparkles, feed crumbs, pet ring, water droplets)
+- Button cooldowns with visual overlay
 
 **Camera Behavior**:
-- Follows player with 4.0 speed
-- Zooms based on vertical velocity (0.72x-1.0x)
-- Screen shake on landing
-- Lookahead enabled
+- Fixed at center (720×720)
+- No follow or zoom needed
 
-**Pause Menu**: Custom `PauseMenuOverlay` with Resume/Controls/Exit
+**Merge Logic**:
+- Emits `MergeRequested` event on merge button click
+- MergeController handles timing and validation
+- Locks button for 3 seconds after each merge
 
 ---
 
-#### 2. BossScene (`src/game/BossScene.cpp`)
+#### 2. HexViewScene (`src/game/HexViewScene.cpp`)
 
-**Purpose**: Boss arena with platforming challenges
+**Purpose**: Hex grid world map for pet exploration
 
-**Dimensions**: 2400×900 pixels
-
-**Actors**:
-- `player` - PlayerActor
-- `ground` - Dark purple platform
-- `boss` - 90×110 enemy with animated boss shape
-- `platform` - 4 pillars at x=500,800,1400,1700
-
-**Rendering Features**:
-- Concentric circles animation in background
-- Boss pulsing aura effect
-- Eye blinking animation
-- Mouth bar animation
-- Pillar side highlights
-
-**Camera Behavior**:
-- Follows player with 2.5 speed
-- Zooms to 0.75x during jumps
-- Shake on landing
-- No lookahead
-
-**Pause Menu**: Same as GameScene
-
----
-
-#### 3. HexViewScene (`src/game/HexViewScene.cpp`)
-
-**Purpose**: Hex grid world map display
-
-**Dimensions**: 4800×900 pixels
+**Dimensions**: 720×720 pixels
 
 **Hex Grid**:
-- 32 hexes wide × 18 hexes tall
-- 64px hex size
+- 11 hexes wide × 11 hexes tall (720×720 grid)
+- 64px hex size (approximate)
 - Biomes: Ocean, Sand, Grass, Dirt, Ice, Swamp, Lava
 
 **Rendering**:
 - Custom `HexTile` class with vertex-based hex shapes
-- Biome-specific textures from assets
-- Camera centered at (1536, 960) zoomed at 0.8x
+- Biome-specific colors/textures from assets
+- Camera centered at grid center
 
-**Pause Menu**: Same as GameScene
+**Navigation**:
+- "Back" button returns to `GotchiScene`
 
 ---
 
-### Gotchi (Pet) Scenes
+#### 3. GotchiStatsScene (`src/game/GotchiStatsScene.cpp`)
 
-#### 4. GotchiScene (`src/game/GotchiScene.cpp`)
-
-**Purpose**: Pet status display UI
+**Purpose**: Detailed stat display with all 100 stats
 
 **Dimensions**: 720×720 pixels
 
-**UI Layout**:
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                        GOTCHI SCENE                              │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌────────────┬─────────────────────────────┬──────────────────┐ │
-│  │ VITAL      │  CURRENT MOOD             │  EMOTIONAL       │ │
-│  │ STATS      │  [Mood Name]              │  Happiness       │ │
-│  │ - Health   │  [Mood Color Box]         │  Excitement      │ │
-│  │ - Hunger   │  Mood Drivers:            │  Satisfaction    │ │
-│  │ - Energy   │    * Happiness            │  Love/Affection  │ │
-│  │ - Thirst   │    * Excitement           │  Friends         │ │
-│  │ - Sleep    │    * Satisfaction         │                  │ │
-│  │ - Hygiene  │    * Energy               │  SOCIAL          │ │
-│  └────────────┤    * Health               │  Popularity      │ │
-│               └───────────────────────────┤  Confidence      │ │
-│                                             └──────────────────┘ │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │ STATUS: [SLEEPING/HAPPY/NEEDS ATTENTION]                   │  │
-│  │ STAT SUMMARY: Health: 85 | Hunger: 12 | Energy: 76        │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │ [RUNNING]  Time: 05:23  Frame: 312  Ticks: 158            │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│                        [Gotchi Sprite]                           │
-│                        (Center Screen)                           │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-**Gotchi Actor**:
-- 4× scale (64×64 source → 256×256 display)
-- Animation frames from `gotchis/001/<action>_NN.png`
-- Actions: idle, walk, attack, bounce, blink, hurt, die
+**UI**:
+- Scrollable stat list with categories (Core, Secondary, Emotional, Physical, Social, Environmental, Skill)
+- Stat value display with bar for normalized values
 
 ---
 
@@ -531,101 +458,110 @@ enum class TransitionEffect {
 
 All narrative scenes use the shared `DialogBox` for dialogue and have similar structure:
 
-#### 5. PizzaParlorScene (`src/game/PizzaParlorScene.cpp`)
+#### 4. PizzaParlorScene (`src/game/PizzaParlorScene.cpp`)
 
-**Setting**: Pizza restaurant with Gary, his wife Karen, and Ronzer the Pokemon
+**Setting**: Pizza restaurant with Gary, his wife Karen, and Ronzer the creature
 
-**Dimensions**: 1024×576
+**Dimensions**: 720×720 pixels
+
+**Set Dressing**:
+- Background: `parlorbg.png`
+- SunEffect: 3D sunset visible through door
+- Ambient bobbing animations for idle state
 
 **Actors**:
-- `gary` - Slouched silhouette at (160, 380)
-- `wife` - Sharp silhouette at (520, 360)
-- `pokemon` - Round creature at (620, 400)
-
-**Rendering**:
-- All actors draw via custom silhouette functions (`drawGary()`, `drawWife()`, `drawPokemon()`)
-- Ambient bobbing animations for idle state
-- Camera drifts slowly left/right during idle
+- `gary` - Slouched silhouette at center
+- `wife` - Sharp silhouette
+- `ronzer` - Round creature (side comment)
 
 **Event System**:
-- 13 dialogue lines triggered by `triggerEvent(0)`
-- Camera focuses on speaking actor with zoom (1.4x)
-- Screen shake on dramatic lines
+- Event 0: "Monday Morning" - wife needling Tom while Ronzer heckles
+- `triggerEvent(0)` starts the sequence
+
+**Camera**: Centered, slight drift during idle
 
 ---
 
-#### 6. ApartmentScene (`src/game/ApartmentScene.cpp`)
+#### 5. ApartmentScene (`src/game/ApartmentScene.cpp`)
 
 **Setting**: Gary's apartment - Monday morning scene
 
-**Dimensions**: 1024×576
+**Dimensions**: 720×720 pixels
 
 **Set Dressing**:
-- Bed (frame + sheet)
-- Window with dim morning light
-- Kitchen counter with broken coffee machine
-- Bathroom mirror
+- Background: `apartmentbg.png`
+- CityWindowEffect: Window view with train shake simulation
+- Bed, kitchen counter, bathroom mirror
 
 **Actors**:
 - `gary` - Sunken silhouette for exhaustion
 
 **Event System**:
-- 8 dialogue lines covering alarm, mirror, Karen's text, coffee
+- Event 0: Alarm, mirror, Karen's text, coffee machine
+
+**Camera**: Centered, slight sway during idle
 
 ---
 
-#### 7. TherapistOfficeScene (`src/game/TherapistOfficeScene.cpp`)
+#### 6. TherapistOfficeScene (`src/game/TherapistOfficeScene.cpp`)
 
 **Setting**: Therapy session - "The Last Session" episode
 
-**Dimensions**: 1024×576
+**Dimensions**: 720×720 pixels
 
 **Set Dressing**:
+- Background: `therapistbg.png`
 - Bookshelf behind therapist
-- Window with daylight
+- Window with daylight (TherapistWindowEffect)
 - Side table with tissues
-- Rug beneath chairs
 
 **Actors**:
 - `gary` - Seated silhouette fidgeting
 - `therapist` - Composed silhouette with notepad
 
 **Event System**:
-- 9 dialogue lines ending with copay hike
+- Event 0: Divorce talk, copay hike
+
+**Camera**: Centered, gary fidgets, therapist nods
 
 ---
 
-#### 8. OfficeScene (`src/game/OfficeScene.cpp`)
+#### 7. OfficeScene (`src/game/OfficeScene.cpp`)
 
 **Setting**: Datatek Solutions - Performance review and "promotion"
 
-**Dimensions**: 1024×576
+**Dimensions**: 720×720 pixels
 
 **Set Dressing**:
+- Background: `officebg.png`
 - Hot-desk workspace rows
 - Glass-walled boss office
 - Motivational poster
+- Portal: 3D portal model pixel-locked to scene background
 
 **Actors**:
 - `gary` - Balanced on yoga ball
 - `boss` - Sharp-suited silhouette (only in events)
 
 **Event System**:
-- 2 events (Performance Review, The Promotion)
-- Each with 6-7 dialogue lines
+- Event 0: "Performance Review" - no raise, verbal commendation
+- Event 1: "The Promotion" - Henderson + Brickford accounts
+
+**Camera**: Centered, gary wobbles on yoga ball
 
 ---
 
-#### 9. SchoolScene (`src/game/SchoolScene.cpp`)
+#### 8. SchoolScene (`src/game/SchoolScene.cpp`)
 
 **Setting**: School pickup - Karen and Zap incident
 
-**Dimensions**: 1024×576
+**Dimensions**: 720×720 pixels
 
 **Set Dressing**:
+- Background: `schoolbg.png`
 - Grass ground
 - School building with windows
-- Flagpole
+- SchoolSkyEffect: Daytime sky
 - Pickup bench
 
 **Actors**:
@@ -634,38 +570,105 @@ All narrative scenes use the shared `DialogBox` for dialogue and have similar st
 - `zap` - Small child silhouette with missing tooth
 
 **Event System**:
-- 1 event with 11 dialogue lines
-- Tooth fairy money moment
+- Event 0: "School Pickup" - late, lost tooth, inflation joke
+
+**Camera**: Centered, gary waits, others only during event
 
 ---
 
-### Utility/Debug Scenes
+### Transition Scenes
 
-#### 10. InputTestScene (`src/game/InputTestScene.cpp`)
+#### 9. MergeScene (`src/game/MergeScene.cpp`)
+
+**Purpose**: Literal door-through transition between gotchi and story modes
+
+**Dimensions**: 720×720 pixels
+
+**Visuals**:
+- Standalone scene with no background art
+- Uses `PortalEffect` (same as OfficeScene's portal)
+- Clear color fades black ↔ white
+
+**Modes**:
+- `MERGE_IN`: Camera starts far (10), pushes to near (0.1), color black→white
+- `MERGE_OUT`: Camera starts near (0.1), pulls to far (10), color white→black
+
+**Duration**: 7 seconds (configurable via `MERGE_DURATION`)
+
+**Controls**:
+- Tab key toggles direction mid-transition (debug)
+
+---
+
+### Menu/Utility Scenes
+
+#### 10. TitleScene (`src/game/TitleScene.cpp`)
+
+**Purpose**: Main menu with save system
+
+**Dimensions**: 720×720 pixels
+
+**UI**:
+- "NEW GAME" button - creates default GameState, saves to slot 0
+- "LOAD GAME" button - shows slot selection UI
+- "SAVE" button (main menu) - saves current GameState to active slot
+
+**Save Slots**:
+- 3 slot buttons with summary display (playtime, beat index)
+- SAVE/DELETE/BACK action buttons (shown when "Load Game" selected)
+
+**Navigation**:
+- Press 9 to return to title from any scene
+- Transitions to `GotchiScene` after new/load
+
+**Background**: Solid black
+
+---
+
+#### 11. SceneSelectScene (`src/game/SceneSelectScene.cpp`)
+
+**Purpose**: Hub for selecting narrative/"world" scenes
+
+**Dimensions**: 720×720 pixels
+
+**UI**:
+- "TOM'S WORLD" title
+- Button list of narrative scenes:
+  - PIZZA PARLOR
+  - APARTMENT
+  - THERAPIST'S OFFICE
+  - DATATEK SOLUTIONS (OFFICE)
+  - SCHOOL PICKUP
+  - 3D MODEL TEST
+  - MERGE TRANSITION
+
+**Navigation**:
+- Click any button to switch to that scene
+- Press ESC to exit
+
+---
+
+### Debug/Test Scenes
+
+#### 12. InputTestScene (`src/game/InputTestScene.cpp`)
 
 **Purpose**: Input handler debugging and key rebinding
 
-**Dimensions**: 720×720
+**Dimensions**: 720×720 pixels
 
 **Features**:
 - Action queries (move_left, jump, etc.)
 - Raw key state display
 - Mouse position tracking
 - Action binding display and rebinding UI
-- Button interaction demo
-
-**Rebinding UI**:
-- Toggle with R key
-- Cycle through actions
-- Capture new key press
 
 ---
 
-#### 11. SpriteTestScene (`src/game/SpriteTestScene.cpp`)
+#### 13. SpriteTestScene (`src/game/SpriteTestScene.cpp`)
 
 **Purpose**: Animation frame testing with real Gotchi art
 
-**Dimensions**: 720×720
+**Dimensions**: 720×720 pixels
 
 **Features**:
 - Display Gotchi animations from assets.rres
@@ -678,22 +681,11 @@ All narrative scenes use the shared `DialogBox` for dialogue and have similar st
 
 ---
 
-#### 12. SceneSelectScene (`src/game/SceneSelectScene.cpp`)
+#### 14. Model3DTestScene (`src/game/Model3DTestScene.cpp`)
 
-**Purpose**: Hub for selecting world scenes
+**Purpose**: 3D model testing and preview
 
-**Dimensions**: 720×720 (GAME_W × GAME_H)
-
-**UI**:
-- "GARY'S WORLD" title
-- 5 scene buttons:
-  - PIZZA PARLOR
-  - APARTMENT
-  - THERAPIST'S OFFICE
-  - DATATEK SOLUTIONS (OFFICE)
-  - SCHOOL PICKUP
-
-**Button Implementation**: Custom `Button` class with hover/press states
+**Dimensions**: 720×720 pixels
 
 ---
 
@@ -737,6 +729,19 @@ if (ih->isKeyHeld(KEY_LEFT_SHIFT)) {
 Vector2 mouseWorld = ih->getMouseWorldPosition();
 ```
 
+### Key Bindings (Keyboard)
+
+| Key | Scene | Function |
+|-----|-------|----------|
+| 3 | Any | Switch to InputTestScene |
+| 4 | Any | Switch to SpriteTestScene |
+| 5 | Any | Switch to HexViewScene |
+| 7 | Any | Switch to SceneSelectScene |
+| 9 | Any | Switch to TitleScene |
+| E | Pizza Parlor/Apartment/Therapist/Office/School | Trigger next story event |
+| TAB | MergeScene | Toggle merge direction (debug) |
+| ESC | All | Exit game |
+
 ---
 
 ## Asset System
@@ -765,23 +770,172 @@ AssetPack::unloadFrames(frames);
 
 ---
 
-## Key Bindings (Keyboard)
+## Scene Flow Architecture
 
-| Key | Scene | Function |
-|-----|-------|----------|
-| 1 | Any | Switch to GameScene |
-| 2 | Any | Switch to BossScene |
-| 3 | Any | Switch to InputTestScene |
-| 4 | Any | Switch to SpriteTestScene |
-| 5 | Any | Switch to HexViewScene |
-| 7 | Any | Switch to SceneSelectScene |
-| 8 | Any | Switch to GotchiScene |
-| 0 | Game/Boss | Toggle pause menu |
-| SPACE | Game/Boss | Skip dialog or advance |
-| H | Game/Boss | Replay dialog from start |
-| E | Narrative scenes | Trigger next event |
-| R | InputTest | Toggle key rebinding mode |
-| ESC | All | Exit game |
+### Scene Transitions
+
+The game uses a **state machine** for scene transitions:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            Scene Flow                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────┐                                                            │
+│  │ Title   │                                                            │
+│  │ Scene   │                                                            │
+│  └────┬────┘                                                            │
+│       │                                                                                 │
+│       ▼                                                                                 │
+│  ┌──────────┐  ┌──────────────┐                                                        │
+│  │  New     │  │   Load       │                                                        │
+│  │  Game    │  │   Game       │                                                        │
+│  └────┬─────┘  └─────┬────────┘                                                        │
+│       │              │                                                                 │
+│       └───────┬──────┘                                                                 │
+│               ▼                                                                        │
+│  ┌───────────────┐  ┌────────────┐                                                     │
+│  │  Load From     │  │  Save To   │                                                     │
+│  │  Slot 0/1/2    │  │  Slot      │                                                     │
+│  └───────┬───────┘  └─────┬───────┘                                                     │
+│          │                │                                                            │
+│          └────────┬───────┘                                                            │
+│                   ▼                                                                    │
+│  ┌───────────────────────────────┐                                                     │
+│  │        ┌────────┐             │                                                     │
+│  │        │Gotchi  │◄────────────┘                                                     │
+│  │        │Scene   │                                                                   │
+│  │        └────┬───┘                                                                   │
+│  │             │                                                                       │
+│  │  Merge Button (MergeRequested)                                                     │
+│  │             │                                                                       │
+│  │             ▼                                                                       │
+│  │        ┌────────┐                                                                   │
+│  │        │Merge   │                                                                   │
+│  │        │Scene   │                                                                   │
+│  │        └───┬────┘                                                                   │
+│  │            │                                                                        │
+│  │            ▼                                                                        │
+│  │      ┌──────────────┐                                                               │
+│  │      │ Story        │                                                               │
+│  │      │ Sequencer    │                                                               │
+│  │      │ (Box D)      │                                                               │
+│  │      └──────┬───────┘                                                               │
+│  │             │                                                                        │
+│  │  ┌──────────┴────────────────────────────────┐                                       │
+│  │  │                                           │                                       │
+│  │  ▼                                           ▼                                       │
+│  │ Pizza Parlor   Apartment   Office   School   Therapist                             │
+│  │     │              │            │       │           │                                │
+│  │     └──────────────┴────────────┴───────┴───────────┘                                │
+│  │             │                                                                        │
+│  │     ┌───────┴───────┐                                                                │
+│  │     │StoryBeat      │                                                                │
+│  │     │Completed      │                                                                │
+│  │     └───────┬───────┘                                                                │
+│  │             │                                                                        │
+│  │        ┌────┴─────┐                                                                  │
+│  │        │MergeScene│                                                                  │
+│  │        │(MergeOut)│                                                                  │
+│  │        └────┬─────┘                                                                  │
+│  │             │                                                                        │
+│  │             ▼                                                                        │
+│  │        ┌─────────┐                                                                   │
+│  │        │Gotchi   │                                                                   │
+│  │        │Scene    │                                                                   │
+│  │        └─────────┘                                                                   │
+│  │                                                                                      │
+│  └────────────────────────────────────────────────────────────────────────────────────┘
+│                                                                                          │
+│  HexViewScene ─────────────┐                                                             │
+│  (from Gotchi "EXPLORE")   │                                                             │
+│                             ▼                                                            │
+│                      ┌──────────────┐                                                   │
+│                      │Scene Select  │                                                   │
+│                      │Hub           │                                                   │
+│                      └──────────────┘                                                   │
+│                             │                                                            │
+│                             └───────────────┐                                            │
+└──────────────────────────────────────────────┴───────────────────────────────────────────┘
+```
+
+### Core Game Loop
+
+```
+START (TitleScene)
+  └─> New Game or Load Game
+       └─> GotchiScene (Gotchi Mode)
+            ├─> Player presses buttons (feed, pet, wash, etc.)
+            ├─> Merge button clicked (MergeRequested)
+            │    └─> MergeController validates and triggers merge
+            │         └─> MergeScene (MERGE_IN transition)
+            │              └─> StorySequencer loads next story beat
+            │                   └─> PizzaParlor/Apartment/etc.
+            │                        └─> Dialog plays
+            │                        └─> StoryBeatCompleted emitted
+            │                             └─> MergeScene (MERGE_OUT transition)
+            │                                  └─> Back to GotchiScene
+            │
+            └─> "EXPLORE" button clicked
+                 └─> HexViewScene
+                      └─> Back button
+                           └─> Back to GotchiScene
+```
+
+### Merge Controller (Box B)
+
+The `MergeController` manages the core loop timing:
+
+| State | Logic |
+|-------|-------|
+| **First merge** | Timing bucket computed (Immediate/AfterABit/AfterNeglect) based on wait time + needs |
+| **Merge lock** | 3-second cooldown after each merge |
+| **Sleep drain** | 0.02/s while in Gotchi mode; forces merge at 0 |
+| **Death enabled** | When climax reached, merge back is deferred (ending system) |
+
+### Story Sequencer (Box D)
+
+The `StorySequencer` manages story beat playback:
+
+| Phase | Description |
+|-------|-------------|
+| **Idle** | Waiting for StoryBeatStarted event |
+| **MergeIn** | Transition scene plays before first step |
+| **PlayingStep** | Current scene's dialog is active |
+| **MergeOut** | Transition scene plays after last step |
+
+---
+
+## Event System
+
+### Event Bus (`src/events/EventBus.h`)
+
+**Events Used**:
+
+| Event | Emitter | Consumer | Purpose |
+|-------|---------|----------|---------|
+| `MergeRequested` | GotchiScene | MergeController | Player pressed merge button |
+| `MergeCompleted` | MergeController | StorySequencer | Merge initiated |
+| `StoryBeatStarted` | StorySequencer | StorySequencer | Start story beat playback |
+| `StoryBeatCompleted` | StorySequencer | MergeController | Story beat finished |
+| `CareAction` | GotchiScene | DriversController | Care action performed |
+| `DeathEnabled` | StorySequencer | MergeController | Climax reached |
+
+---
+
+## Drivers Controller (Box C)
+
+### Affection/Mercy Computation
+
+| Driver | Fed By | Current Implementation | Design Says |
+|--------|--------|----------------------|-------------|
+| **Affection** | Warmth actions | Pet only (`actionCode == 3`) | Pet/play/ball on hex |
+| **Mercy** | Hygiene actions | Wash/Groom (`actionCode == 0,1`) | Merge usage only |
+
+**Grime System**:
+- Increases with neglect (0.01/s)
+- Reduced by hygiene actions (0.08 per wash/groom)
+- Applied via `GrimeShader` to gotchi sprite
 
 ---
 
@@ -789,13 +943,19 @@ AssetPack::unloadFrames(frames);
 
 The Hexagotchi rendering system provides:
 
-1. **Scene-based architecture** - 12 distinct scenes with custom rendering
+1. **Scene-based architecture** - 14 distinct scenes with custom rendering
 2. **Actor system** - Layered rendering with physics and animation
-3. **Camera system** - Follow, zoom, shake, and lookahead
-4. **Effect system** - Parallax stars and 3D moon with shaders
+3. **Camera system** - Follow, zoom, shake, lookahead, and wide view toggle
+4. **Effect system** - Parallax stars, 3D moon, portal, grime shader
 5. **Transition effects** - Fade and slide transitions between scenes
 6. **Dialog system** - Shared dialogue box with typing reveal and options
 7. **Input system** - Action mapping with rebinding support
 8. **Asset packing** - Single rres file for all resources
+9. **Merge transition** - Dedicated scene for literal door-through transitions
+10. **Scene select hub** - Centralized navigation to narrative scenes
 
 The system balances simplicity (base Scene/SceneActor classes) with flexibility (custom draw() methods per scene) to support both gameplay and narrative scenes.
+
+---
+
+*Last updated based on commit dcf5254 (2026-07-09). Scene changes from GameScene/BossScene removal in f8daa2e integrated.*
