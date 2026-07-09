@@ -3,6 +3,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
+#include "HexTile.hpp"
 
 // Simple Perlin-like noise implementation
 HexWorld::HexWorld(const HexWorldConfig& cfg)
@@ -231,13 +232,10 @@ HexTile* HexWorld::getTileAt(int q, int r) const {
 }
 
 std::string HexWorld::getBiomeAt(float x, float y) const {
-    // Convert pixel position to hex coordinates
-    float inv32 = 1.0f / (config.hexSize * 3.0f / 2.0f);
-    float q = x * inv32;
-    float r = (y / (config.hexSize * std::sqrt(3.0f) / 2.0f) - q) / 2.0f;
-
-    int hexQ = static_cast<int>(std::round(q));
-    int hexR = static_cast<int>(std::round(r));
+    // Convert pixel position to hex coordinates using canonical fromPixel
+    HexCoords hc = HexCoords::fromPixel({x, y}, config.hexSize);
+    int hexQ = hc.q;
+    int hexR = hc.r;
 
     HexTile* tile = getTileAt(hexQ, hexR);
     if (tile && tile->getTileType()) {

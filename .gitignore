@@ -51,5 +51,10 @@ Makefile
 !README.md
 !BUILD_INSTRUCTIONS.md
 
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Asset bundle
 assets.rres

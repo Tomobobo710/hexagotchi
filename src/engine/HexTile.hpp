@@ -11,8 +11,11 @@ struct HexCoords {
 
     HexCoords(int q_, int r_) : q(q_), r(r_) {}
 
-    // Convert hex coordinates to pixel coordinates (flat-top hex)
+    // Convert hex coordinates to pixel coordinates (pointy-top hex, odd-r offset)
     Vector2 toPixel(float hexSize) const;
+
+    // Inverse: convert pixel coordinates to hex coordinates
+    static HexCoords fromPixel(Vector2 p, float hexSize);
 };
 
 class HexTile : public SceneActor {
