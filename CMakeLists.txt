@@ -232,8 +232,10 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/AssetPack.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/GameState.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexTile.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexWorld.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/SaveManager.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Scene.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneActor.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneCamera.cpp
@@ -250,6 +252,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/HexBoard.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexViewScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/MergeController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PizzaParlorScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
@@ -258,6 +261,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
@@ -268,11 +272,16 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/LitShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/MergeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
-        ${CMAKE_SOURCE_DIR}/src/game/ScenePreviewScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalBaseMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalRingMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalShader.cpp
+        ${CMAKE_SOURCE_DIR}/src/events/EventBus.cpp
     )
     add_custom_target(game-web ALL
-        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
+        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/src/events -I ${CMAKE_SOURCE_DIR}/src/flags -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
         DEPENDS raylib-web ${WEB_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
