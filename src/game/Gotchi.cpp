@@ -9,7 +9,7 @@ const float GOTCHI_WIDTH = 64.0f;
 const float GOTCHI_HEIGHT = 64.0f;
 const float GOTCHI_MOVE_SPEED = 50.0f;
 const float GOTCHI_WANDER_SPEED = 20.0f;
-const float GOTCHI_TICK_RATE = 1.0f;  // Base tick rate in seconds
+const float GOTCHI_TICK_RATE = 10.0f;  // Base tick rate in seconds
 
 Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
     : SceneActor(position, GOTCHI_WIDTH, GOTCHI_HEIGHT),
