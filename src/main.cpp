@@ -19,6 +19,7 @@
 #include "game/TitleScene.hpp"
 #include "game/GotchiStatsScene.hpp"
 #include "game/MergeController.hpp"
+#include "game/StorySequencer.hpp"
 #include "game/DialogSequences.hpp"
 #include "engine/GameState.h"
 #include "events/EventBus.h"
@@ -36,6 +37,9 @@ EventBus  globalEventBus;
 
 // MergeController - created in main() and used in UpdateDrawFrame
 MergeController* mergeController = nullptr;
+
+// StorySequencer - created in main() and used in UpdateDrawFrame
+StorySequencer* storySequencer = nullptr;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -199,6 +203,9 @@ void UpdateDrawFrame() {
     if (mergeController) {
         mergeController->update(dt);
     }
+    if (storySequencer) {
+        storySequencer->update(dt);
+    }
     dialog->update(dt);
 
     BeginTextureMode(gameTarget);
@@ -314,6 +321,9 @@ int main() {
     mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);
     gotchiScene->setEventBus(&globalEventBus);
 
+    // Wire up the story sequencer
+    storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);
+
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
         (shotScene && shotScene[0]) ? shotScene : "game");
@@ -364,6 +374,7 @@ int main() {
     UnloadRenderTexture(gameTarget);
     delete dialog;
     delete mergeController;
+    delete storySequencer;
     delete sceneManager;
     CloseWindow();
 #endif

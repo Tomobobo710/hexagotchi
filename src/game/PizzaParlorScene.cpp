@@ -180,6 +180,10 @@ void PizzaParlorScene::triggerEvent(int index) {
     playLine(events[activeEvent][lineIndex]);
 }
 
+void PizzaParlorScene::triggerStoryEvent(int eventIndex) {
+    triggerEvent(eventIndex);
+}
+
 bool PizzaParlorScene::isPlayingEvent() const {
     return activeEvent >= 0;
 }

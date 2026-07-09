@@ -127,6 +127,10 @@ void SchoolScene::triggerEvent(int index) {
     playLine(events[activeEvent][lineIndex]);
 }
 
+void SchoolScene::triggerStoryEvent(int eventIndex) {
+    triggerEvent(eventIndex);
+}
+
 bool SchoolScene::isPlayingEvent() const {
     return activeEvent >= 0;
 }
