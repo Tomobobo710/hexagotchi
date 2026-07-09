@@ -1,0 +1,17 @@
+Tier 0 — confirm the loop is playable at all (verify this first, 30 seconds). The stat doc says the "Give a Break" (merge) button is "Not yet implemented — shows 'Not available yet' feedback." Box B's merge controller is built and unit-tested, so the engine works — but if the button isn't wired to actually invoke it, the player can't reach the merge, and there is no game. Press it in a running build: does it take you into a story scene, or show "Not available yet"? If it merges, you're fine — "not available yet" is just the voluntary-merge gate talking after the first merge. If it never merges, wiring that button to the (working) MergeController is the single most important fix on the board, because everything below assumes the loop is reachable.
+Tier 1 — make the game end, and end correctly. This is the real remaining work.
+
+Fix the driver mapping. The stat doc + prior state doc confirm it: Pet → affection is right, but wash/groom currently feed the mercy driver, and mercy is supposed to come from merges only (design §5). Hygiene actions should feed no hidden driver. Right now the gate that picks Escape vs. Trapped is being moved by washing the pet. Small fix, but it has to precede the endings or you'll route wrong silently.
+Build the ending router + display. Nothing reads the drivers and shows an ending — the game hangs at the climax. This is the biggest missing piece: read drivers + the both-sides gate → ending 1/2/3 → an ending screen → back to title. The router is your lane; the ending content is the story dev's.
+Connect collapse to real deterioration. Ending 3 fires from C-core reading GameState.needs, but the actual vitals live in GotchiStats (which even has its own health-drain-from-neglect system, per the new doc). Those aren't connected, so collapse can't trigger from real neglect and ending 3 is unreachable. Either populate GameState.needs from GotchiStats, or point collapse at GotchiStats health. Until this, you effectively have two of three endings.
+
+After Tier 1, you have a game someone can play start to finish and get one of three endings. That's the base game complete.
+Tier 2 — land the theme (the game's identity, not just its mechanics).
+
+Thread grime into story-Gary. The shader exists but isn't applied in the story scenes, so the "the pet and Gary are the same being" statement — the design's highest-value hook — isn't landing.
+First-merge-bucket flavoring + a few state-keyed lines. Verify the beat-1 opening still varies by how long they waited (may have been lost in the StorySequencer refactor), plus the handful of need-keyed line swaps.
+Beep intrusion. Event's defined, no sound plays. Small, atmospheric.
+
+Tier 3 — in flight, and genuinely optional. The hexbar (slot 3) is the "second way to care." It rounds out the hex half of the theme, but the base game is complete and submittable without it — don't let it block Tiers 0–1.
+So the honest shape: the spine (boot → title → gotchi → merge → story → back, save/load, care buttons, 5 written scenes, the pacing engine) is done and mostly trustworthy. Tier 0 verify + Tier 1's three items are the whole distance to a finishable base game — probably a few focused sessions. Tier 2 is what makes it feel like hexagotchi rather than a systems demo. Tier 3 is bonus.
+If you want, I'll turn Tier 1 into the ending-router prompt with the driver-mapping fix folded into its read-gate — but confirm the Tier 0 merge-button question first, because if that button's a placeholder, it jumps the queue ahead of everything.

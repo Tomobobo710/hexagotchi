@@ -1,0 +1,148 @@
+# Tier 1 — Finishing the base game (handoff)
+
+**Audience:** the story/content dev. **Goal of Tier 1:** a game you can play start to finish and
+reach one of the three endings. After this, the base game is complete and submittable.
+
+Tags: **[ENGINE]** = engine/wiring, owned on the systems side. **[STORY]** = scenes/dialog/
+assets, owned by you. A couple of items are split, with the contract called out.
+
+---
+
+## Where we are
+
+The spine works and is trustworthy: boot → title → New Game/Load → gotchi → merge → story
+scene(s) → back to gotchi, save/load, the care buttons (Wash/Groom/Feed/Pet/Water), the merge
+pacing engine (timing bucket, sleep metronome, forced merges, lock cooldown), and your five
+written scenes with their Event 0/1 content. What's left is the endgame: making the game
+actually *end*, and end on the *right* ending. That's this document.
+
+---
+
+## Tier 0 — prerequisite: the merge button must actually merge  **[ENGINE]**
+
+`GOTCHI_ACTION_STAT_GAINS.md` lists "Give a Break" as *not yet implemented — shows "Not available
+yet."* The `MergeController` behind it is built and tested, so this is a wiring gap: the button
+needs to invoke the merge. This is load-bearing twice over — without it there's no loop **and**
+the mercy driver (fed by merges) never accumulates, so ending 1 can never gate. Confirm/wire this
+first; everything below assumes merging works.
+
+---
+
+## Item 1 — Fix the hidden-driver mapping  **[ENGINE]**  *(but you need to know the result)*
+
+The drivers decide which ending fires, and they're currently mis-wired. Correct target, per
+`GAME_DESIGN.mx §5`:
+
+- **Affection** ← warmth shown: **Pet** (and later the hex-board **Ball**). Not feeding, not
+  washing.
+- **Mercy** ← **giving breaks: merges only** (count + how early). **No care button feeds mercy.**
+- **Survival** ← not letting him collapse after death is enabled.
+- **Wash / Feed / Water** ← move the *visible bars only*. They feed **no** hidden driver.
+
+**The bug today:** Wash/Groom are wired into the **mercy** driver. That's wrong on both counts —
+mercy should come only from merges, and washing is hygiene. So right now washing the pet nudges
+the gate that picks Escape vs. Trapped. Fix: remove any care-button → mercy wiring; mercy
+accumulates only from merge events.
+
+**One decision for you both:** in the actual build, **Groom** gives Love/Happiness (it's an
+affectionate act), not hygiene. So does Groom count as *warmth* (feed affection) or not?
+Recommendation: **Pet + Ball = affection for sure; Groom is your call** — include it if you want
+grooming to read as bonding, exclude it to reserve affection for deliberate petting. Wash / Feed
+/ Water stay bar-only regardless.
+
+**Why you care:** when you design the three endings, the mental model the player is being scored
+on is *warmth* (did they pet/bond) and *mercy* (did they give him breaks by merging early rather
+than grinding him to forced merges). That's what ending 1 vs 2 rewards.
+
+---
+
+## Item 2 — The endings  **[SPLIT]**
+
+Endings fit your Scenario system exactly (per `SCENARIO_SYSTEM.mx §3`): **each ending is a
+Sequence**, and the selection logic picks which one plays at the climax based on the drivers.
+No new bolt-on ending framework — it's the "future state machine" seam the doc already reserved.
+
+### 2a. The selector / router  **[ENGINE]**
+At the climax (the last authored story step, where `deathEnabled` gets set today), the selector
+evaluates `GameState` and picks the ending, then plays the matching ending Sequence:
+
+- Gate: require `engagedCareSide && engagedStorySide` (both sides touched — true by the climax in
+  normal play; confirm `engagedCareSide` is actually set on first care action).
+- If the pet **collapsed** (Item 3) → **Ending 3 (Collapse)**.
+- Else if **affection ≥ threshold AND mercy ≥ threshold** → **Ending 1 (Escape)**.
+- Else → **Ending 2 (Trapped)**.
+
+Thresholds are provisional and get locked after one full playthrough (`GAME_DESIGN.mx §5/§7`).
+The router also handles the one flow difference: after an ending Sequence completes, the game goes
+to **title / restart**, not back to the gotchi screen (normal merges return to gotchi; endings
+don't).
+
+### 2b. The three ending Sequences — content  **[STORY — you]**
+Author each as a Sequence of `{scene, scenario}` steps, same as your existing scenes' scenarios,
+selected by the router. If an ending needs a locale that doesn't exist yet, that's a new scene on
+your side (the engine can't add scenes). What each must contain, from `GAME_DESIGN.mx §7`:
+
+- **Ending 1 — Escape (good):** Gary, in good enough shape to have agency, follows Ronzer, catches
+  him being a cheater/creep (harassing a woman who isn't Karen), intervenes and decks him, and
+  escapes the gotchi world. Written as infidelity + harassment that Gary *interrupts* — nothing
+  sexual depicted. Keep it clean or it gets pulled from a public jam.
+- **Ending 2 — Trapped (bittersweet):** everyone around Gary gets a happy resolution; Gary does
+  not — he stays the Tamagotchi, aware and hating it. The gut-punch ending for the efficient,
+  loveless caretaker.
+- **Ending 3 — Collapse (bad):** he gets fired for falling apart and ends up homeless; he dies as
+  the pet. The kicker is that it was the player's neglect, not Gary's failing.
+
+Content notes: **Ronzer must be an original creature, not a real Pokémon** (takedown risk on a
+public entry). Each ending ends by returning to the title with a new-game option (the engine wires
+the "go to title after" part; you own the content shown).
+
+### 2c. The contract between 2a and 2b
+The handle is simple: **ending id ∈ {1, 2, 3} ↔ a Sequence you author.** The router computes the
+id from the drivers; the selector returns your ending Sequence for that id; your Sequence plays
+through the normal `StoryBeatStarted → steps → StoryBeatCompleted` path. You author against the
+three ids; the router guarantees the right one fires. Agree the id↔Sequence lookup convention
+(e.g. reserved scenario ids, or an `ending_1/2/3` scene) once, up front.
+
+---
+
+## Item 3 — Make collapse real (unlocks ending 3)  **[ENGINE]**
+
+Ending 3 currently can't happen. Collapse detection reads `GameState.needs`, which nothing
+populates — but the real deterioration already exists in `GotchiStats`, which drains **Health**
+from unmet needs (starvation/dehydration/exhaustion/filth/depression, up to −7.5/tick, per
+`GOTCHI_ACTION_STAT_GAINS.md`). The fix is to connect that existing health-death to the collapse/
+ending-3 path, **gated by `deathEnabled`**:
+
+- Before the climax (`deathEnabled` false), the pet **cannot die** (`GAME_DESIGN.mx §11`) — health
+  can drain but bottoming out does nothing.
+- After the climax (`deathEnabled` true), health hitting bottom → collapse → `PetCollapsed` →
+  Ending 3.
+
+**What this means for you:** ending 3 becomes reachable, and its in-play trigger is "the player
+let him fall apart, and he's already at the climax." No content dependency beyond authoring the
+Ending 3 Sequence in 2b.
+
+---
+
+## Sequencing & definition of done
+
+1. **Tier 0** merge button wired **[ENGINE]** — nothing else matters until the loop is reachable.
+2. **Item 1** driver fix **[ENGINE]** — before the router, so it routes on correct drivers.
+3. **Item 2a** router **[ENGINE]** ‖ **Item 2b** ending content **[STORY]** — in parallel against
+   the 2c contract.
+4. **Item 3** collapse wiring **[ENGINE]** — unlocks ending 3; meet the router's ending-3 branch.
+5. **Threshold tuning** — after the first full playthrough: play a warm+merciful run, read
+   affection/mercy at the climax (debug readout), set the cutoffs just under; play a
+   spreadsheet run and confirm it lands in Trapped.
+
+**Done =** you can start a new game, play the loop, reach the climax, and get exactly one of the
+three endings based on how you treated him, then return to title. Endings 1 and 2 are reachable as
+soon as 2a+2b land; ending 3 comes online with Item 3.
+
+---
+
+## Not in Tier 1 (so you know what's deliberately parked)
+Grime on story-Gary, beep intrusion, and state-keyed dialogue variants are **Tier 2** (theme
+polish — they make it feel like *hexagotchi*, but the base game ends without them). The hex-board
+hotbar (the "second way to care") is in flight separately and the base game is submittable without
+it. Don't let any of these block Tier 1.

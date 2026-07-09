@@ -1,0 +1,108 @@
+# Tier 3 — The hexboard care playground (handoff)
+
+**Audience:** the story/content + asset dev. **Goal of Tier 3:** the hexboard becomes a living
+"second way to care" — the gotchi wanders on its own, and you stock the board with items it seeks
+out and consumes for stat gains. This is the **hex** half of the theme. It's **optional**: the base
+game (Tiers 0–1) ships without it, so nothing here blocks the endgame.
+
+Tags: **[ENGINE]** engine/behavior, **[DESIGN]** the item/stat mapping, **[ASSET]** pixel art.
+
+**Where we are:** slot 3 is delivering the core loop — 3 placeholder objects that drop onto hexes
+and get consumed when the gotchi stands on them. The rest is: autonomy, expanding 3 → 8 items with
+correct stat effects, and the art.
+
+---
+
+## Item A — Gotchi autonomous decision-making  **[ENGINE]**
+
+Right now the gotchi only moves when you drop an item (or click a hex). Give it simple autonomy so
+the board feels alive. This is a tiny behavior layer on top of slot 3's existing seek — **not**
+complex AI, and per `GAME_DESIGN.mx §4b` it stays a **straight-line seek** (`setTargetPosition` /
+`moveToTarget` / `wander`), no pathfinding unless the board has impassable tiles.
+
+Goal selection each time the gotchi goes idle, in priority order:
+1. **Nearest un-consumed item on the board** → seek it. (This is what makes "drop food, watch him
+   go eat it" work without you setting the target manually — the drop just places the item; the
+   gotchi *decides* to go get it.)
+2. **Otherwise wander** — pick a random reachable hex, optionally biased toward liked biomes and
+   away from disliked ones (tiles already carry a "he likes it / doesn't" flavor per §4b). Keep it
+   loose and idle-looking.
+
+Reconcile with what exists: a **manual hex-click** (slot 3's move) is a high-priority temporary
+goal that overrides the AI; when it arrives / goes idle, autonomy resumes. Consume-on-arrival
+(slot 3's mechanic) stays exactly as is — the AI just chooses the targets now.
+
+---
+
+## Item B — The 8-item set  **[DESIGN + ENGINE]**
+
+Extend slot 3's 3-placeholder mechanic to 8 items. Each item, when the gotchi reaches it, applies
+its stat effects and is consumed. Use the **real stat path** the buttons use (`addStat` /
+`feed()` / etc. per `GOTCHI_ACTION_STAT_GAINS.md`) — don't duplicate stat math.
+
+**The one hard rule:** only the **Ball** feeds a hidden driver (affection, via a warmth
+`CareAction`), matching the Tier 1 fix (affection = pet/play/ball only). Every other item affects
+**visible/reserved stats only — no hidden driver.** Food/rest/etc. must not touch affection or
+mercy, or you re-introduce the spreadsheet-caretaker bug on the hex side.
+
+These 8 also deliberately fill the categories the button system reserved for the hexboard (Social,
+Skill, Physical — see the doc's "Future-Reserved Actions"), so the board exercises stats the
+buttons never touch.
+
+| # | Item | Fills / affects (real stat names) | Hidden driver? |
+|---|------|-----------------------------------|----------------|
+| 1 | **Ball** (play) | `EXCITEMENT` ++, `HAPPINESS` +, `LOVE` +, `AGILITY` + (Physical) | **Yes — warmth `CareAction` → affection** |
+| 2 | **Food bowl** | `FOOD_LEVEL` −− (fills hunger; 0=full), `SATISFACTION` + | no |
+| 3 | **Water bowl** | `HYDRATION` −− (fills thirst; 0=hydrated), `SATISFACTION` + | no |
+| 4 | **Soap / bath** | `CLEANLINESS` ++ (hygiene), `SATISFACTION` + | no |
+| 5 | **Bed / cushion** | `ENERGY` +, `SLEEP_DEBT` − (rest; 0=rested), `HAPPINESS` + | no |
+| 6 | **Puzzle / block toy** | `LEARNING` +, `MEMORY` + (Skill), `EXCITEMENT` + | no |
+| 7 | **Buddy / plush** | `FRIENDS` +, `POPULARITY` +, `FRIEDNSHIP` + (Social) | no |
+| 8 | **Medicine / berry** | `FITALITY` + (Health) | no |
+
+Notes for whoever wires the effects:
+- Watch the **inverted vitals**: `FOOD_LEVEL` / `HYDRATION` / `SLEEP_DEBT` are 0=good, 100=bad, so
+  "filling" them means **subtracting**. `CLEANLINESS` / `ENERGY` / `FITALITY` are normal (+).
+- `FRIEDNSHIP` is the **intentional misspelling** in the enum — use it exactly (per the doc).
+- Magnitudes are tunable; start comparable to the matching button (e.g. Food ≈ the −30 the Feed
+  button gives), then tune.
+
+Coverage check: this spread hits play/affection, hunger, thirst, hygiene, rest, skill, social, and
+health — a full care surface without overlapping the ending drivers beyond the Ball.
+
+---
+
+## Item C — 32×32 pixel art  **[ASSET]**
+
+Eight 32×32 icons, one per item above, in the game's retro palette. Requirements: readable as a
+silhouette at 32px, transparent background, consistent limited palette across the set, and legible
+both in the hotbar slot and dropped on a hex tile. Slot 3's colored-shape placeholders keep working
+until these land, so this doesn't block A or B — it's a straight swap of the placeholder draw for
+the loaded texture. (Pick items whose 32px silhouettes are distinct — a ball, a bowl, a bed, etc.
+read instantly; avoid two round bowls that look identical.)
+
+---
+
+## Sequencing & definition of done
+
+1. **Item A (autonomy)** [ENGINE] — layer goal-selection on slot 3's seek; drops become goals,
+   idle → wander.
+2. **Item B (8 items)** [DESIGN + ENGINE] — expand the hotbar + item table to 8, wire each to its
+   real stats through the existing stat path, Ball-only affection.
+3. **Item C (art)** [ASSET] — 8 × 32×32 icons; engine swaps placeholders for textures.
+
+**Done =** you drop any of the 8 items on the board, the gotchi decides on its own to walk over and
+consume it, the right stats move (and only the Ball nudges affection), and when the board's empty
+the gotchi wanders on its own. Placeholders are fine for a working build; the pixel art is the
+finishing pass.
+
+---
+
+## Guardrails (so it stays shallow and consistent)
+
+- Straight-line seek, no pathfinding, per §4b — unless the board actually has impassable tiles.
+- **Only the Ball feeds a hidden driver.** This is the same discipline as the button fix — the
+  moment food or a bed nudges affection/mercy, hex-board caretaking corrupts the ending routing.
+- Consume applies effects through the **existing** stat path, not a parallel copy.
+- This whole tier is bonus. If time gets tight, the game is complete without it — don't let art
+  polish or the 8th item hold up anything in Tiers 0–2.

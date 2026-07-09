@@ -1,0 +1,124 @@
+# Tier 2 — Landing the theme (handoff)
+
+**Audience:** the story/content dev. **Goal of Tier 2:** the game stops feeling like a systems
+demo and starts feeling like *hexagotchi* — the two worlds visibly bleed into each other, and the
+"the pet and Gary are the same being" statement actually lands. These are the three **PROTECT**
+hooks from `GAME_DESIGN.mx §8` (the ones the design says do not get cut): grime, state-keyed
+dialogue, and beep intrusion.
+
+Tags: **[ENGINE]** = engine/wiring. **[STORY]** = dialog/content. **[ASSET]** = art/sound. Same
+split as the Tier 1 handoff.
+
+**Assumes Tier 0 is done** — none of this is visible unless the merge loop is reachable. Tier 2
+doesn't otherwise depend on Tier 1; it can proceed in parallel.
+
+---
+
+## Shared note: where the pet's "current state" comes from
+
+Two of these hooks reference the pet's live condition:
+- **Grime** comes from `GameState.grime` (0 = clean → 1 = filthy), already driven by the sim
+  (creeps with neglect, drops with care). One caveat to verify: grime should only start creeping
+  **after the first merge** (`seenReality`), so the toy reads *clean* early per `§9`. If it creeps
+  from t=0, story-Gary is grimy in the opening — check and gate it if so.
+- **Needs** (for "if starved" lines and the beep) live in `GotchiStats`, not `GameState.needs`
+  (which isn't populated). So the need-reading hooks below read the **real** `GotchiStats` values —
+  the same source Tier 1's collapse wiring uses. (If the vitals migration lands, it becomes a
+  single clean source, but it's not required for Tier 2.)
+
+---
+
+## Item 1 — Grime on story-Gary  **[ENGINE]**  *(the highest-value hook, §8.1)*
+
+The `GrimeShader` is built and `GameState.grime` is driven, but the shader is **not applied to the
+protagonist in the story scenes** — so a neglected pet doesn't show up as a rougher Gary. This is
+`§8.1`, the design's "best merge-per-hour" hook and its most direct "same being" statement.
+
+The work: thread `GameState.grime` into a tint on the protagonist (Tom/Gary) silhouette wherever
+it's drawn across the five story scenes, using the existing `GrimeShader`.
+- First find how the silhouette is drawn: **one shared draw path or per-scene?** If shared, thread
+  it once (ideal). If per-scene, wire each — small, but know the count up front.
+- No new art — this is shader/tint only (`§11`: all "getting worse" visuals are shader/tint/
+  reflavor). Fits the no-assets constraint.
+- It's a dual `_DESKTOP`/`_WEB` shader; **test the web build** — shader-string parity is where web
+  breaks (`§13`), and this is the first time grime renders in a story scene on web.
+
+**Coordination:** this edits the story scenes' *render* path, which is your (story dev's) active
+territory for content — so whoever threads it should keep the change to the character-draw wrapper
+and stay out of the scenario/dialog content, to avoid stepping on in-flight scene work.
+
+*(Related but parked as cut-first polish, not Tier 2: §8's IF-TIME hooks — portrait swap to a grimy
+face at low kindness (#6) and mood-tint leak into the scene palette (#5) — reuse the same grime/mood
+values and are easy follow-ons once this lands.)*
+
+---
+
+## Item 2 — State-keyed dialogue + first-merge flavoring  **[SPLIT]**
+
+Two pieces, both "the gotchi fuels the story" (`§8.3`), and both must stay a **handful of pointed
+line swaps, not a branching tree** (`§6`: reflavored, not re-branched — the only real branch is the
+ending).
+
+**2a. First-merge-bucket flavors story beat 1's opening** (`§3`, the hook). The player's first-merge
+timing (`firstMergeBucket` = Immediate / AfterABit / AfterNeglect) picks the opening variant of the
+first story beat — the "oh, they made a Tamagotchi → oh no, what is this" moment.
+- **Verify this survived the Scenario refactor** (`b1dd1cf` removed the old `BEATS` array). If the
+  bucket→opening-variant selection got dropped, restore it in the new Sequence/scenario system.
+
+**2b. A few state-keyed line swaps.** At scripted points, a line reflects the pet's condition — e.g.
+"I can't remember my last real meal" if starved; someone remarks he seems fine because he keeps
+smiling if he's fed but loveless (low affection driver). Keyed to specific need states and to the
+hidden drivers.
+
+Split:
+- **[ENGINE]** — the mechanism: can a scenario read `GameState` (drivers, `firstMergeBucket`) and
+  `GotchiStats` (needs) to pick which line plays? **Verify first.** If the scenario/dialog system
+  already supports a conditional line, this is mostly content. If not, engine adds the hook (a
+  scenario step can query state and select one of N authored lines).
+- **[STORY]** — the content: you author the three beat-1 opening variants and the handful of
+  conditional lines, and decide where the swaps go. Keep it small and pointed.
+
+---
+
+## Item 3 — Beep intrusion  **[ENGINE + ASSET]**
+
+`NeedCritical` is defined as an event but nothing emits it and nothing plays a sound. The hook
+(`§8.2`): when a need is critical as a story beat plays, punctuate a dialogue line with the
+Tamagotchi beep — diegetic and unsettling, Gary flinching at a sound only the player recognizes.
+
+- **[ENGINE]** Emit `NeedCritical` when a visible need (in `GotchiStats`) crosses its critical
+  threshold — from the existing need-check path (`GotchiScene::handleGotchiAction` already inspects
+  needs). Stand up minimal audio (`InitAudioDevice` + load + play — raylib has this; there's no
+  audio subsystem yet, so this is slightly more than "just play a sound"). Subscribe, and during a
+  story beat, if a need is critical, play the beep to punctuate a line.
+- **[ASSET]** the beep sound itself is yours (asset side). A generated tone or a tiny placeholder
+  `.wav` unblocks the engine work immediately; swap in the real Tamagotchi-style beep when ready.
+
+Keep it subtle and near-free — a single diegetic cue during story dialogue, not a UI alarm.
+
+---
+
+## Sequencing & definition of done
+
+These three are largely independent and can go in parallel; each is small:
+1. **Item 1 (grime)** [ENGINE] — verify grime gating, thread into the silhouette, web-test. Biggest
+   visible payoff.
+2. **Item 2** — [ENGINE] verify the bucket flavoring + the conditional-line hook, then [STORY]
+   author the variants. Do the verify first; it decides how much engine work exists.
+3. **Item 3** — [ENGINE] emit `NeedCritical` + minimal audio + beep-during-story; [ASSET] the beep
+   sound (placeholder unblocks it).
+
+**Done =** across a playthrough, neglect visibly ages Gary in the story scenes; the first beat's
+opening reflects how the player treated the toy before merging; a couple of story lines shift with
+the pet's state; and a critical need makes an unsettling beep intrude on the story. The game now
+*feels* like the two worlds are the same being.
+
+---
+
+## Not in Tier 2 (deliberately parked)
+
+The rest of `§8` is **cut-first polish**, not Tier 2: tile rot on a bad beat (#4), mood-tint leak
+(#5), portrait swap (#6), the merge button aging (#7), and the climax hex overlay (#8, STRETCH).
+They're all shader/tint reflavors that reuse values you'll already have wired — nice if Saturday
+has room, droppable without guilt if it doesn't. And the hex-board hotbar (the "second way to
+care") is a separate in-flight track; the themed base game stands without it.
