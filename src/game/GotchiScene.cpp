@@ -138,13 +138,17 @@ void GotchiScene::init() {
     // Center camera
     getCamera()->setBoundary(0, 0, 720.0f, 720.0f);
 
-    // Create Gotchi at center of screen
-    gotchi = new Gotchi({360.0f, 360.0f});
+    // Create Gotchi with shared vitals and mood from GameState
+    // If gameState_ is not set (e.g., in tests), use fallback defaults
+    GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
+    GotchiMood& mood = gameState_ ? gameState_->mood : defaultMood_;
+
+    gotchi = new Gotchi({360.0f, 360.0f}, stats, mood);
     gotchi->setTag("gotchi");
     gotchi->setScale({4.0f, 4.0f});  // Scale up for visibility
     addActor(gotchi);
 
-    // Initialize the Gotchi
+    // Initialize the Gotchi (no longer resets vitals - they persist in GameState)
     gotchi->init();
 
     // Load animation frames using the Gotchi's loader
