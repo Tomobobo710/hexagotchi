@@ -56,3 +56,6 @@ Makefile
 
 # Asset bundle
 assets.rres
+
+# Save files (runtime-generated)
+saves/

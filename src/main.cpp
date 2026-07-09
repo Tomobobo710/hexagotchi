@@ -22,6 +22,8 @@
 #include "game/StorySequencer.hpp"
 #include "game/DialogSequences.hpp"
 #include "engine/GameState.h"
+#include "engine/SaveManager.h"
+#include "engine/SaveWiring.h"
 #include "events/EventBus.h"
 #include <string>
 #include <vector>
@@ -40,6 +42,12 @@ MergeController* mergeController = nullptr;
 
 // StorySequencer - created in main() and used in UpdateDrawFrame
 StorySequencer* storySequencer = nullptr;
+
+// SaveManager - handles save/load/delete operations
+SaveManager saveManager;
+
+// SaveWiring - subscribes to checkpoint events for autosave
+SaveWiring* saveWiring = nullptr;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -119,6 +127,11 @@ void UpdateDrawFrame() {
             dialog->hide();
         }
         lastScene = currentScene;
+
+        // Autosave on scene transition (if active slot is set)
+        if (saveWiring) {
+            saveWiring->onSceneTransition();
+        }
     }
 
     // These standalone debug/demo scenes never use the shared dialog box at
@@ -322,12 +335,19 @@ int main() {
     gotchiScene->setGameState(&globalGameState);
     gotchiStatsScene->setGameState(&globalGameState);
 
+    // Initialize save directory
+    saveManager.initSaveDir();
+
     // Wire up the merge controller
     mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);
     gotchiScene->setEventBus(&globalEventBus);
 
     // Wire up the story sequencer
     storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);
+
+    // Wire up SaveWiring for autosave on checkpoints
+    saveWiring = new SaveWiring(saveManager, globalEventBus);
+    saveWiring->setGameState(&globalGameState);
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
@@ -376,10 +396,18 @@ int main() {
         }
 #endif
     }
+
+    // Shutdown autosave (if active slot is set)
+    if (saveManager.activeSlot() >= 0) {
+        saveManager.autosave(globalGameState);
+        std::cout << "[Shutdown] Autosaved GameState to slot " << saveManager.activeSlot() << std::endl << std::flush;
+    }
+
     UnloadRenderTexture(gameTarget);
     delete dialog;
     delete mergeController;
     delete storySequencer;
+    delete saveWiring;
     delete sceneManager;
     CloseWindow();
 #endif

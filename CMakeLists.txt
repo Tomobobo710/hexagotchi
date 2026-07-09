@@ -82,20 +82,28 @@ if(RBUILD_DESKTOP)
     target_include_directories(test_story_sequencer PRIVATE . src src/engine src/game src/events src/flags raylib/src)
     target_link_libraries(test_story_sequencer PRIVATE raylib glfw)
 
-    # Test executable for SaveManager (keep existing)
-    # (This test requires additional files that are not in the test source list)
-    # Build test executable if test sources exist
-    if(GRIME_TEST_SRCS)
-        add_executable(tests ${GRIME_TEST_SRCS})
-        target_include_directories(tests PRIVATE
-            src
-            raylib/src
-            rres/src
-        )
-        # Include the grime shader source for the test
-        target_sources(tests PRIVATE ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp)
-        target_link_libraries(tests PRIVATE raylib glfw)
-    endif()
+    # Test executable for SaveManager
+    set(SAVE_TEST_SRCS
+        tests/TestSaveManager.cpp
+        src/engine/SaveManager.cpp
+        src/engine/GameState.cpp
+    )
+    add_executable(test_save_manager ${SAVE_TEST_SRCS})
+    target_include_directories(test_save_manager PRIVATE . src src/engine raylib/src rres/src)
+    target_link_libraries(test_save_manager PRIVATE raylib glfw)
+
+    # Test executable for SaveWiring (includes SaveManager tests)
+    set(SAVE_WIRING_TEST_SRCS
+        tests/TestSaveWiring.cpp
+        src/engine/SaveManager.cpp
+        src/engine/GameState.cpp
+        src/events/EventBus.cpp
+    )
+    add_executable(test_save_wiring ${SAVE_WIRING_TEST_SRCS})
+    target_include_directories(test_save_wiring PRIVATE . src src/engine src/events src/flags raylib/src rres/src)
+    target_link_libraries(test_save_wiring PRIVATE raylib glfw)
+
+    # Test executable for MergeController
 
 
     # Build raylib as a static library

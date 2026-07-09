@@ -85,4 +85,7 @@ struct GameState {
     GotchiMood  mood;
 };
 
+// Global game state - declared in main.cpp, used by scenes
+extern GameState globalGameState;
+
 #endif // GAME_STATE_H
