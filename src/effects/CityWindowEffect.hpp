@@ -32,19 +32,16 @@ public:
     bool consumeTrainShakeRequest();
     float getShakeDuration() const { return shakeDuration; }
 
-    // Debug-only camera distance override for tuning from ScenePreviewScene
-    // (Numpad 2/8) -- lets the building scale/distance tradeoff be dialed in
-    // live instead of guessing at values blind. Normal gameplay always uses
-    // the fixed default; ScenePreviewScene is the only caller that changes it.
-    void setDebugCamDist(float dist) { debugCamDist = dist; }
-    float getDebugCamDist() const { return debugCamDist; }
-
-    // Debug-only camera pitch (degrees, positive = down) and vertical FOV,
-    // same tuning-from-ScenePreviewScene pattern as debugCamDist.
-    void setDebugPitch(float deg) { debugPitchDeg = deg; }
-    float getDebugPitch() const { return debugPitchDeg; }
-    void setDebugFovy(float deg) { debugFovyDeg = deg; }
-    float getDebugFovy() const { return debugFovyDeg; }
+    // SceneEffect's debug-camera interface (see SceneEffect.hpp) -- lets
+    // any scene's shared debug-camera controls (SceneDebugCamera.hpp) tune
+    // this effect's internal 3D camera without knowing its concrete type.
+    bool hasDebugCamera() const override { return true; }
+    float getDebugCamDist() const override { return debugCamDist; }
+    void setDebugCamDist(float dist) override { debugCamDist = dist; }
+    float getDebugPitch() const override { return debugPitchDeg; }
+    void setDebugPitch(float deg) override { debugPitchDeg = deg; }
+    float getDebugFovy() const override { return debugFovyDeg; }
+    void setDebugFovy(float deg) override { debugFovyDeg = deg; }
 
 private:
     struct Building {
@@ -104,10 +101,10 @@ private:
     float shakeTriggerT = 0.0f;   // trainT value at which the shake should fire
     float shakeDuration = 0.0f;   // computed per-pass; see getShakeDuration()
 
-    // Camera framing, tuned live via ScenePreviewScene's debug controls.
-    // Distance is kept > 0 (the look vector and lens-shift both scale with
-    // it, so 0 collapses the view); 0.1 is the floor the debug control
-    // clamps to.
+    // Camera framing, tuned live via the shared debug-camera controls
+    // (SceneDebugCamera.hpp). Distance is kept > 0 (the look vector and
+    // lens-shift both scale with it, so 0 collapses the view); 0.1 is the
+    // floor the debug control clamps to.
     float debugCamDist = 0.1f;
     float debugPitchDeg = -8.0f;
     float debugFovyDeg = 45.0f;

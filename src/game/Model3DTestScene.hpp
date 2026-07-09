@@ -20,14 +20,35 @@ public:
     void cleanup() override;
 
 private:
+    // TAB cycles through every hand-built model this scene can inspect.
+    // COMBINED shows the whole assembled portal (ring + base + membrane)
+    // exactly as PortalEffect draws it -- spinning ring, shimmering
+    // membrane shader and all -- so a full combined check doesn't require
+    // flying the actual OfficeScene.
+    enum class ModelKind { JET, PORTAL_RING, PORTAL_BASE, PORTAL_COMBINED };
+    ModelKind modelKind = ModelKind::JET;
+
     Shader shader;
     Light light;
     Model jetModel;
+    Model portalRingModel;
+    Model portalBaseModel;
     Texture2D whiteTex = {0};
+
+    // Membrane needs its own shader (unlit, animated) -- see PortalEffect,
+    // this mirrors that setup for the COMBINED preview.
+    Shader portalShader;
+    Model portalMembraneModel;
+    int portalTimeLoc = -1;
+    int portalIntensityLoc = -1;
+    float portalTime = 0.0f;
+    float ringSpinDegPerSec = 12.0f;
 
     float orbitYaw = 0.4f;
     float orbitPitch = 0.35f;
     float orbitDistance = 4.0f;
+
+    void drawActiveModel();
 };
 
 #endif // MODEL_3D_TEST_SCENE_HPP

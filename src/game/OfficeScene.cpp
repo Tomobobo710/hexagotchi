@@ -1,6 +1,7 @@
 #include "OfficeScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
+#include "SceneDebugCamera.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR     = {139, 172, 15, 255};
@@ -15,6 +16,9 @@ void OfficeScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
     background = AssetPack::loadTexture("backgrounds/officebg.png");
+
+    portal = new PortalEffect();
+    portal->init();
 
     tom = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
@@ -80,14 +84,36 @@ void OfficeScene::init() {
 void OfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
+    if (portal) portal->update(deltaTime);
+    updateSceneDebugCamera(portal, getCamera(), deltaTime);
+
+    if (portal) {
+        // Numpad +/-: uniform scale. Numpad 4/6: yaw (rotate around Y).
+        // PortalEffect-specific (not part of SceneEffect's generic
+        // debug-camera interface), so handled directly here rather than
+        // through SceneDebugCamera.hpp.
+        float scale = portal->getObjectScale();
+        if (IsKeyDown(KEY_KP_ADD)) scale += 0.6f * deltaTime;
+        if (IsKeyDown(KEY_KP_SUBTRACT)) scale -= 0.6f * deltaTime;
+        if (scale < 0.1f) scale = 0.1f;
+        portal->setObjectScale(scale);
+
+        float yaw = portal->getObjectYaw();
+        if (IsKeyDown(KEY_KP_6)) yaw += 60.0f * deltaTime;
+        if (IsKeyDown(KEY_KP_4)) yaw -= 60.0f * deltaTime;
+        portal->setObjectYaw(yaw);
+    }
+
     if (activeEvent < 0) {
         // Ambient: Tom balancing/wobbling on the yoga ball, boss absent
         // (only appears during the scripted events, called into "his office").
         tomWobbleTimer += deltaTime * 3.0f;
         tom->setPosition({420.0f, 400.0f + sinf(tomWobbleTimer) * 6.0f});
 
-        getCamera()->setPosition(460.0f, 320.0f);
-        getCamera()->setZoom(1.0f);
+        if (!getCamera()->isWideViewEnabled()) {
+            getCamera()->setPosition(460.0f, 320.0f);
+            getCamera()->setZoom(1.0f);
+        }
     }
 
     if (activeEvent >= 0 && dialog->isVisible() && dialog->isFinished()) {
@@ -102,11 +128,29 @@ void OfficeScene::draw() {
     Scene::draw();
 
     Camera2D cam = getCamera()->getRaylibCamera();
+
+    // Background art first (its own 2D pass).
     BeginMode2D(cam);
     drawOffice();
+    EndMode2D();
+
+    // Portal/merge-machine: renders ON TOP of the background art but BEHIND
+    // the actors, since the actor draws come after this. Needs its own 3D
+    // mode (can't share the 2D camera), so the 2D pass is split around it.
+    if (portal) portal->drawBackground();
+
+    // Actors last, on top of the portal.
+    BeginMode2D(cam);
     drawTom(tom->getPosition());
     if (activeEvent >= 0) drawBoss(boss->getPosition());
     EndMode2D();
+
+    drawSceneDebugCameraReadout(portal, 16, 16);
+    if (portal) {
+        const char* txt = TextFormat("scale: %.2f (Numpad +/-)   yaw: %.1f deg (Numpad 4/6)",
+            portal->getObjectScale(), portal->getObjectYaw());
+        DrawText(txt, 16, 60, 18, Color{255, 220, 140, 255});
+    }
 }
 
 void OfficeScene::cleanup() {
@@ -119,6 +163,8 @@ void OfficeScene::cleanup() {
     lineIndex = 0;
 
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
+
+    if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
 }
 
 void OfficeScene::triggerEvent(int index) {
