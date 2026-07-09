@@ -77,6 +77,9 @@ public:
     // Debug
     void drawDebugBounds() const;
 
+    // Bounds access (public for shader overlay)
+    Rectangle getBounds() const;
+
 protected:
     std::string label;
 
@@ -111,7 +114,6 @@ protected:
 
     std::function<void()> onClick;
 
-    Rectangle getBounds() const;  // Resolved top-left bounds after applying anchor
     const Texture2D* resolveTexture() const;  // Active-state texture, or null if none set
 };
 
