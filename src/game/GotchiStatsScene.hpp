@@ -5,6 +5,7 @@
 #include "Gotchi.hpp"
 #include "Button.hpp"
 #include "GameState.h"
+#include "EventBus.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -32,6 +33,15 @@ private:
     float simTime_ = 0.0f;  // Total simulation time
     int frameCount_ = 0;    // Frame counter for animation
     std::vector<std::unique_ptr<Button>> buttons;
+
+    // DEBUG panel: CareAction observation
+    int lastCareAction_ = -1;
+    int careActionCount_ = 0;
+    int careActionToken_ = 0;
+
+    // Enum-to-string helpers
+    std::string modeToString(Mode mode) const;
+    std::string firstMergeToString(FirstMerge fm) const;
 
     void addNavigationButton(const std::string& label, const std::string& targetScene, float x, float y);
 };
