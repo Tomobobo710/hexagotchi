@@ -6,6 +6,8 @@
 #include "SceneManager.hpp"
 #include "EventBus.h"
 #include "MergeController.hpp"
+#include "ExploreGate.h"
+#include "EventType.h"
 #include <iostream>
 #include <sstream>
 
@@ -21,6 +23,24 @@
 // Two versions for desktop (OpenGL 3.3) and web (WebGL 2.0)
 // Fixed: No texture0 sampling, mask-based compositing with real UVs
 // ============================================================================
+
+// ============================================================================
+// Action codes for CareAction events
+// ============================================================================
+// These match the shader modes and button order in GotchiScene::addButtons()
+// Order: Wash=0, Groom=1, Feed=2, Pet=3, Water=4, Give a Break=5
+// Warmth actions (for affection): Pet only (play/ball not yet implemented as button)
+// Hygiene actions (for mercy): Wash, Groom (not Water or Feed)
+static bool isWarmthAction(int actionCode) {
+    // Warmth = pet/play only
+    // Current implementation: only Pet (code 3) is a warmth action
+    return actionCode == 3;  // Pet
+}
+
+static bool isHygieneAction(int actionCode) {
+    // Hygiene = wash/groom
+    return actionCode == 0 || actionCode == 1;  // Wash or Groom
+}
 
 // Desktop shader - #version 330
 static const char* ACTION_OVERLAY_FS_DESKTOP = R"(#version 330
@@ -177,6 +197,27 @@ void GotchiScene::init() {
 
     // Add navigation buttons
     addButtons();
+
+    // Subscribe to CareAction events from ButtonPressed handlers
+    // (the event is emitted in handleGotchiAction)
+    if (eventBus_) {
+        careActionToken_ = eventBus_->subscribe(EventType::CareAction, [this](const Event& e) {
+            // Track warmth and hygiene actions for Box C drivers
+            // actionCode: 0=Wash, 1=Groom, 2=Feed, 3=Pet, 4=Water
+            int actionCode = e.ia;
+            float magnitude = e.fa;
+
+            // Warmth actions (pet only) drive affection
+            if (isWarmthAction(actionCode)) {
+                affectionAccumulator_ += magnitude * magnitude;  // Squared for diminishing returns
+            }
+
+            // Hygiene actions (wash/groom) drive mercy
+            if (isHygieneAction(actionCode)) {
+                hygieneAccumulator_ += magnitude * magnitude;
+            }
+        });
+    }
 }
 
 void GotchiScene::addButtons() {
@@ -202,6 +243,9 @@ void GotchiScene::addButtons() {
 
     // Add "Detailed Vitals" button at bottom center
     addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 80);
+
+    // Add Explore button - created hidden, visibility controlled by predicate each frame
+    addExploreButton();
 }
 
 void GotchiScene::addButton(const std::string& label, float x, float y, bool isMergeButton) {
@@ -251,6 +295,9 @@ void GotchiScene::update(float deltaTime) {
     for (auto& btn : buttons) {
         btn->update(input, deltaTime);
     }
+
+    // Update explore button visibility based on predicate
+    updateExploreButtonVisibility();
 
     // Update cooldown timers
     for (auto& [name, timer] : buttonCooldowns_) {
@@ -550,6 +597,7 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
     int shaderMode = -1;
     float shaderDur = 0.0f;
     bool success = true;
+    int actionCode = -1;  // For CareAction event
 
     if (action == "Wash") {
         gotchi->clean();
@@ -558,6 +606,7 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         mood.addMoodOverlay(GotchiMoodType::MOOD_14_PEACEFUL, 8.0f);
         feedback = "Washed - Cleanliness 100%";
         shaderMode = 0; shaderDur = 1.5f;
+        actionCode = 0;
     } else if (action == "Groom") {
         gotchi->interact();
         stats.addStat(EmotionalStat::HAPPINESS, 10.0f);
@@ -566,6 +615,7 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         mood.addMoodOverlay(GotchiMoodType::MOOD_52_BEAUTIFUL, 10.0f);
         feedback = "Groomed - Happy & shiny!";
         shaderMode = 1; shaderDur = 3.0f;
+        actionCode = 1;
     } else if (action == "Feed") {
         gotchi->feed();
         stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
@@ -573,6 +623,7 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
         feedback = "Fed - Hunger reduced";
         shaderMode = 2; shaderDur = 3.0f;
+        actionCode = 2;
     } else if (action == "Pet") {
         gotchi->interact();
         stats.addStat(EmotionalStat::HAPPINESS, 10.0f);
@@ -582,6 +633,7 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         mood.addMoodOverlay(GotchiMoodType::MOOD_30_LOVING, 15.0f);
         feedback = "Petted - Happiness up";
         shaderMode = 3; shaderDur = 2.0f;
+        actionCode = 3;
     } else if (action == "Water") {
         // Thirst lives in SecondaryStat::HYDRATION (0 = hydrated, 100 = dehydrated).
         // Giving water REDUCES the dehydration value.
@@ -591,6 +643,7 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 4.0f);
         feedback = "Watered - Thirst quenched";
         shaderMode = 4; shaderDur = 2.5f;
+        actionCode = 4;
     } else if (action == "Give a Break") {
         // Intentionally inert for now. Rest/sleep will be triggered by the events
         // system, not by this button. Show a neutral message; no stats, no mood,
@@ -607,6 +660,16 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         buttonFeedbackTimer_ = 3.0f;
         cooldown = 2.0f;
         if (shaderMode >= 0) triggerActionShader(shaderMode, shaderDur);
+
+        // Emit CareAction event for Box C (drivers computation)
+        // Action codes: 0=Wash, 1=Groom, 2=Feed, 3=Pet, 4=Water
+        // Magnitude: how much this action contributes (0.0 to 1.0)
+        if (eventBus_ && actionCode >= 0) {
+            // Warmth actions (pet only) drive affection
+            // Hygiene actions (wash/groom) drive mercy
+            float magnitude = 1.0f;  // Full care action
+            eventBus_->emit(Event::careAction(actionCode, magnitude));
+        }
     }
 }
 
@@ -639,5 +702,65 @@ void GotchiScene::cleanup() {
         whitePixel_ = {0};
     }
 
+    // Unsubscribe from CareAction events
+    if (eventBus_ && careActionToken_ > 0) {
+        eventBus_->unsubscribe(careActionToken_);
+        careActionToken_ = 0;
+    }
+
     gotchi = nullptr;
+}
+
+// ============================================================================
+// Explore Button Implementation
+// ============================================================================
+
+void GotchiScene::addExploreButton() {
+    // Add Explore button at top-right of screen (near instructions)
+    // It will be hidden by default and only visible when predicate returns true
+    float buttonWidth = 100.0f;
+    float buttonHeight = 32.0f;
+    float x = GAME_W - buttonWidth - 20.0f;
+    float y = 40.0f;
+
+    Button* btn = new Button({x, y}, buttonWidth, buttonHeight, "EXPLORE");
+    btn->setAnchor("top-left");
+    btn->setFontSize(14);
+    btn->setBackgroundColor({60, 60, 100, 180});  // Slightly transparent
+    btn->setHoverColor({100, 100, 160, 240});
+    btn->setBorderColor({150, 150, 200, 255});
+    btn->setVisible(false);  // Start hidden
+
+    btn->setOnClick([this]() {
+        onExploreButtonClicked();
+    });
+
+    buttons.push_back(std::unique_ptr<Button>(btn));
+}
+
+void GotchiScene::updateExploreButtonVisibility() {
+    // Get confidence and excitement from the Gotchi's stats
+    if (!gotchi) return;
+
+    float confidence = gotchi->getStats().getNormalizedStat(EmotionalStat::CONFIDENCE);
+    float excitement = gotchi->getStats().getNormalizedStat(EmotionalStat::EXCITEMENT);
+
+    // Use the predicate to determine visibility
+    bool shouldShow = shouldShowExplore(confidence, excitement);
+
+    // Find the Explore button and set its visibility
+    for (auto& btn : buttons) {
+        if (btn->getLabel() == "EXPLORE") {
+            btn->setVisible(shouldShow);
+            break;
+        }
+    }
+}
+
+void GotchiScene::onExploreButtonClicked() {
+    // Switch to hexboard scene
+    if (getSceneManager()) {
+        SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
+        mgr->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
+    }
 }

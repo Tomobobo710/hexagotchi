@@ -4,6 +4,7 @@
 #include "../engine/SceneInputHandler.hpp"
 #include "../engine/HexPathFinder.hpp"
 #include "PauseMenuOverlay.hpp"
+#include "SceneManager.hpp"
 #include <cmath>
 
 HexViewScene::HexViewScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
@@ -73,6 +74,9 @@ void HexViewScene::init() {
     float startY = (-200.0f + 900.0f) * 0.5f;
     getCamera()->setPosition(startX, startY);
     getCamera()->setZoom(0.8f);
+
+    // Add Back button
+    addBackButton();
 }
 
 void HexViewScene::draw() {
@@ -120,6 +124,11 @@ void HexViewScene::draw() {
     // Draw instructions
     DrawText("HEX VIEW", 14, 8, 18, Color{180, 180, 255, 255});
     DrawText("Right-click drag to pan  Mouse wheel to zoom", GAME_W - 290, 8, 12, Color{140, 140, 180, 255});
+
+    // Draw back button
+    if (backButton_) {
+        backButton_->draw();
+    }
 }
 
 void HexViewScene::update(float deltaTime) {
@@ -192,6 +201,11 @@ void HexViewScene::update(float deltaTime) {
             }
         }
     }
+
+    // Update back button
+    if (backButton_) {
+        backButton_->update(ih, deltaTime);
+    }
 }
 
 void HexViewScene::togglePause() {
@@ -215,4 +229,36 @@ void HexViewScene::togglePause() {
 void HexViewScene::onExitSelected() {
     extern bool exitRequested;
     exitRequested = true;
+}
+
+// ============================================================================
+// Back Button Implementation
+// ============================================================================
+
+void HexViewScene::addBackButton() {
+    // Add Back button at top-left of screen
+    // Takes input priority so clicking it does NOT also trigger a hex move
+    float buttonWidth = 100.0f;
+    float buttonHeight = 32.0f;
+    float x = 20.0f;
+    float y = 40.0f;
+
+    backButton_ = std::unique_ptr<Button>(new Button({x, y}, buttonWidth, buttonHeight, "BACK"));
+    backButton_->setAnchor("top-left");
+    backButton_->setFontSize(14);
+    backButton_->setBackgroundColor({60, 60, 100, 220});
+    backButton_->setHoverColor({100, 100, 160, 240});
+    backButton_->setBorderColor({150, 150, 200, 255});
+
+    backButton_->setOnClick([this]() {
+        onBackButtonClicked();
+    });
+}
+
+void HexViewScene::onBackButtonClicked() {
+    // Switch back to gotchi scene
+    if (getSceneManager()) {
+        SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
+        mgr->switchScene("gotchi", TransitionEffect::FADE, 0.5f);
+    }
 }

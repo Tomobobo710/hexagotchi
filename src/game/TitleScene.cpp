@@ -15,6 +15,9 @@ extern SceneManager* sceneManager;
 // Global SaveManager (extern'd in main.cpp)
 extern SaveManager saveManager;
 
+// Global GameState (extern'd in GameState.h, defined in main.cpp)
+extern GameState globalGameState;
+
 TitleScene::TitleScene()
     : Scene(720.0f, 720.0f, {0, 0, 0, 255}),
       saveManager_(saveManager),
