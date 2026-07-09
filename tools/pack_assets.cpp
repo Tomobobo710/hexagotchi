@@ -24,12 +24,17 @@
 #include <vector>
 #include <algorithm>
 
+// Cross-platform directory walking:
+// - POSIX (Linux/macOS/Cygwin): use dirent.h
+// - Windows MSVC: use _findfirst/_findnext from io.h
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#include <io.h>
+#include <sys/stat.h>
+#else
 #include <dirent.h>
 #include <sys/stat.h>
+#endif
 
-// POSIX directory walk (works under Cygwin/Linux/macOS). Deliberately avoids
-// <windows.h> here -- pulling it into this Cygwin-targeted build previously
-// caused the linker to expect a WinMain entry point instead of plain main().
 static std::vector<std::string> FindPngsRecursive(const std::string& root) {
     std::vector<std::string> found;
     std::vector<std::string> dirs = {root};
@@ -38,10 +43,32 @@ static std::vector<std::string> FindPngsRecursive(const std::string& root) {
         std::string dir = dirs.back();
         dirs.pop_back();
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+        // Windows implementation using _findfirst/_findnext (avoids windows.h conflicts)
+        std::string searchPattern = dir + "\\*";
+        _finddata_t ffd;
+        intptr_t hFind = _findfirst(searchPattern.c_str(), &ffd);
+        if (hFind == -1) continue;
+
+        do {
+            std::string name = ffd.name;
+            if (name == "." || name == "..") continue;
+            std::string full = dir + "\\" + name;
+
+            // Check if it's a directory
+            if (ffd.attrib & _A_SUBDIR) {
+                dirs.push_back(full);
+            } else if (name.size() > 4 && name.substr(name.size() - 4) == ".png") {
+                found.push_back(full);
+            }
+        } while (_findnext(hFind, &ffd) == 0);
+
+        _findclose(hFind);
+#else
+        // POSIX implementation using opendir/readdir
         DIR* d = opendir(dir.c_str());
         if (!d) continue;
         struct dirent* entry;
-        std::vector<std::string> entries;
         while ((entry = readdir(d)) != nullptr) {
             std::string name = entry->d_name;
             if (name == "." || name == "..") continue;
@@ -55,6 +82,7 @@ static std::vector<std::string> FindPngsRecursive(const std::string& root) {
             }
         }
         closedir(d);
+#endif
     }
 
     // Sort the found files for deterministic output
@@ -66,7 +94,10 @@ static std::vector<std::string> FindPngsRecursive(const std::string& root) {
 static std::string ToRelativeKey(const std::string& fullPath, const std::string& root) {
     std::string rel = fullPath.substr(root.size());
     while (!rel.empty() && (rel[0] == '/' || rel[0] == '\\')) rel.erase(0, 1);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+    // On Windows, normalize backslashes to forward slashes for consistency
     for (char& c : rel) if (c == '\\') c = '/';
+#endif
     return rel;
 }
 

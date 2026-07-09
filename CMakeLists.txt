@@ -260,8 +260,8 @@ if(RBUILD_DESKTOP)
         add_custom_target(assets.rres ALL
             COMMAND ${CMAKE_COMMAND} -E echo "Building assets.rres..."
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/devtools
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:pack_assets> ${CMAKE_BINARY_DIR}/devtools/pack_assets
-            COMMAND ${CMAKE_BINARY_DIR}/devtools/pack_assets ${CMAKE_SOURCE_DIR}/assets ${CMAKE_SOURCE_DIR}/assets.rres
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:pack_assets> $<TARGET_FILE_DIR:pack_assets>/pack_assets
+            COMMAND $<TARGET_FILE:pack_assets> ${CMAKE_SOURCE_DIR}/assets ${CMAKE_SOURCE_DIR}/assets.rres
             DEPENDS pack_assets
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
