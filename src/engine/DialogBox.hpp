@@ -19,6 +19,14 @@ const float DIALOG_FADE_DURATION = 0.3f;
 const float DIALOG_OPTION_SPACING = 12.0f;
 const float DIALOG_PORTRAIT_SIZE = 128.0f;
 const float DIALOG_PORTRAIT_PADDING = 16.0f;
+// Baseline: the longest scripted line in the game so far (Karen's
+// "Ronzer got a promotion..." line, 87 characters) should take 10 seconds --
+// so duration scales with line length at 8.7 characters/second, and shorter
+// lines get proportionally shorter auto-continue bars instead of a flat
+// timer that reads as much too slow for a one-word line.
+const float DIALOG_AUTO_CONTINUE_CHARS_PER_SECOND = 8.7f;
+const float DIALOG_AUTO_CONTINUE_MIN_DURATION = 2.0f;
+const float DIALOG_AUTO_CONTINUE_BAR_HEIGHT = 5.0f;
 
 class DialogBox {
 public:
@@ -56,6 +64,23 @@ public:
     void setCharacterRevealSpeed(float charsPerSecond);
     void setFadeSpeed(float duration);
     void skipCharacterReveal();
+
+    // Auto-continue: a progress bar along the bottom edge (in the current
+    // speaker's color) fills from the moment a line is shown. By default its
+    // duration scales with the line's length (see
+    // DIALOG_AUTO_CONTINUE_CHARS_PER_SECOND) so short lines don't linger and
+    // long lines get enough time to read; setAutoContinueDuration()
+    // overrides that with a fixed duration instead, if a caller ever needs
+    // one. consumeAutoAdvance() returns true exactly once, the frame the bar
+    // completes (and only once the text has fully revealed) -- callers
+    // check it alongside their existing accept-key poll so a line advances
+    // on input or on timeout, whichever comes first. Disabled by default
+    // (opt-in per dialog box via setAutoContinueEnabled(true)) so scenes
+    // that want manual-only pacing are unaffected.
+    void setAutoContinueEnabled(bool enabled);
+    void setAutoContinueDuration(float seconds);
+    bool consumeAutoAdvance();
+    float getAutoContinueProgress() const;
     
     void show();
     void hide();
@@ -114,6 +139,12 @@ protected:
     bool visible;
     float fadeAlpha;
     float fadeTimer;
+
+    bool autoContinueEnabled;
+    float autoContinueDuration;
+    bool autoContinueDurationOverridden;
+    float autoContinueTimer;
+    bool autoAdvancePending;
     
     std::function<void(int)> onOptionSelected;
     std::function<void()> onFinished;

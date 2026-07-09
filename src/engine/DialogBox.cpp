@@ -14,13 +14,33 @@ DialogBox::DialogBox(Vector2 pos, float w, float h)
       fontSize(DIALOG_DEFAULT_FONT_SIZE), padding(DIALOG_DEFAULT_PADDING),
       borderThickness(DIALOG_DEFAULT_BORDER), optionSpacing(DIALOG_OPTION_SPACING),
       charRevealSpeed(DIALOG_CHAR_REVEAL_SPEED), fadeSpeed(DIALOG_FADE_DURATION),
-      visible(false), fadeAlpha(0.0f), fadeTimer(0.0f) {
+      visible(false), fadeAlpha(0.0f), fadeTimer(0.0f),
+      autoContinueEnabled(false), autoContinueDuration(DIALOG_AUTO_CONTINUE_MIN_DURATION),
+      autoContinueDurationOverridden(false),
+      autoContinueTimer(0.0f), autoAdvancePending(false) {
 }
 
 void DialogBox::update(float deltaTime) {
     updateFade(deltaTime);
     if (visible) {
         updateCharReveal(deltaTime);
+
+        // Auto-continue runs from the moment the line is shown, in parallel
+        // with the character reveal, so the bar reflects the whole time the
+        // line has been on screen rather than just the post-reveal hold.
+        if (autoContinueEnabled) {
+            autoContinueTimer += deltaTime;
+            if (autoContinueTimer >= autoContinueDuration) {
+                autoContinueTimer = autoContinueDuration;
+                // Only actually queue the advance once the text is fully
+                // revealed -- the bar itself still fills the whole time so
+                // its progress reflects total time on screen, but a line
+                // must never get cut off mid-reveal.
+                if (isFinished()) autoAdvancePending = true;
+            }
+        } else {
+            autoContinueTimer = 0.0f;
+        }
     }
 }
 
@@ -140,6 +160,22 @@ void DialogBox::draw() {
         }
     }
 
+    // --- Auto-continue bar along the bottom edge ---
+    if (autoContinueEnabled) {
+        float barX = drawPos.x + DIALOG_PORTRAIT_PADDING;
+        float barWidth = width - DIALOG_PORTRAIT_PADDING * 2.0f;
+        float barY = drawPos.y + height - DIALOG_PORTRAIT_PADDING * 0.5f - DIALOG_AUTO_CONTINUE_BAR_HEIGHT;
+
+        Color trackColor = { 255, 255, 255, (unsigned char)(alpha / 6) };
+        DrawRectangle((int)barX, (int)barY, (int)barWidth, (int)DIALOG_AUTO_CONTINUE_BAR_HEIGHT, trackColor);
+
+        float progress = getAutoContinueProgress();
+        if (progress > 1.0f) progress = 1.0f;
+        Color fillColor = speakerColor;
+        fillColor.a = alpha;
+        DrawRectangle((int)barX, (int)barY, (int)(barWidth * progress), (int)DIALOG_AUTO_CONTINUE_BAR_HEIGHT, fillColor);
+    }
+
     // --- Options ---
     if (hasOptions() && isFinished()) {
         float optionsY = textY + wrappedTextLines.size() * getTextLineHeight() + 8;
@@ -174,6 +210,14 @@ void DialogBox::setText(const std::string& text) {
     fullText = text;
     currentCharIndex = 0;
     selectedOptionIndex = 0;
+    autoContinueTimer = 0.0f;
+    autoAdvancePending = false;
+    if (!autoContinueDurationOverridden) {
+        autoContinueDuration = fullText.length() / DIALOG_AUTO_CONTINUE_CHARS_PER_SECOND;
+        if (autoContinueDuration < DIALOG_AUTO_CONTINUE_MIN_DURATION) {
+            autoContinueDuration = DIALOG_AUTO_CONTINUE_MIN_DURATION;
+        }
+    }
     wrapText();
 }
 
@@ -235,12 +279,37 @@ void DialogBox::skipCharacterReveal() {
     currentCharIndex = fullText.length();
 }
 
+void DialogBox::setAutoContinueEnabled(bool enabled) {
+    autoContinueEnabled = enabled;
+    autoContinueTimer = 0.0f;
+    autoAdvancePending = false;
+}
+
+void DialogBox::setAutoContinueDuration(float seconds) {
+    autoContinueDuration = seconds;
+    autoContinueDurationOverridden = true;
+}
+
+bool DialogBox::consumeAutoAdvance() {
+    if (!autoAdvancePending) return false;
+    autoAdvancePending = false;
+    autoContinueTimer = 0.0f;
+    return true;
+}
+
+float DialogBox::getAutoContinueProgress() const {
+    if (!autoContinueEnabled || autoContinueDuration <= 0.0f) return 0.0f;
+    return autoContinueTimer / autoContinueDuration;
+}
+
 void DialogBox::show() {
     visible = true;
     fadeTimer = 0.0f;
     currentCharIndex = 0;
     charAccumulator = 0.0f;
     selectedOptionIndex = 0;
+    autoContinueTimer = 0.0f;
+    autoAdvancePending = false;
 }
 
 void DialogBox::hide() {

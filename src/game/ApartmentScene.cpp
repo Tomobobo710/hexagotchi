@@ -81,7 +81,7 @@ void ApartmentScene::update(float deltaTime) {
 
     if (activeScenario >= 0 && dialog->isVisible() && dialog->isFinished()) {
         SceneInputHandler* ih = getInputHandler();
-        if (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE))) {
+        if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
             advanceLine();
         }
     }
@@ -122,6 +122,7 @@ void ApartmentScene::triggerScenario(int index) {
 
     activeScenario = index;
     lineIndex = 0;
+    dialog->setAutoContinueEnabled(true);
     playLine(scenarios[activeScenario][lineIndex]);
 }
 
