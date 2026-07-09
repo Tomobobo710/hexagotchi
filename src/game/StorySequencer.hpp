@@ -3,10 +3,17 @@
 
 // StorySequencer.hpp — Box D: story sequencer
 // Glues StoryBeatStarted events to actual story scene playback.
-// HUMAN-OWNED: The beat table is the single source of story order.
-// Agents: implement the event flow, do not rewrite the design.
+// See docs/SCENARIO_SYSTEM.mx for the event/scenario/sequence vocabulary and
+// the merge/story contract this must preserve.
+//
+// On StoryBeatStarted, asks ScenarioDirector for this merge's Sequence, then
+// walks: merge-in transition -> each {scene, scenarioId} step in order,
+// waiting for that step's dialog to finish before advancing -> merge-out
+// transition -> emit StoryBeatCompleted. MergeController only ever sees one
+// StoryBeatStarted in, one StoryBeatCompleted out, no matter how many steps
+// the sequence actually contains.
 
-#include <vector>
+#include "ScenarioDirector.hpp"
 #include <string>
 
 // Forward declarations
@@ -17,15 +24,6 @@ class DialogBox;
 class Scene;
 struct Event;
 
-// One story beat — what to play, where, and how to finish.
-// AUTHORED ORDER — the single place the story sequence lives.
-// Reorder beats here to change story flow; never hardcode "beat 3 = office" in logic.
-struct StoryBeat {
-    std::string sceneName;      // Registered scene name (from main.cpp)
-    int         eventIndex = 0; // Event index to trigger in that scene
-    bool        isClimax = false;  // Last beat: sets deathEnabled and emits DeathEnabled
-};
-
 class StorySequencer {
 public:
     // Constructor wires up the sequencer to the event bus
@@ -35,21 +33,35 @@ public:
     // Destructor: unsubscribes from event bus
     ~StorySequencer();
 
-    // Update is called each frame (but sequencer is event-driven mostly)
+    // Drives the merge-in/step/merge-out state machine -- polls MergeScene's
+    // isFinished() during the transition phases, otherwise idle (dialog
+    // completion is callback-driven via onDialogFinished()).
     void update(float dt);
 
     // Public for tests to simulate dialog completion
-    // Call this when the active beat's dialog finishes playing
+    // Call this when the active step's dialog finishes playing
     void onDialogFinished();
 
 private:
+    // Phases of one sequence playthrough, one merge's worth of content --
+    // position in the sequence (start vs end), NOT which MergeScene::Mode
+    // visual plays (see startMergeTransition()'s comment for why those are
+    // kept separate).
+    enum class Phase {
+        Idle,
+        MergeIn,     // sequence-start transition, before the first step
+        PlayingStep, // current sequence step's scene/dialog is active
+        MergeOut,    // sequence-end transition, after the last step
+    };
+
     // Event handlers
     void onStoryBeatStarted(const Event& e);
 
     // Internal helpers
-    void startBeat(int beatIndex);
-    void emitBeatCompleted(int beatIndex);
-    void playBeatDialog(const StoryBeat& beat);
+    void startSequence();
+    void startMergeTransition(Phase phase); // phase: MergeIn (sequence start) or MergeOut (sequence end)
+    void startStep(int stepIndex);
+    void finishSequence();
 
     // State
     EventBus&    bus_;
@@ -58,8 +70,10 @@ private:
     DialogBox&   dialog_;
 
     // Runtime state
-    int activeBeatIndex_ = -1;      // Currently playing beat, or -1 if idle
-    bool beatInProgress_ = false;   // Guard against overlapping beats
+    Sequence sequence_;          // This merge's steps, picked once at startSequence()
+    int      activeStepIndex_ = -1;
+    Phase    phase_ = Phase::Idle;
+    bool     sequenceInProgress_ = false; // Guard against overlapping sequences
 };
 
 #endif // STORY_SEQUENCER_HPP

@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "SunEffect.hpp"
 #include <vector>
 #include <string>
 
@@ -83,6 +84,10 @@ private:
     void drawTom(Vector2 pos);
     void drawWife(Vector2 pos);
     void drawPokemon(Vector2 pos);
+
+    // A sunset sun glimpsed through the transparent glass cutout in the
+    // parlor's front door (parlorbg.png) -- see SunEffect.hpp.
+    SunEffect* sunEffect = nullptr;
 };
 
 #endif // PIZZA_PARLOR_SCENE_HPP

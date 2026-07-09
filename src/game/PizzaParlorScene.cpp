@@ -2,6 +2,7 @@
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
 #include "CharacterRegistry.hpp"
+#include "SceneDebugCamera.hpp"
 #include <cstdlib>
 #include <cmath>
 
@@ -30,6 +31,9 @@ PizzaParlorScene::PizzaParlorScene(DialogBox* sharedDialog)
 
 void PizzaParlorScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    sunEffect = new SunEffect();
+    addEffect(sunEffect);
 
     // Actors are invisible bounds/position holders -- drawTom/drawWife/
     // drawPokemon render the actual silhouettes on top, keyed by tag (same
@@ -98,6 +102,27 @@ void PizzaParlorScene::init() {
 void PizzaParlorScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
+    if (sunEffect) {
+        updateSceneDebugCamera(sunEffect, getCamera(), deltaTime);
+
+        // Dial-in controls, now targeting the pine tree's position -- I/K: Y,
+        // J/L: X, U/O: Z. Temporary, for finding the right placement to bake
+        // into the scene as a fixed value once dialed in (same workflow
+        // TherapistWindowEffect's roadOrigin/treeOrigin/backdropOrigin went
+        // through, and sunOrigin already went through here -- see that
+        // scene's update()/draw()). Repurposed from sunOrigin now that the
+        // sun's position is baked.
+        Vector3 origin = sunEffect->getTreeOrigin();
+        float moveSpeed = 4.0f * deltaTime;
+        if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
+        if (IsKeyDown(KEY_I)) origin.y += moveSpeed;
+        if (IsKeyDown(KEY_J)) origin.x -= moveSpeed;
+        if (IsKeyDown(KEY_L)) origin.x += moveSpeed;
+        if (IsKeyDown(KEY_U)) origin.z -= moveSpeed;
+        if (IsKeyDown(KEY_O)) origin.z += moveSpeed;
+        sunEffect->setTreeOrigin(origin);
+    }
+
     if (activeEvent < 0) {
         // --- Ambient idle: gentle bob/sway per character, slow camera drift ---
         tomBobTimer += deltaTime * 2.0f;
@@ -155,10 +180,21 @@ void PizzaParlorScene::draw() {
     drawWife(wife->getPosition());
     drawPokemon(pokemon->getPosition());
     EndMode2D();
+
+    drawSceneDebugCameraReadout(sunEffect, 16, 40);
+
+    if (sunEffect) {
+        Vector3 origin = sunEffect->getTreeOrigin();
+        const char* txt = TextFormat("treeOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
+            origin.x, origin.y, origin.z);
+        DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
+        DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
+    }
 }
 
 void PizzaParlorScene::cleanup() {
     Scene::cleanup();
+    sunEffect = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     if (portraits[0][0].id != 0) UnloadTexture(portraits[0][0]);
     if (portraits[0][1].id != 0) UnloadTexture(portraits[0][1]);

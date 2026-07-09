@@ -1,0 +1,101 @@
+# Scenario System
+
+Design for how the story side plays out across a merge, and the vocabulary we use to talk
+about it. Supersedes the old single-beat-per-merge model in `StorySequencer`; that file is no
+longer a fixed human-owned design and is fair game to restructure to match this doc.
+
+---
+
+## 1. Vocabulary
+
+Three words, three different things. Keep them straight:
+
+- **Event** — a signal that story content should play now. Today this is `StoryBeatStarted`,
+  fired by `MergeController::enterMerge()` when the player merges in. An event does not carry
+  content; it just says "go."
+- **Scenario** — the actual unit of playable content: a scene name plus a scripted dialog/
+  camera sequence within that scene (what today lives as one entry in each scene's private
+  `events` vector, e.g. `PizzaLine`/`TherapistLine` arrays). A scenario is what a scene knows
+  how to play when told "play scenario X."
+- **Sequence** — an ordered list of `{scene, scenario}` steps that all play out during a single
+  merge, back to back, before control returns to the gotchi side. Chosen per-merge by
+  selection logic (see section 3), not hardcoded.
+
+Old terms this replaces: "beat" (`StoryBeat`) conflated event + scenario + position-in-a-fixed-
+list into one thing. Going forward, "beat" can mean "one merge's worth of story," i.e. one
+sequence.
+
+---
+
+## 2. The merge/story contract (unchanged shape, more inside it)
+
+The tomagotchi side and the story side agree on exactly this much, and this must keep working
+no matter how the internals below change:
+
+```
+MergeController::enterMerge()
+  -> emits StoryBeatStarted(...)
+  -> [ story side plays some number of scene/scenario steps, in order ]
+  -> emits StoryBeatCompleted
+  -> MergeController::returnFromMerge() snaps back to "gotchi" scene
+```
+
+Every merge starts and ends at the gotchi/merge screen. What happens in between is a sequence
+of one or more scenario visits, not necessarily one. `MergeController` does not know or care
+how many steps happened — it only reacts to `StoryBeatCompleted` firing once, after the whole
+sequence is done.
+
+This preserves every existing invariant `MergeController` relies on:
+- `state_.storyBeatIndex` still increments once per merge (once per completed sequence, not
+  once per scenario step within it).
+- `deathEnabled`/climax handling in `StorySequencer::onDialogFinished` (or its replacement)
+  still fires exactly once, at the end of the whole sequence, not mid-sequence.
+- `GameState` fields (`firstMergeBucket`, `mergeCount`, hidden drivers, `flags`) are the only
+  channel the tomagotchi side and story side share. No new direct coupling between scenes and
+  `MergeController`/`GotchiSim`.
+
+---
+
+## 3. Selection logic (the "future state machine")
+
+Today `BEATS` is a fixed `std::vector<StoryBeat>` walked by index. That goes away. In its
+place: a selector that, given the current `GameState`, produces a `Sequence` (an ordered list
+of `{sceneName, scenarioId}`) for this merge.
+
+Not designed in detail yet — this doc exists to lock the vocabulary and contract first. Shape
+to fill in later:
+- Selector reads `GameState` (needs, hidden drivers, `flags`, `mergeCount`, `storyBeatIndex`)
+  and picks which scenario(s) play this merge.
+- Must stay scene-count-agnostic and reorder/extend-safe, per `GAME_DESIGN.mx` section 3's
+  existing invariant ("all connective logic attaches to 'the next story beat,' never to a
+  hardcoded scene count or order").
+- Climax/ending sequences are still special-cased (same as today's `isClimax` flag), just
+  attached to whichever step is authored as the last one in a sequence, not to a fixed final
+  index in one flat array.
+
+---
+
+## 4. Scenario, on the scene side
+
+Each story scene (Pizza Parlor, Apartment, Therapist's Office, Office/Datatek, School) keeps
+owning its own scenario content — no shared "scenario" base class is needed yet, just a shared
+naming/lookup convention so the sequencer can ask for a scenario by id instead of a raw array
+index:
+
+- `triggerStoryEvent(int)` stays as the mechanical entry point for now (matches every scene's
+  current `Scene` interface) but should be thought of as "play scenario N," not "play event N."
+- Longer term, scenario ids may become named/string keys instead of raw indices, so authoring a
+  new scenario in a scene doesn't require the selector to know array positions. Not required
+  for the first pass.
+
+---
+
+## 5. What does NOT change
+
+- `DialogBox` stays the single shared UI both `PizzaLine`/`TherapistLine`/etc-style scenario
+  data feeds into. No changes needed there.
+- `CharacterRegistry` (name-label colors, body-art colors, portraits per emotion) is orthogonal
+  to this system and unaffected.
+- The gotchi/hex care loop (`GotchiSim`, `HexViewScene`, `MergeController`'s merge-availability
+  rules) is unaffected — this doc only concerns what happens between one `StoryBeatStarted` and
+  the matching `StoryBeatCompleted`.
