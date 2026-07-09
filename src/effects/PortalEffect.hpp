@@ -5,21 +5,23 @@
 #include "raylib.h"
 #include "rlights.h"
 
-// Exposed (not static) so tools/export_glb.cpp can rebuild the exact same
-// geometry for a Blender round-trip -- see that file's header comment for
-// the workflow (export current mesh -> edit in Blender -> hand back
-// vertex/normal/color data to be written back as PushTri/PushQuad calls).
-Mesh BuildRingFrameMesh(float radius, float tubeThickness, int segments);
+// The membrane is still procedural (a plain quad, no reason to hand-edit it
+// in Blender); exposed so tools/export_glb.cpp can dump it for reference.
+// The ring frame lives in PortalRingMesh.hpp/.cpp (BuildPortalRingMesh());
+// the stationary pedestal/staircase/pillars live separately in
+// PortalBaseMesh.hpp/.cpp (BuildPortalBaseMesh()) so the ring can spin
+// independently of the base -- see those files' header comments for the
+// Blender export/reshape/bake-back pipeline.
 Mesh BuildMembraneMesh(float innerRadius);
 extern const float RING_RADIUS;
 extern const float RING_TUBE_THICKNESS;
-extern const int RING_SEGMENTS;
 
 // The office's teleporter/"merge machine" -- lore-wise, the device that
 // moves Tom between his world and the physical Tomagotchi. A lit ring frame
-// on a pedestal base (same hand-built-mesh/LitShader convention as
-// JetMesh/SchoolSkyEffect), with an unlit animated membrane inside the ring
-// (PortalShader) standing in for the portal surface itself.
+// (spins continuously) on a stationary pedestal base (same hand-built-mesh/
+// LitShader convention as JetMesh/SchoolSkyEffect), with an unlit animated
+// membrane inside the ring (PortalShader) standing in for the portal
+// surface itself.
 //
 // Draws in FRONT of the scene's 2D background but BEHIND its actors -- see
 // OfficeScene::draw(), which splits its 2D passes around this effect's
@@ -60,7 +62,8 @@ public:
 private:
     Shader litShader;
     Light light;
-    Model ringModel;      // the frame: ring + pedestal, one merged mesh
+    Model ringModel;      // the spinning ring frame only
+    Model baseModel;      // stationary pedestal/staircase/pillars
     Texture2D whiteTex = {0};
 
     Shader portalShader;
@@ -78,6 +81,12 @@ private:
 
     float objectScale = 1.0f;
     float objectYawDeg = 0.0f;
+
+    // Continuous flywheel-style spin around the ring's own facing axis (Z),
+    // driven by `time` -- separate from the manual debug yaw above (which
+    // turns the whole device to face a different direction, not spin it in
+    // its own plane).
+    float ringSpinDegPerSec = 12.0f;
 };
 
 #endif // PORTAL_EFFECT_HPP

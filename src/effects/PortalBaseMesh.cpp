@@ -1,0 +1,210 @@
+#include "PortalBaseMesh.hpp"
+#include "MeshBuilders.hpp"
+#include <cstring>
+#include <vector>
+
+// The office teleporter/merge-machine's stationary base: pedestal,
+// staircase, and the two support pillars that hold the ring up -- split
+// out from PortalRingMesh so the ring can spin independently of this
+// (see PortalEffect::drawBackground()). Reshaped by Tom in Blender from
+// the original procedural pedestal block, round-tripped via
+// tools/export_glb.cpp, re-expressed here as PushTri() calls same as
+// every other hand-built mesh (JetMesh.cpp etc.).
+// Vertex color meaning: alternating yellow/black = the 3 step risers,
+// black = the 2 support pillars AND the 2 angled step faces (the only
+// non-axis-aligned faces in the mesh), dark gray = pedestal/staircase body.
+Mesh BuildPortalBaseMesh() {
+    std::vector<float> verts, normals, uvs;
+    std::vector<unsigned char> colors;
+
+    static const Color STEP_YELLOW   = {235, 210, 40, 255};
+    static const Color STEP_BLACK    = {20, 20, 22, 255};
+    static const Color PEDESTAL_GRAY = {50, 52, 58, 255};
+
+    PushTri(verts, normals, uvs, colors, {-1.48921f,-1.41643f,0.12392f}, {-1.48921f,0.17928f,0.12392f}, {-1.83331f,0.17928f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.48921f,-1.41643f,0.12392f}, {-1.83331f,0.17928f,0.12392f}, {-1.83331f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.48921f,-1.41643f,-0.12392f}, {-1.48921f,0.17928f,-0.12392f}, {-1.48921f,0.17928f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.48921f,-1.41643f,-0.12392f}, {-1.48921f,0.17928f,0.12392f}, {-1.48921f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.83331f,-1.41643f,-0.12392f}, {-1.83331f,0.17928f,-0.12392f}, {-1.48921f,0.17928f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.83331f,-1.41643f,-0.12392f}, {-1.48921f,0.17928f,-0.12392f}, {-1.48921f,-1.41643f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.83331f,-1.41643f,0.12392f}, {-1.83331f,0.17928f,0.12392f}, {-1.83331f,0.17928f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.83331f,-1.41643f,0.12392f}, {-1.83331f,0.17928f,-0.12392f}, {-1.83331f,-1.41643f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.39461f,-0.47235f}, {-2.11718f,-1.39461f,-0.47235f}, {-2.11718f,-1.39461f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.39461f,-0.47235f}, {-2.11718f,-1.39461f,0.47235f}, {2.11718f,-1.39461f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,-0.47235f}, {2.11718f,-2.33480f,-0.47235f}, {2.11718f,-2.33480f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,-0.47235f}, {2.11718f,-2.33480f,0.47235f}, {-2.11718f,-2.33480f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.47235f}, {2.11718f,-2.33480f,0.47235f}, {2.11718f,-2.33480f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.47235f}, {2.11718f,-2.33480f,0.47235f}, {-2.11718f,-2.33480f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,-0.47235f}, {2.11718f,-1.39461f,-0.47235f}, {2.11718f,-1.39461f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,-0.47235f}, {2.11718f,-1.39461f,0.47235f}, {2.11718f,-2.33480f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,-0.47235f}, {-2.11718f,-1.39461f,-0.47235f}, {2.11718f,-1.39461f,-0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,-0.47235f}, {2.11718f,-1.39461f,-0.47235f}, {2.11718f,-2.33480f,-0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.47235f}, {-2.11718f,-1.39461f,0.47235f}, {-2.11718f,-1.39461f,-0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.47235f}, {-2.11718f,-1.39461f,-0.47235f}, {-2.11718f,-2.33480f,-0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.83331f,-1.41643f,-0.12392f}, {-1.48921f,-1.41643f,-0.12392f}, {-1.48921f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.83331f,-1.41643f,-0.12392f}, {-1.48921f,-1.41643f,0.12392f}, {-1.83331f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-1.48921f,0.17928f,-0.12392f}, {-1.83331f,0.17928f,-0.12392f}, {-1.83331f,0.17928f,0.12392f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.48921f,0.17928f,-0.12392f}, {-1.83331f,0.17928f,0.12392f}, {-1.48921f,0.17928f,0.12392f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.83331f,-1.41643f,0.12392f}, {1.83331f,0.17928f,0.12392f}, {1.48921f,0.17928f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.83331f,-1.41643f,0.12392f}, {1.48921f,0.17928f,0.12392f}, {1.48921f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.83331f,-1.41643f,-0.12392f}, {1.83331f,0.17928f,-0.12392f}, {1.83331f,0.17928f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.83331f,-1.41643f,-0.12392f}, {1.83331f,0.17928f,0.12392f}, {1.83331f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.48921f,-1.41643f,-0.12392f}, {1.48921f,0.17928f,-0.12392f}, {1.83331f,0.17928f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.48921f,-1.41643f,-0.12392f}, {1.83331f,0.17928f,-0.12392f}, {1.83331f,-1.41643f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.48921f,-1.41643f,0.12392f}, {1.48921f,0.17928f,0.12392f}, {1.48921f,0.17928f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.48921f,-1.41643f,0.12392f}, {1.48921f,0.17928f,-0.12392f}, {1.48921f,-1.41643f,-0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.48921f,-1.41643f,-0.12392f}, {1.83331f,-1.41643f,-0.12392f}, {1.83331f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.48921f,-1.41643f,-0.12392f}, {1.83331f,-1.41643f,0.12392f}, {1.48921f,-1.41643f,0.12392f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {1.83331f,0.17928f,-0.12392f}, {1.48921f,0.17928f,-0.12392f}, {1.48921f,0.17928f,0.12392f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.83331f,0.17928f,-0.12392f}, {1.48921f,0.17928f,0.12392f}, {1.83331f,0.17928f,0.12392f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36716f,-0.00001f,-0.12914f}, {1.50063f,0.00001f,-0.12914f}, {1.50064f,-0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36716f,-0.00001f,-0.12914f}, {1.50064f,-0.09131f,-0.09132f}, {1.36717f,-0.09132f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.09132f,-0.09132f}, {1.50064f,-0.09131f,-0.09132f}, {1.50064f,-0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.09132f,-0.09132f}, {1.50064f,-0.12913f,-0.00000f}, {1.36717f,-0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.12915f,-0.00000f}, {1.50064f,-0.12913f,-0.00000f}, {1.50064f,-0.09131f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.12915f,-0.00000f}, {1.50064f,-0.09131f,0.09132f}, {1.36717f,-0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.09132f,0.09132f}, {1.50064f,-0.09131f,0.09132f}, {1.50063f,0.00001f,0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.09132f,0.09132f}, {1.50063f,0.00001f,0.12914f}, {1.36716f,-0.00001f,0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36716f,-0.00001f,0.12914f}, {1.50063f,0.00001f,0.12914f}, {1.50062f,0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36716f,-0.00001f,0.12914f}, {1.50062f,0.09132f,0.09132f}, {1.36715f,0.09131f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.09131f,0.09132f}, {1.50062f,0.09132f,0.09132f}, {1.50062f,0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.09131f,0.09132f}, {1.50062f,0.12915f,-0.00000f}, {1.36715f,0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.50064f,-0.12913f,-0.00000f}, {1.50064f,-0.09131f,-0.09132f}, {1.50063f,0.00001f,-0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.50063f,0.00001f,-0.12914f}, {1.50062f,0.09132f,-0.09132f}, {1.50062f,0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.50062f,0.12915f,-0.00000f}, {1.50062f,0.09132f,0.09132f}, {1.50063f,0.00001f,0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.50063f,0.00001f,0.12914f}, {1.50064f,-0.09131f,0.09132f}, {1.50064f,-0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.50064f,-0.12913f,-0.00000f}, {1.50063f,0.00001f,-0.12914f}, {1.50062f,0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.50062f,0.12915f,-0.00000f}, {1.50063f,0.00001f,0.12914f}, {1.50064f,-0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.12913f,-0.00000f}, {1.50062f,0.12915f,-0.00000f}, {1.50062f,0.09132f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.12913f,-0.00000f}, {1.50062f,0.09132f,-0.09132f}, {1.36715f,0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.09131f,-0.09132f}, {1.50062f,0.09132f,-0.09132f}, {1.50063f,0.00001f,-0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.09131f,-0.09132f}, {1.50063f,0.00001f,-0.12914f}, {1.36716f,-0.00001f,-0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.09131f,-0.09132f}, {1.36716f,-0.00001f,-0.12914f}, {1.36717f,-0.09132f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.09132f,-0.09132f}, {1.36717f,-0.12915f,-0.00000f}, {1.36717f,-0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.09132f,0.09132f}, {1.36716f,-0.00001f,0.12914f}, {1.36715f,0.09131f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.09131f,0.09132f}, {1.36715f,0.12913f,-0.00000f}, {1.36715f,0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36715f,0.09131f,-0.09132f}, {1.36717f,-0.09132f,-0.09132f}, {1.36717f,-0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {1.36717f,-0.09132f,0.09132f}, {1.36715f,0.09131f,0.09132f}, {1.36715f,0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50063f,-0.00001f,-0.12914f}, {-1.36716f,0.00001f,-0.12914f}, {-1.36715f,-0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50063f,-0.00001f,-0.12914f}, {-1.36715f,-0.09131f,-0.09132f}, {-1.50062f,-0.09132f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.09132f,-0.09132f}, {-1.36715f,-0.09131f,-0.09132f}, {-1.36715f,-0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.09132f,-0.09132f}, {-1.36715f,-0.12913f,-0.00000f}, {-1.50062f,-0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.12915f,-0.00000f}, {-1.36715f,-0.12913f,-0.00000f}, {-1.36715f,-0.09131f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.12915f,-0.00000f}, {-1.36715f,-0.09131f,0.09132f}, {-1.50062f,-0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.09132f,0.09132f}, {-1.36715f,-0.09131f,0.09132f}, {-1.36716f,0.00001f,0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.09132f,0.09132f}, {-1.36716f,0.00001f,0.12914f}, {-1.50063f,-0.00001f,0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50063f,-0.00001f,0.12914f}, {-1.36716f,0.00001f,0.12914f}, {-1.36717f,0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50063f,-0.00001f,0.12914f}, {-1.36717f,0.09132f,0.09132f}, {-1.50064f,0.09131f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.09131f,0.09132f}, {-1.36717f,0.09132f,0.09132f}, {-1.36717f,0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.09131f,0.09132f}, {-1.36717f,0.12915f,-0.00000f}, {-1.50064f,0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.36715f,-0.12913f,-0.00000f}, {-1.36715f,-0.09131f,-0.09132f}, {-1.36716f,0.00001f,-0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.36716f,0.00001f,-0.12914f}, {-1.36717f,0.09132f,-0.09132f}, {-1.36717f,0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.36717f,0.12915f,-0.00000f}, {-1.36717f,0.09132f,0.09132f}, {-1.36716f,0.00001f,0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.36716f,0.00001f,0.12914f}, {-1.36715f,-0.09131f,0.09132f}, {-1.36715f,-0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.36715f,-0.12913f,-0.00000f}, {-1.36716f,0.00001f,-0.12914f}, {-1.36717f,0.12915f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.36717f,0.12915f,-0.00000f}, {-1.36716f,0.00001f,0.12914f}, {-1.36715f,-0.12913f,-0.00000f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.12913f,-0.00000f}, {-1.36717f,0.12915f,-0.00000f}, {-1.36717f,0.09132f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.12913f,-0.00000f}, {-1.36717f,0.09132f,-0.09132f}, {-1.50064f,0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.09131f,-0.09132f}, {-1.36717f,0.09132f,-0.09132f}, {-1.36716f,0.00001f,-0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.09131f,-0.09132f}, {-1.36716f,0.00001f,-0.12914f}, {-1.50063f,-0.00001f,-0.12914f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.09131f,-0.09132f}, {-1.50063f,-0.00001f,-0.12914f}, {-1.50062f,-0.09132f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.09132f,-0.09132f}, {-1.50062f,-0.12915f,-0.00000f}, {-1.50062f,-0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.09132f,0.09132f}, {-1.50063f,-0.00001f,0.12914f}, {-1.50064f,0.09131f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.09131f,0.09132f}, {-1.50064f,0.12913f,-0.00000f}, {-1.50064f,0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50064f,0.09131f,-0.09132f}, {-1.50062f,-0.09132f,-0.09132f}, {-1.50062f,-0.09132f,0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-1.50062f,-0.09132f,0.09132f}, {-1.50064f,0.09131f,0.09132f}, {-1.50064f,0.09131f,-0.09132f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.39461f,0.47235f}, {-2.11718f,-1.39461f,0.47235f}, {-2.11718f,-1.63606f,0.77406f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.39461f,0.47235f}, {-2.11718f,-1.63606f,0.77406f}, {2.11718f,-1.63606f,0.77406f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.39461f,0.47235f}, {-2.11718f,-2.33480f,0.47235f}, {-2.11718f,-2.33480f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.39461f,0.47235f}, {-2.11718f,-2.33480f,0.47235f}, {-2.11718f,-1.39461f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.47235f}, {2.11718f,-1.39461f,0.47235f}, {2.11718f,-1.39461f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.47235f}, {2.11718f,-1.39461f,0.47235f}, {2.11718f,-2.33480f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.39461f,0.47235f}, {-2.11718f,-1.39461f,0.47235f}, {-2.11718f,-1.39461f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.39461f,0.47235f}, {-2.11718f,-1.39461f,0.47235f}, {2.11718f,-1.39461f,0.47235f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.77406f}, {2.11718f,-1.63606f,0.77406f}, {2.11718f,-1.63606f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.77406f}, {2.11718f,-1.63606f,0.77406f}, {2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.39461f,0.47235f}, {-2.11718f,-2.33480f,0.47235f}, {-2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.39461f,0.47235f}, {-2.11718f,-2.33480f,0.77406f}, {-2.11718f,-1.63606f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.47235f}, {2.11718f,-2.33480f,0.47235f}, {2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.47235f}, {2.11718f,-2.33480f,0.77406f}, {-2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.47235f}, {2.11718f,-1.39461f,0.47235f}, {2.11718f,-1.63606f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.47235f}, {2.11718f,-1.63606f,0.77406f}, {2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.77406f}, {2.11718f,-1.63606f,0.77406f}, {2.11718f,-1.63606f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.77406f}, {2.11718f,-1.63606f,0.97406f}, {2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.63606f,0.77406f}, {-2.11718f,-1.63606f,0.77406f}, {-2.11718f,-1.63606f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.63606f,0.77406f}, {-2.11718f,-1.63606f,0.77406f}, {2.11718f,-1.63606f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.63606f,0.77406f}, {-2.11718f,-2.33480f,0.77406f}, {-2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.63606f,0.77406f}, {-2.11718f,-2.33480f,0.77406f}, {-2.11718f,-1.63606f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.77406f}, {2.11718f,-2.33480f,0.77406f}, {2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.77406f}, {2.11718f,-2.33480f,0.77406f}, {-2.11718f,-2.33480f,0.77406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.97406f}, {2.11718f,-1.63606f,0.97406f}, {2.11718f,-1.83606f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.97406f}, {2.11718f,-1.83606f,0.97406f}, {2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.63606f,0.77406f}, {-2.11718f,-1.63606f,0.77406f}, {-2.11718f,-1.63606f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.63606f,0.77406f}, {-2.11718f,-1.63606f,0.97406f}, {2.11718f,-1.63606f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.63606f,0.77406f}, {-2.11718f,-2.33480f,0.77406f}, {-2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.63606f,0.77406f}, {-2.11718f,-2.33480f,0.97406f}, {-2.11718f,-1.63606f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.77406f}, {2.11718f,-2.33480f,0.77406f}, {2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.77406f}, {2.11718f,-2.33480f,0.97406f}, {-2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.83606f,0.97406f}, {-2.11718f,-2.33480f,0.97406f}, {-2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.83606f,0.97406f}, {-2.11718f,-2.33480f,1.17406f}, {-2.11718f,-1.83606f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.63606f,0.97406f}, {-2.11718f,-1.63606f,0.97406f}, {-2.11718f,-1.83606f,0.97406f}, STEP_YELLOW);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.63606f,0.97406f}, {-2.11718f,-1.83606f,0.97406f}, {2.11718f,-1.83606f,0.97406f}, STEP_YELLOW);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.63606f,0.97406f}, {-2.11718f,-2.33480f,0.97406f}, {-2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.63606f,0.97406f}, {-2.11718f,-2.33480f,0.97406f}, {-2.11718f,-1.83606f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.97406f}, {2.11718f,-2.33480f,0.97406f}, {2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.97406f}, {2.11718f,-2.33480f,0.97406f}, {-2.11718f,-2.33480f,0.97406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.83606f,1.17406f}, {-2.11718f,-2.33480f,1.17406f}, {-2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-1.83606f,1.17406f}, {-2.11718f,-2.33480f,1.17406f}, {-2.11718f,-2.03606f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.97406f}, {2.11718f,-2.33480f,0.97406f}, {2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,0.97406f}, {2.11718f,-2.33480f,1.17406f}, {-2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.97406f}, {2.11718f,-1.83606f,0.97406f}, {2.11718f,-1.83606f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,0.97406f}, {2.11718f,-1.83606f,1.17406f}, {2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.83606f,0.97406f}, {-2.11718f,-1.83606f,0.97406f}, {-2.11718f,-1.83606f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.83606f,0.97406f}, {-2.11718f,-1.83606f,1.17406f}, {2.11718f,-1.83606f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.33480f,1.37406f}, {-2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.33480f,1.17406f}, {-2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.17406f}, {2.11718f,-1.83606f,1.17406f}, {2.11718f,-2.03606f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.03606f,1.17406f}, {2.11718f,-2.33480f,1.17406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.83606f,1.17406f}, {-2.11718f,-1.83606f,1.17406f}, {-2.11718f,-2.03606f,1.17406f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-1.83606f,1.17406f}, {-2.11718f,-2.03606f,1.17406f}, {2.11718f,-2.03606f,1.17406f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.03606f,1.37406f}, {2.11718f,-2.23597f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.23597f,1.37406f}, {2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.03606f,1.17406f}, {2.11718f,-2.03606f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.17406f}, {2.11718f,-2.03606f,1.37406f}, {2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.03606f,1.17406f}, {-2.11718f,-2.03606f,1.17406f}, {-2.11718f,-2.03606f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.03606f,1.17406f}, {-2.11718f,-2.03606f,1.37406f}, {2.11718f,-2.03606f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.03606f,1.17406f}, {-2.11718f,-2.33480f,1.17406f}, {-2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.03606f,1.17406f}, {-2.11718f,-2.33480f,1.37406f}, {-2.11718f,-2.03606f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.23597f,1.37406f}, {-2.11718f,-2.33480f,1.37406f}, {-2.11718f,-2.33480f,1.68113f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.23597f,1.37406f}, {-2.11718f,-2.33480f,1.68113f}, {-2.11718f,-2.23597f,1.53852f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.03606f,1.37406f}, {-2.11718f,-2.03606f,1.37406f}, {-2.11718f,-2.23597f,1.37406f}, STEP_YELLOW);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.03606f,1.37406f}, {-2.11718f,-2.23597f,1.37406f}, {2.11718f,-2.23597f,1.37406f}, STEP_YELLOW);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.03606f,1.37406f}, {-2.11718f,-2.33480f,1.37406f}, {-2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.03606f,1.37406f}, {-2.11718f,-2.33480f,1.37406f}, {-2.11718f,-2.23597f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.33480f,1.37406f}, {-2.11718f,-2.33480f,1.37406f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.68113f}, {2.11718f,-2.23597f,1.53852f}, {-2.11718f,-2.23597f,1.53852f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.68113f}, {-2.11718f,-2.23597f,1.53852f}, {-2.11718f,-2.33480f,1.68113f}, STEP_BLACK);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.33480f,1.68113f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {-2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.33480f,1.68113f}, {-2.11718f,-2.33480f,1.68113f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.23597f,1.37406f}, {2.11718f,-2.23597f,1.53852f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.33480f,1.37406f}, {2.11718f,-2.23597f,1.53852f}, {2.11718f,-2.33480f,1.68113f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.23597f,1.37406f}, {-2.11718f,-2.23597f,1.37406f}, {-2.11718f,-2.23597f,1.53852f}, PEDESTAL_GRAY);
+    PushTri(verts, normals, uvs, colors, {2.11718f,-2.23597f,1.37406f}, {-2.11718f,-2.23597f,1.53852f}, {2.11718f,-2.23597f,1.53852f}, PEDESTAL_GRAY);
+
+    Mesh mesh = {};
+    mesh.triangleCount = (int)(verts.size() / 9);
+    mesh.vertexCount = mesh.triangleCount * 3;
+    mesh.vertices = (float*)RL_MALLOC(verts.size() * sizeof(float));
+    mesh.normals = (float*)RL_MALLOC(normals.size() * sizeof(float));
+    mesh.texcoords = (float*)RL_MALLOC(uvs.size() * sizeof(float));
+    mesh.colors = (unsigned char*)RL_MALLOC(colors.size() * sizeof(unsigned char));
+    memcpy(mesh.vertices, verts.data(), verts.size() * sizeof(float));
+    memcpy(mesh.normals, normals.data(), normals.size() * sizeof(float));
+    memcpy(mesh.texcoords, uvs.data(), uvs.size() * sizeof(float));
+    memcpy(mesh.colors, colors.data(), colors.size() * sizeof(unsigned char));
+    UploadMesh(&mesh, false);
+    return mesh;
+}
