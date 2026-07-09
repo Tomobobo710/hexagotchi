@@ -5,9 +5,13 @@
 #include <cstdlib>
 #include <cmath>
 
-static const Color TOM_COLOR     = CharacterRegistry::get(CharacterId::Tom).color;
-static const Color WIFE_COLOR    = CharacterRegistry::get(CharacterId::Karen).color;
-static const Color POKEMON_COLOR = CharacterRegistry::get(CharacterId::Ronzer).color;
+static const Color TOM_COLOR     = CharacterRegistry::get(CharacterId::Tom).nameColor;
+static const Color WIFE_COLOR    = CharacterRegistry::get(CharacterId::Karen).nameColor;
+static const Color POKEMON_COLOR = CharacterRegistry::get(CharacterId::Ronzer).nameColor;
+// Placeholder silhouette-art colors -- deliberately separate from the name
+// labels above (see CharacterInfo::bodyColor).
+static const Color WIFE_BODY_COLOR    = CharacterRegistry::get(CharacterId::Karen).bodyColor;
+static const Color POKEMON_BODY_COLOR = CharacterRegistry::get(CharacterId::Ronzer).bodyColor;
 
 // Ambient-only lines the Pokemon shouts unprompted, popped through the same
 // shared DialogBox as scripted events. Its entire personality is its own name.
@@ -21,7 +25,7 @@ static const char* POKEMON_QUIPS[] = {
 static const float POKEMON_QUIP_DURATION = 1.8f;
 
 PizzaParlorScene::PizzaParlorScene(DialogBox* sharedDialog)
-    : Scene(1280.0f, 720.0f, {30, 20, 20, 255}), dialog(sharedDialog) {
+    : Scene(1280.0f, 720.0f, {225, 120, 60, 255}), dialog(sharedDialog) {
 }
 
 void PizzaParlorScene::init() {
@@ -284,10 +288,10 @@ void PizzaParlorScene::drawWife(Vector2 pos) {
     // Sharp, upright silhouette -- angular shoulders, arms crossed
     Color darkWife = {110, 20, 40, 255};
     // Body: trapezoid via triangle-ish rectangle for sharp shoulders
-    DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, WIFE_COLOR);
-    DrawRectangle((int)(cx - 16), (int)(cy - 4), 32, 20, WIFE_COLOR);
+    DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, WIFE_BODY_COLOR);
+    DrawRectangle((int)(cx - 16), (int)(cy - 4), 32, 20, WIFE_BODY_COLOR);
     // Head, held high
-    DrawCircle((int)cx, (int)(cy - 26), 16, WIFE_COLOR);
+    DrawCircle((int)cx, (int)(cy - 26), 16, WIFE_BODY_COLOR);
     // Narrowed, unimpressed eyes
     DrawRectangle((int)(cx - 10), (int)(cy - 28), 6, 2, darkWife);
     DrawRectangle((int)(cx + 4), (int)(cy - 28), 6, 2, darkWife);
@@ -304,10 +308,10 @@ void PizzaParlorScene::drawPokemon(Vector2 pos) {
 
     // Round, bouncy little creature -- pointed ears, big excited eyes
     Color darkMon = {160, 120, 10, 255};
-    DrawCircle((int)cx, (int)cy, 18, POKEMON_COLOR);
+    DrawCircle((int)cx, (int)cy, 18, POKEMON_BODY_COLOR);
     // Ears
-    DrawTriangle({cx - 14, cy - 10}, {cx - 20, cy - 28}, {cx - 6, cy - 16}, POKEMON_COLOR);
-    DrawTriangle({cx + 14, cy - 10}, {cx + 20, cy - 28}, {cx + 6, cy - 16}, POKEMON_COLOR);
+    DrawTriangle({cx - 14, cy - 10}, {cx - 20, cy - 28}, {cx - 6, cy - 16}, POKEMON_BODY_COLOR);
+    DrawTriangle({cx + 14, cy - 10}, {cx + 20, cy - 28}, {cx + 6, cy - 16}, POKEMON_BODY_COLOR);
     // Big round eyes
     DrawCircle((int)(cx - 7), (int)(cy - 2), 5, darkMon);
     DrawCircle((int)(cx + 7), (int)(cy - 2), 5, darkMon);
@@ -316,6 +320,6 @@ void PizzaParlorScene::drawPokemon(Vector2 pos) {
     // Open, shouting mouth
     DrawCircle((int)cx, (int)(cy + 8), 5, darkMon);
     // Tiny stub feet
-    DrawEllipse((int)(cx - 8), (int)(cy + 18), 6, 4, POKEMON_COLOR);
-    DrawEllipse((int)(cx + 8), (int)(cy + 18), 6, 4, POKEMON_COLOR);
+    DrawEllipse((int)(cx - 8), (int)(cy + 18), 6, 4, POKEMON_BODY_COLOR);
+    DrawEllipse((int)(cx + 8), (int)(cy + 18), 6, 4, POKEMON_BODY_COLOR);
 }

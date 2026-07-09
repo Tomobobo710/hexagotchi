@@ -9,33 +9,35 @@ namespace {
 // folder) while every other character is "<name><emotion>" directly --
 // intentional, not a bug to "fix" by renaming the files.
 const CharacterInfo kTom = {
-    {139, 172, 15, 255},
+    {139, 172, 15, 255}, {139, 172, 15, 255},
     {"portraits/tom/gotchiportraitsad.png", "portraits/tom/gotchiportraitmid.png", "portraits/tom/gotchiportraithappy.png"},
 };
 
-// Karen: yellow.
+// Karen: name label yellow. Body-art color kept at its original pink/red --
+// the placeholder shape wasn't drawn to look right in yellow.
 const CharacterInfo kKaren = {
-    {230, 200, 40, 255},
+    {230, 200, 40, 255}, {200, 60, 90, 255},
     {"portraits/karen/karensad.png", "portraits/karen/karenmid.png", "portraits/karen/karenhappy.png"},
 };
 
-// Ronzer: red.
+// Ronzer: name label red. Body-art color kept at its original yellow -- the
+// placeholder shape wasn't drawn to look right in red.
 const CharacterInfo kRonzer = {
-    {200, 60, 60, 255},
+    {200, 60, 60, 255}, {250, 200, 40, 255},
     {"portraits/ronzer/ronzersad.png", "portraits/ronzer/ronzermid.png", "portraits/ronzer/ronzerhappy.png"},
 };
 
 const CharacterInfo kJimmy = {
-    {41, 128, 185, 255},   // matches JS JIMMY color scheme (blue kid)
+    {41, 128, 185, 255}, {41, 128, 185, 255},   // matches JS JIMMY color scheme (blue kid)
     {"portraits/jimmy/jimmysad.png", "portraits/jimmy/jimmymid.png", "portraits/jimmy/jimmyhappy.png"},
 };
 
 // No portrait art yet -- portraitPath[] left default-empty (see
 // CharacterInfo's comment on empty meaning "no art for this emotion").
-const CharacterInfo kTherapist = {{22, 160, 133, 255}, {"", "", ""}};
-const CharacterInfo kBoss      = {{142, 68, 173, 255}, {"", "", ""}};
-const CharacterInfo kNarrator  = {{150, 150, 170, 255}, {"", "", ""}};
-const CharacterInfo kPhone     = {{230, 160, 60, 255}, {"", "", ""}};
+const CharacterInfo kTherapist = {{22, 160, 133, 255}, {22, 160, 133, 255}, {"", "", ""}};
+const CharacterInfo kBoss      = {{142, 68, 173, 255}, {142, 68, 173, 255}, {"", "", ""}};
+const CharacterInfo kNarrator  = {{150, 150, 170, 255}, {150, 150, 170, 255}, {"", "", ""}};
+const CharacterInfo kPhone     = {{230, 160, 60, 255}, {230, 160, 60, 255}, {"", "", ""}};
 
 } // namespace
 

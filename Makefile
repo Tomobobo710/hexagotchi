@@ -34,9 +34,17 @@ $(DESKTOP_OUT)/obj/%.o: src/%.cpp
 -include $(OBJ:.o=.d)
 
 # Web
-web: $(RL)/libraylib.web.a
+# --preload-file embeds build/assets.rres into the virtual filesystem at
+# /assets.rres (see main.cpp's AssetPack::setPackFile("/assets.rres") under
+# PLATFORM_WEB) -- without it the web build has no asset pack at all and
+# every AssetPack::loadTexture() call silently misses.
+# --shell-file uses our own web/shell.html (centered, 100vmin-scaled canvas
+# with pixelated image-rendering), NOT raylib's vendored minshell.html --
+# minshell.html has no centering/scaling CSS at all, which is why the canvas
+# renders tiny/offset if that ever gets used here by mistake.
+web: build/assets.rres $(RL)/libraylib.web.a
 	mkdir -p $(WEB_OUT)
-	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/game.html $(WEBINCLUDES) $(WEBLINK) --shell-file $(RL)/minshell.html
+	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/index.html $(WEBINCLUDES) $(WEBLINK) --shell-file web/shell.html --preload-file build/assets.rres@assets.rres
 
 $(RL)/libraylib.web.a:
 	$(EMCC) -c $(RL)/rcore.c     $(WEBFLAGS) -o $(RL)/rcore.wasm.o

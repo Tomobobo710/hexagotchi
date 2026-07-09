@@ -5,9 +5,9 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).color;
-static const Color BOSS_COLOR     = CharacterRegistry::get(CharacterId::Boss).color;
-static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).color;
+static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
+static const Color BOSS_COLOR     = CharacterRegistry::get(CharacterId::Boss).nameColor;
+static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
 
 // The portal's anchor in this scene's 2D world space (same coordinate space
 // as tom/boss's positions) -- where in the room it should visually sit.

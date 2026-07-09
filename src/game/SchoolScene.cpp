@@ -5,10 +5,13 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).color;
-static const Color KAREN_COLOR    = CharacterRegistry::get(CharacterId::Karen).color;
-static const Color JIMMY_COLOR    = CharacterRegistry::get(CharacterId::Jimmy).color;
-static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).color;
+static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
+static const Color KAREN_COLOR    = CharacterRegistry::get(CharacterId::Karen).nameColor;
+static const Color JIMMY_COLOR    = CharacterRegistry::get(CharacterId::Jimmy).nameColor;
+static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
+// Placeholder silhouette-art color -- deliberately separate from the name
+// label above (see CharacterInfo::bodyColor).
+static const Color KAREN_BODY_COLOR = CharacterRegistry::get(CharacterId::Karen).bodyColor;
 
 // Matches the opaque sky color actually painted in schoolbg.png's daytime
 // sky, sampled from the art -- schoolbg.png's sky region is otherwise
@@ -236,9 +239,9 @@ void SchoolScene::drawKaren(Vector2 pos) {
     float cy = pos.y + 36.0f;
 
     Color darkKaren = {110, 20, 40, 255};
-    DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, KAREN_COLOR);
-    DrawRectangle((int)(cx - 16), (int)(cy - 4), 32, 20, KAREN_COLOR);
-    DrawCircle((int)cx, (int)(cy - 26), 16, KAREN_COLOR);
+    DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, KAREN_BODY_COLOR);
+    DrawRectangle((int)(cx - 16), (int)(cy - 4), 32, 20, KAREN_BODY_COLOR);
+    DrawCircle((int)cx, (int)(cy - 26), 16, KAREN_BODY_COLOR);
 
     DrawRectangle((int)(cx - 10), (int)(cy - 28), 6, 2, darkKaren);
     DrawRectangle((int)(cx + 4), (int)(cy - 28), 6, 2, darkKaren);

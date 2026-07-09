@@ -5,9 +5,9 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).color;
-static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).color;
-static const Color PHONE_COLOR    = CharacterRegistry::get(CharacterId::Phone).color;
+static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
+static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
+static const Color PHONE_COLOR    = CharacterRegistry::get(CharacterId::Phone).nameColor;
 
 ApartmentScene::ApartmentScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {22, 18, 26, 255}), dialog(sharedDialog) {

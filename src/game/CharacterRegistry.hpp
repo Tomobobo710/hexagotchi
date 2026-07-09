@@ -34,7 +34,15 @@ enum class Emotion {
 };
 
 struct CharacterInfo {
-    Color color;
+    // Dialogue speaker-name label color (and portrait background gradient) --
+    // this is the character's "identity color" (Karen=yellow, Ronzer=red).
+    Color nameColor;
+    // Placeholder silhouette-art fill color, used only by each scene's
+    // hand-drawn shape stand-ins (drawWife/drawKaren/drawPokemon/etc).
+    // Deliberately separate from nameColor: the shape art was tuned to look
+    // right at its own color and isn't meant to follow the name label if
+    // that gets changed for legibility/identity reasons.
+    Color bodyColor;
     // Portrait asset keys (relative to assets/, matches AssetPack::loadTexture
     // keys), indexed by Emotion. Empty string means no art for that emotion --
     // callers should fall back to Mid, or to no portrait at all if Mid is
