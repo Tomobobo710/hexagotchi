@@ -41,7 +41,12 @@ private:
     int frameCount_ = 0;    // Frame counter for animation
     std::vector<std::unique_ptr<Button>> buttons;
     std::string lastClickedButton_;  // Message to display when a button is clicked
-    EventBus* eventBus_ = nullptr;   // Event bus for merge button events
+    EventBus* eventBus_ = nullptr;   // Event bus for merge button events and CareAction subscription
+    int careActionToken_ = 0;        // Event subscription token for CareAction
+
+    // Action accumulation for Box C drivers (warmth/hygiene)
+    float affectionAccumulator_ = 0.0f;
+    float hygieneAccumulator_ = 0.0f;
 
     // Button cooldown system
     std::map<std::string, float> buttonCooldowns_;
@@ -69,6 +74,14 @@ private:
 
     // Merge button callback - emits MergeRequested on the bus
     void onMergeButtonClicked();
+
+    // Explore button logic
+    void addExploreButton();
+    void updateExploreButtonVisibility();
+    void onExploreButtonClicked();
+
+    // Back button on hexboard - handled in HexViewScene
+    // This is just a placeholder to note the navigation relationship
 };
 
 #endif // GOTCHI_SCENE_HPP

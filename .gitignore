@@ -10,6 +10,18 @@ build/web/
 /game
 /game.exe
 
+# Test binaries
+/test_explore_gate
+/test_merge_controller
+/test_save_manager
+/test_save_wiring
+/test_story_sequencer
+
+# Generic build artifacts
+*.a
+*.o
+*.so
+
 # Raylib build artifacts
 raylib/src/*.o
 raylib/src/*.wasm.o

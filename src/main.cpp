@@ -9,6 +9,7 @@
 #include "game/SpriteTestScene.hpp"
 #include "game/GotchiScene.hpp"
 #include "game/GotchiSim.hpp"
+#include "game/DriversController.hpp"
 #include "game/PizzaParlorScene.hpp"
 #include "game/ApartmentScene.hpp"
 #include "game/TherapistOfficeScene.hpp"
@@ -46,6 +47,9 @@ StorySequencer* storySequencer = nullptr;
 
 // GotchiSim - simulation reducer (C-core)
 GotchiSim* gotchiSim = nullptr;
+
+// DriversController - Box C: affection/mercy driver computation
+DriversController* driversController = nullptr;
 
 // SaveManager - handles save/load/delete operations
 SaveManager saveManager;
@@ -226,6 +230,10 @@ void UpdateDrawFrame() {
     if (gotchiSim) {
         gotchiSim->update(dt);
     }
+    if (driversController) {
+        driversController->update(dt);
+    }
+
     dialog->update(dt);
 
     BeginTextureMode(gameTarget);
@@ -355,6 +363,9 @@ int main() {
     // Wire up the sim reducer (C-core)
     gotchiSim = new GotchiSim(globalEventBus, globalGameState);
 
+    // Wire up the drivers controller (Box C: affection/mercy computation)
+    driversController = new DriversController(globalEventBus, globalGameState);
+
     // Wire up SaveWiring for autosave on checkpoints
     saveWiring = new SaveWiring(saveManager, globalEventBus);
     saveWiring->setGameState(&globalGameState);
@@ -418,6 +429,7 @@ int main() {
     delete mergeController;
     delete storySequencer;
     delete gotchiSim;
+    delete driversController;
     delete saveWiring;
     delete sceneManager;
     CloseWindow();

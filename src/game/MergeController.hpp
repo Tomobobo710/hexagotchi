@@ -16,6 +16,20 @@ constexpr float FIRST_MERGE_NEGLECT_NEED  = 0.40f;  // any visible need below th
 constexpr float MERGE_LOCK_COOLDOWN_SEC   = 3.0f;   // button locked after each beat
 constexpr float SLEEP_FULL                = 1.0f;   // sleep reset target on merge-back
 
+// Sim constants - core game loop pacing
+constexpr float SLEEP_DRAIN_RATE          = 0.02f;  // per second - master pacing dial (~50s per cycle)
+
+// Affection/mercy gain per care action
+constexpr float AFFECTION_GAIN            = 0.08f;  // per warmth action (pet only)
+constexpr float MERCY_GAIN                = 0.12f;  // per hygiene action (wash/groom)
+
+// Grime constants
+constexpr float GRIME_CREEP_RATE          = 0.01f;  // per second of neglect
+constexpr float GRIME_CARE_REDUCE         = 0.08f;  // reduced per hygiene action
+
+// Collapse threshold for C-core (dormant until A4)
+constexpr float COLLAPSE_NEED_THRESHOLD   = 0.05f;
+
 class EventBus;
 
 class MergeController {

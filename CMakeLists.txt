@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR
+    "In-source builds are banned. Run: cmake -B build -D RBUILD_DESKTOP=ON -D RBUILD_WEB=OFF")
+endif()
 project(hexagotchi CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -36,6 +40,14 @@ if(RBUILD_DESKTOP)
             list(APPEND GRIME_TEST_SRCS ${f})
         endif()
     endforeach()
+
+    # Test executable for ExploreGate
+    add_executable(test_explore_gate
+        tests/TestExploreGate.cpp
+        src/game/GotchiStats.cpp
+    )
+    target_include_directories(test_explore_gate PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+    target_link_libraries(test_explore_gate PRIVATE raylib glfw)
 
     set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS} ${EVENT_SRCS})
 

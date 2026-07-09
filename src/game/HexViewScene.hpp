@@ -6,7 +6,9 @@
 #include "Gotchi.hpp"
 #include "GotchiStats.hpp"
 #include "GotchiMood.hpp"
+#include "Button.hpp"
 #include <memory>
+#include <vector>
 
 class PauseMenuOverlay;
 
@@ -27,6 +29,10 @@ private:
     // Callback for pause menu
     void onExitSelected();  // Request exit
 
+    // Back button logic
+    void addBackButton();
+    void onBackButtonClicked();
+
 private:
     HexWorld* world;
     Gotchi* gotchi;
@@ -46,6 +52,9 @@ private:
     bool  hasClickMarker_ = false;
     HexCoords clickMarkerHex_{0, 0};
     Vector2   clickMarkerWorld_{0, 0};
+
+    // Back button
+    std::unique_ptr<Button> backButton_;
 };
 
 #endif
