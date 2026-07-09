@@ -2,7 +2,6 @@
 // program. RLIGHTS_IMPLEMENTATION must be defined in exactly one .cpp before the
 // header is included; every other TU includes rlights.h (via MoonEffect.hpp) for
 // declarations only.
-#define RLIGHTS_IMPLEMENTATION
 #include "MoonEffect.hpp"
 #include "LitShader.hpp"
 

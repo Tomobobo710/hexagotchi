@@ -1,3 +1,4 @@
+#define RLIGHTS_IMPLEMENTATION
 #include "LitShader.hpp"
 
 // The lighting shaders are embedded as strings and compiled via

@@ -2,8 +2,6 @@
 #include "DialogBox.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
-#include "game/GameScene.hpp"
-#include "game/BossScene.hpp"
 #include "game/InputTestScene.hpp"
 #include "game/HexViewScene.hpp"
 #include "game/SpriteTestScene.hpp"
@@ -65,10 +63,8 @@ SceneManager* sceneManager = nullptr;
 DialogBox*    dialog       = nullptr;
 RenderTexture2D gameTarget;
 
-std::vector<DialogEntry> gameDialogs;
-std::vector<DialogEntry> bossDialogs;
 int         dialogIndex = 0;
-std::string lastScene   = "game";
+std::string lastScene   = "title";
 
 static Rectangle GetLetterboxRect() {
     int sw = GetScreenWidth();
@@ -103,17 +99,6 @@ static void SyncMouseToGameSpace() {
     SetMouseScale(1.0f / scale, 1.0f / scale);
 }
 
-void showDialog(std::vector<DialogEntry>& seq, int idx) {
-    if (idx < (int)seq.size()) {
-        auto& d = seq[idx];
-        dialog->setSpeakerName(d.speaker);
-        dialog->setSpeakerColor(d.speakerColor);
-        dialog->setPortraitColor(d.portraitColor);
-        dialog->setText(d.text);
-        dialog->show();
-    }
-}
-
 void UpdateDrawFrame() {
     SyncMouseToGameSpace();
 
@@ -122,16 +107,15 @@ void UpdateDrawFrame() {
 
     if (currentScene != lastScene) {
         dialogIndex = 0;
-        if (currentScene == "game") showDialog(gameDialogs, 0);
-        if (currentScene == "boss") showDialog(bossDialogs, 0);
         // The Tom world-scenes (pizza_parlor/apartment/etc.) drive the shared
         // dialog box themselves via triggerEvent()/DialogBox::show() -- only
         // force-hide it once, on the frame we transition in, so a stale
-        // game/boss line doesn't linger. Do NOT hide it every frame here or
+        // line doesn't linger. Do NOT hide it every frame here or
         // it fights with the scene's own show() calls and the dialog can
         // never stay visible (softlock: it disappears the instant it shows).
         if (currentScene == "pizza_parlor" || currentScene == "apartment" || currentScene == "therapist_office" ||
-            currentScene == "office" || currentScene == "school" || currentScene == "scene_select") {
+            currentScene == "office" || currentScene == "school" || currentScene == "scene_select" ||
+            currentScene == "gotchi" || currentScene == "title") {
             dialog->hide();
         }
         lastScene = currentScene;
@@ -149,49 +133,18 @@ void UpdateDrawFrame() {
         dialog->hide();
     }
 
-    if (IsKeyPressed(KEY_ONE) && currentScene != "game")
-        sceneManager->switchScene("game", TransitionEffect::FADE, 0.5f);
-    if (IsKeyPressed(KEY_TWO) && currentScene != "boss")
-        sceneManager->switchScene("boss", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_THREE) && currentScene != "input_test")
         sceneManager->switchScene("input_test", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_FOUR) && currentScene != "sprite_test")
         sceneManager->switchScene("sprite_test", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_FIVE) && currentScene != "hexboard")
         sceneManager->switchScene("hexboard", TransitionEffect::FADE, 0.5f);
-    if (IsKeyPressed(KEY_EIGHT) && currentScene != "gotchi")
-        sceneManager->switchScene("gotchi", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_NINE) && currentScene != "title")
         sceneManager->switchScene("title", TransitionEffect::FADE, 0.5f);
     if (IsKeyPressed(KEY_SEVEN) && currentScene != "scene_select")
         sceneManager->switchScene("scene_select", TransitionEffect::FADE, 0.5f);
 
-    bool onGameOrBoss = (currentScene == "game" || currentScene == "boss");
-
-    if (onGameOrBoss && IsKeyPressed(KEY_SPACE) && dialog->isVisible()) {
-        if (!dialog->isFinished()) {
-            dialog->skipCharacterReveal();
-        } else {
-            dialogIndex++;
-            auto& seq = (currentScene == "boss") ? bossDialogs : gameDialogs;
-            if (dialogIndex < (int)seq.size()) showDialog(seq, dialogIndex);
-            else dialog->hide();
-        }
-    }
-
-    if (onGameOrBoss && IsKeyPressed(KEY_H)) {
-        dialogIndex = 0;
-        auto& seq = (currentScene == "boss") ? bossDialogs : gameDialogs;
-        showDialog(seq, 0);
-    }
-
-    // Toggle pause menu with 0 key (only in game and boss scenes)
-    if (IsKeyPressed(KEY_ZERO) && (currentScene == "game" || currentScene == "boss")) {
-        Scene* currentSceneObj = sceneManager->getCurrentScene();
-        if (currentSceneObj) {
-            currentSceneObj->togglePause();
-        }
-    }
+    // Pause key (0) is reserved for future use - no scene supports it yet
 
     // Debug trigger for the pizza parlor's / apartment's scripted story beat
     // (normally invoked by the tomagotchi/stat side, not by a raw key).
@@ -243,16 +196,16 @@ void UpdateDrawFrame() {
         DrawRectangle(0, 0, GAME_W, 32, {0, 0, 0, 160});
         if (currentScene == "hexboard") {
             DrawText("HEXBOARD", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "input_test") {
             DrawText("INPUT TEST", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "sprite_test") {
             // SpriteTestScene draws its own "SPRITE TEST" title, skip the overlay title here.
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "gotchi") {
             DrawText("GOTCHI", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss  3: Input  4: Sprite  5: Hexboard  8: Gotchi  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
+            DrawText("3: Input  4: Sprite  5: Hexboard  9: Title  0: Menu  ESC: Exit", GAME_W - 290, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "pizza_parlor") {
             DrawText("PIZZA PARLOR", 14, 8, 18, {180, 180, 255, 255});
             DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
@@ -270,14 +223,10 @@ void UpdateDrawFrame() {
             DrawText("E: Trigger event  7: Scene Select  ESC: Exit", GAME_W - 320, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "scene_select") {
             DrawText("SCENE SELECT", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("Click a scene  1: World  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
+            DrawText("Click a scene  ESC: Exit", GAME_W - 280, 8, 12, {140, 140, 180, 255});
         } else if (currentScene == "title") {
             DrawText("TITLE SCREEN", 14, 8, 18, {180, 180, 255, 255});
-            DrawText("9: Title Screen  ESC: Exit", GAME_W - 220, 8, 12, {140, 140, 180, 255});
-        } else {
-            std::string sceneLabel = (currentScene == "boss") ? "BOSS ARENA" : "OVERWORLD";
-            DrawText(sceneLabel.c_str(), 14, 8, 18, {180, 180, 255, 255});
-            DrawText("1: World  2: Boss 3: Input 4: Sprite 5: Hexboard  7: Scenes 8: Gotchi H: Dialog 0: Menu", GAME_W - 320, 8, 12, {140, 140, 180, 255});
+            DrawText("ESC: Exit", GAME_W - 220, 8, 12, {140, 140, 180, 255});
         }
     EndTextureMode();
 
@@ -327,8 +276,6 @@ int main() {
     AssetPack::setPackFile("assets.rres");
 
     sceneManager = new SceneManager();
-    sceneManager->registerScene("game", new GameScene());
-    sceneManager->registerScene("boss", new BossScene());
     sceneManager->registerScene("hexboard", new HexViewScene());
     sceneManager->registerScene("input_test", new InputTestScene());
     GotchiScene* gotchiScene = new GotchiScene();
@@ -341,8 +288,8 @@ int main() {
     sceneManager->registerScene("school", new SchoolScene(dialog));
     sceneManager->registerScene("model3d_test", new Model3DTestScene());
     sceneManager->registerScene("merge", new MergeScene());
-    sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     sceneManager->registerScene("title", new TitleScene());
+    sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     GotchiStatsScene* gotchiStatsScene = new GotchiStatsScene();
     sceneManager->registerScene("gotchi_stats", gotchiStatsScene);
 
@@ -372,32 +319,13 @@ int main() {
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
-        (shotScene && shotScene[0]) ? shotScene : "scene_select");
+        (shotScene && shotScene[0]) ? shotScene : "title");
 #else
-    sceneManager->switchSceneImmediate("scene_select");
+    sceneManager->switchSceneImmediate("title");
 #endif
 
     dialog->setAnchor("bottom");
     dialog->setCharacterRevealSpeed(45.0f);
-
-    gameDialogs = {
-        { "Guide",  "Welcome, traveler. Use A/D or arrow keys to move. SPACE to jump.",
-          {120, 220, 255, 255}, {30, 50, 100, 255} },
-        { "Guide",  "Collect the golden gems. Watch out for the red creatures!",
-          {120, 220, 255, 255}, {30, 50, 100, 255} },
-        { "System", "Press 2 to enter the Boss Arena when you are ready. Good luck.",
-          {200, 160, 255, 255}, {60, 20, 80, 255} },
-    };
-    bossDialogs = {
-        { "???",    "So... you finally arrived. I have been waiting.",
-          {255, 100, 120, 255}, {80, 20, 30, 255} },
-        { "???",    "You think your little platforming skills will save you here?",
-          {255, 100, 120, 255}, {80, 20, 30, 255} },
-        { "System", "Press 1 to return to the overworld. Press H to replay dialog.",
-          {200, 160, 255, 255}, {60, 20, 80, 255} },
-    };
-
-    showDialog(gameDialogs, 0);
 
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(UpdateDrawFrame, 0, 1);

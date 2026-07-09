@@ -27,7 +27,35 @@ if(RBUILD_DESKTOP)
 
     # Source files
     file(GLOB ENGINE_SRCS "src/engine/*.cpp" "src/engine/*/*.cpp")
-    file(GLOB GAME_SRCS "src/game/*.cpp")
+    file(GLOB GAME_SRCS
+        "src/game/ControlsOverlay.cpp"
+        "src/game/CharacterRegistry.cpp"
+        "src/game/DriversController.cpp"
+        "src/game/Gotchi.cpp"
+        "src/game/GotchiMood.cpp"
+        "src/game/GotchiScene.cpp"
+        "src/game/GotchiStats.cpp"
+        "src/game/GotchiStatsScene.cpp"
+        "src/game/GotchiSim.cpp"
+        "src/game/HexBoard.cpp"
+        "src/game/HexViewScene.cpp"
+        "src/game/InputTestScene.cpp"
+        "src/game/MergeController.cpp"
+        "src/game/MergeScene.cpp"
+        "src/game/Model3DTestScene.cpp"
+        "src/game/OfficeScene.cpp"
+        "src/game/PauseMenuOverlay.cpp"
+        "src/game/PizzaParlorScene.cpp"
+        "src/game/PlayerActor.cpp"
+        "src/game/ApartmentScene.cpp"
+        "src/game/SchoolScene.cpp"
+        "src/game/SceneSelectScene.cpp"
+        "src/game/SpriteTestScene.cpp"
+        "src/game/StorySequencer.cpp"
+        "src/game/ScenarioDirector.cpp"
+        "src/game/TherapistOfficeScene.cpp"
+        "src/game/TitleScene.cpp"
+    )
     file(GLOB EFFECTS_SRCS "src/effects/*.cpp")
     file(GLOB EVENT_SRCS "src/events/*.cpp")
     file(GLOB TEST_SRCS "tests/*.cpp")
@@ -71,15 +99,22 @@ if(RBUILD_DESKTOP)
         src/game/GotchiSim.cpp
         src/game/GotchiStats.cpp
         src/game/GotchiMood.cpp
+        src/game/MergeScene.cpp
+        src/game/ScenarioDirector.cpp
     )
-    set(TEST_EVENT_SRCS
-        src/events/EventBus.cpp
+    set(TEST_EFFECTS_SRCS
+        src/effects/PortalEffect.cpp
+        src/effects/PortalShader.cpp
+        src/effects/LitShader.cpp
+        src/effects/PortalRingMesh.cpp
+        src/effects/PortalBaseMesh.cpp
     )
     set(TEST_SRCS
         tests/TestMergeController.cpp
         ${TEST_ENGINE_SRCS}
         ${TEST_EVENT_SRCS}
         ${TEST_GAME_SRCS}
+        ${TEST_EFFECTS_SRCS}
     )
     add_executable(test_merge_controller ${TEST_SRCS})
     target_include_directories(test_merge_controller PRIVATE . src src/engine src/game src/events src/flags raylib/src)
@@ -91,6 +126,7 @@ if(RBUILD_DESKTOP)
         ${TEST_ENGINE_SRCS}
         ${TEST_EVENT_SRCS}
         ${TEST_GAME_SRCS}
+        ${TEST_EFFECTS_SRCS}
     )
     add_executable(test_gotchi_sim ${GOTCHI_SIM_TEST_SRCS})
     target_include_directories(test_gotchi_sim PRIVATE . src src/engine src/game src/events src/flags raylib/src)
@@ -102,6 +138,7 @@ if(RBUILD_DESKTOP)
         ${TEST_ENGINE_SRCS}
         ${TEST_EVENT_SRCS}
         ${TEST_GAME_SRCS}
+        ${TEST_EFFECTS_SRCS}
     )
     target_include_directories(test_story_sequencer PRIVATE . src src/engine src/game src/events src/flags raylib/src)
     target_link_libraries(test_story_sequencer PRIVATE raylib glfw)
@@ -279,9 +316,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/SceneInputHandler.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneManager.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/TileType.cpp
-        ${CMAKE_SOURCE_DIR}/src/game/BossScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ControlsOverlay.cpp
-        ${CMAKE_SOURCE_DIR}/src/game/GameScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Gotchi.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiMood.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiScene.cpp
@@ -300,11 +335,15 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiSim.cpp
         ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/ScenarioDirector.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/CityWindowEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/SunEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/TherapistWindowEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/VehicleMesh.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/SchoolSkyEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/StarfieldEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/LitShader.cpp
@@ -312,6 +351,8 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
         ${CMAKE_SOURCE_DIR}/src/game/MergeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/DriversController.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/CharacterRegistry.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/PortalEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/PortalBaseMesh.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/PortalRingMesh.cpp
