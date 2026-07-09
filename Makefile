@@ -3,8 +3,8 @@ EMCC = emsdk/python/3.13.3_64bit/python.exe emsdk/upstream/emscripten/emcc.py
 EMAR = emsdk/python/3.13.3_64bit/python.exe emsdk/upstream/emscripten/emar.py
 RL   = raylib/src
 
-SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp)
-INCLUDES    = -I src/engine -I src/game -I src/effects -I $(RL) -I glfw/include -I rres/src
+SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp) $(wildcard src/events/*.cpp)
+INCLUDES    = -I src/engine -I src/game -I src/effects -I src/events -I src/flags -I $(RL) -I glfw/include -I rres/src
 CXXFLAGS    = -std=c++17 $(INCLUDES)
 
 # Desktop linker flags differ per platform: Windows (devkitPro/Cygwin) links
@@ -17,7 +17,7 @@ else
 LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -pthread -lm -ldl -lX11 -lXrandr -lXinerama -lXi -lXcursor
 endif
 
-WEBINCLUDES = -I src/engine -I src/game -I src/effects -I $(RL) -I rres/src
+WEBINCLUDES = -I src/engine -I src/game -I src/effects -I src/events -I src/flags -I $(RL) -I rres/src
 WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)
 # Preload just the packed assets.rres, not the whole assets/ tree -- everything
 # loads through AssetPack now, so the loose PNGs never need to be in the

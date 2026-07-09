@@ -142,8 +142,20 @@ private:
     // Cached min zoom (computed once when boundary changes)
     float cachedMinZoom;
 
-    // Pan margin (overscroll padding in world units)
+    // Pan margin (overscroll padding in world units) -- only affects how far
+    // a user's drag-to-pan can pull past the boundary edge (see panUpdate()/
+    // panEnd()), NOT the hard clamp every setPosition()/zoomTo()/focus shot
+    // is subject to. clampToBoundary() uses safetyInset instead (see below);
+    // panMargin being large is fine/intentional for drag UX, since that's a
+    // separate, deliberately generous overscroll allowance.
     float panMargin;
+
+    // Inward safety margin (screen pixels) subtracted from the visible
+    // half-width/half-height in clampToBoundary() -- keeps the camera's
+    // actual visible frame at least this far inside the true boundary rect
+    // at all times, so panning/zooming to frame an off-center actor (or
+    // camera shake) never reveals empty space past the scene's edge.
+    static constexpr float BOUNDARY_SAFETY_INSET = 30.0f;
 
     // Inertia state (for fling momentum)
     Vector2 velocity;

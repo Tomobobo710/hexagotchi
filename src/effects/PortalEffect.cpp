@@ -101,6 +101,10 @@ void PortalEffect::drawBackground() {
     float camFovy = debugFovyDeg;
     float camDist = debugCamDist;
 
+    // Camera is fixed in world space (independent of objectPosition) --
+    // moving the device around the room via setObjectPosition() should look
+    // like the object stays planted while the camera's view frames it
+    // differently, not like the camera is chasing the object around.
     Vector3 camPos = {0.0f, 0.0f, camDist};
     Vector3 forward = {0.0f, 0.0f, -camDist};
     Vector3 right = {1.0f, 0.0f, 0.0f};
@@ -141,14 +145,14 @@ void PortalEffect::drawBackground() {
     // the device turns or spins.
     Vector3 membraneLocalOffset = {0.0f, 0.0f, RING_TUBE_THICKNESS * 0.3f};
     Vector3 membraneOffset = Vector3Transform(membraneLocalOffset, MatrixMultiply(ringSpin, ringYaw));
-    Vector3 membranePos = Vector3Scale(membraneOffset, objectScale);
+    Vector3 membranePos = Vector3Add(objectPosition, Vector3Scale(membraneOffset, objectScale));
     Matrix membraneTransform = MatrixMultiply(MatrixMultiply(ringScale, ringSpin), ringYaw);
 
     BeginMode3D(cam3d);
         baseModel.transform = baseTransform;
-        DrawModel(baseModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+        DrawModel(baseModel, objectPosition, 1.0f, WHITE);
         ringModel.transform = ringTransform;
-        DrawModel(ringModel, {0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+        DrawModel(ringModel, objectPosition, 1.0f, WHITE);
         membraneModel.transform = membraneTransform;
         DrawModel(membraneModel, membranePos, 1.0f, WHITE);
     EndMode3D();

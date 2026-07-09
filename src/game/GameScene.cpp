@@ -44,6 +44,11 @@ void GameScene::init() {
     };
 
     PlayerActor* player = new PlayerActor({300.0f, 480.0f}, groundY);
+    // Snap the camera to the player immediately -- followActor() alone only
+    // sets targetPosition, leaving the camera to lerp in from the
+    // constructor's default (scene center) over the first several frames.
+    getCamera()->followActor(player, 4.0f);
+    getCamera()->setPosition(player->getPosition());
     player->setInputHandler(getInputHandler());
     addActor(player);
 

@@ -5,6 +5,7 @@
 #include "PortalBaseMesh.hpp"
 #include "PortalEffect.hpp"
 #include "PortalShader.hpp"
+#include "VehicleMesh.hpp"
 #include "LitShader.hpp"
 #include "raymath.h"
 #include <cmath>
@@ -41,6 +42,18 @@ void Model3DTestScene::init() {
     portalBaseModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = whiteTex;
     portalBaseModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 
+    Mesh carMesh = BuildVehicleMesh(false, Color{180, 40, 40, 255});
+    carModel = LoadModelFromMesh(carMesh);
+    carModel.materials[0].shader = shader;
+    carModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = whiteTex;
+    carModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+
+    Mesh truckMesh = BuildVehicleMesh(true, Color{60, 42, 30, 255}, Color{110, 112, 116, 255});
+    truckModel = LoadModelFromMesh(truckMesh);
+    truckModel.materials[0].shader = shader;
+    truckModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = whiteTex;
+    truckModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+
     // Same "from behind-above, down-and-away at 45" light direction used in
     // SchoolSkyEffect, so this preview matches how it'll actually look there.
     light = CreateLight0(LIGHT_DIRECTIONAL, {0.0f, 4.0f, 6.0f}, {0.0f, -4.0f, -6.0f}, WHITE, shader);
@@ -62,7 +75,7 @@ void Model3DTestScene::update(float deltaTime) {
 
     if (IsKeyPressed(KEY_TAB)) {
         int next = (int)modelKind + 1;
-        if (next > (int)ModelKind::PORTAL_COMBINED) next = (int)ModelKind::JET;
+        if (next > (int)ModelKind::TRUCK) next = (int)ModelKind::JET;
         modelKind = (ModelKind)next;
     }
 
@@ -116,6 +129,8 @@ void Model3DTestScene::draw() {
         case ModelKind::PORTAL_RING:     label = "3D MODEL TEST: PORTAL RING"; break;
         case ModelKind::PORTAL_BASE:     label = "3D MODEL TEST: PORTAL BASE"; break;
         case ModelKind::PORTAL_COMBINED: label = "3D MODEL TEST: PORTAL (COMBINED, SPINNING)"; break;
+        case ModelKind::CAR:             label = "3D MODEL TEST: CAR"; break;
+        case ModelKind::TRUCK:           label = "3D MODEL TEST: TRUCK"; break;
         default: break;
     }
     DrawText(label, 20, 20, 28, RAYWHITE);
@@ -134,6 +149,14 @@ void Model3DTestScene::drawActiveModel() {
     }
     if (modelKind == ModelKind::PORTAL_BASE) {
         DrawModelEx(portalBaseModel, {0, 0, 0}, {0, 1, 0}, 0.0f, {1, 1, 1}, WHITE);
+        return;
+    }
+    if (modelKind == ModelKind::CAR) {
+        DrawModelEx(carModel, {0, 0, 0}, {0, 1, 0}, 0.0f, {1, 1, 1}, WHITE);
+        return;
+    }
+    if (modelKind == ModelKind::TRUCK) {
+        DrawModelEx(truckModel, {0, 0, 0}, {0, 1, 0}, 0.0f, {1, 1, 1}, WHITE);
         return;
     }
 
@@ -162,6 +185,8 @@ void Model3DTestScene::cleanup() {
     UnloadModel(portalRingModel);
     UnloadModel(portalBaseModel);
     UnloadModel(portalMembraneModel);
+    UnloadModel(carModel);
+    UnloadModel(truckModel);
     UnloadTexture(whiteTex);
     UnloadShader(shader);
     UnloadShader(portalShader);

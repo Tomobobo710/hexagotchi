@@ -293,20 +293,24 @@ void SceneCamera::updatePulse(float deltaTime) {
 }
 
 void SceneCamera::clampToBoundary() {
-    float hw = (GAME_W / zoom) * 0.5f;
-    float hh = (GAME_H / zoom) * 0.5f;
+    // Visible half-width/half-height, shrunk by a fixed inward safety
+    // margin (see BOUNDARY_SAFETY_INSET) -- this is the hard clamp every
+    // scene's setPosition()/zoomTo()/focus shot is subject to, using the
+    // TRUE boundary rect (not inflated by panMargin, which is drag-overscroll
+    // UX padding, a different concern -- see the field comment in the
+    // header). Without this, a story-camera focus shot near the scene edge
+    // (e.g. an actor placed near a wall) could center on empty space past
+    // the boundary, or leave no room for shake before revealing it.
+    float hw = (GAME_W / zoom) * 0.5f + BOUNDARY_SAFETY_INSET;
+    float hh = (GAME_H / zoom) * 0.5f + BOUNDARY_SAFETY_INSET;
 
-    // Inflate the world box so you can scroll panMargin past each edge into empty space.
-    float minX = boundaryMinX - panMargin, maxX = boundaryMaxX + panMargin;
-    float minY = boundaryMinY - panMargin, maxY = boundaryMaxY + panMargin;
-
-    float loX = minX + hw, hiX = maxX - hw;
+    float loX = boundaryMinX + hw, hiX = boundaryMaxX - hw;
     if (loX <= hiX) { if (position.x < loX) position.x = loX; if (position.x > hiX) position.x = hiX; }
-    else           { if (position.x < hiX) position.x = hiX; if (position.x > loX) position.x = loX; }
+    else           { position.x = (boundaryMinX + boundaryMaxX) * 0.5f; }
 
-    float loY = minY + hh, hiY = maxY - hh;
+    float loY = boundaryMinY + hh, hiY = boundaryMaxY - hh;
     if (loY <= hiY) { if (position.y < loY) position.y = loY; if (position.y > hiY) position.y = hiY; }
-    else           { if (position.y < hiY) position.y = hiY; if (position.y > loY) position.y = loY; }
+    else           { position.y = (boundaryMinY + boundaryMaxY) * 0.5f; }
 }
 
 float SceneCamera::lerp(float a, float b, float t) const {

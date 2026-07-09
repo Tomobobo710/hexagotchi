@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "TherapistWindowEffect.hpp"
 #include <vector>
 #include <string>
 
@@ -54,6 +55,14 @@ private:
     void drawTom(Vector2 pos);
     void drawTherapist(Vector2 pos);
     void drawOffice();
+
+    // The two windows baked into therapistbg.png are flat opaque blue
+    // rectangles with no depth -- this draws a little 3D world glimpsed
+    // through each one (trees on the left, a hill road with traffic on the
+    // right). See TherapistWindowEffect.hpp for why this is called directly
+    // (with computed screen rects) instead of through the normal
+    // background/foreground SceneEffect split.
+    TherapistWindowEffect* windowEffect = nullptr;
 };
 
 #endif // THERAPIST_OFFICE_SCENE_HPP

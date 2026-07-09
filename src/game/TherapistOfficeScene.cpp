@@ -1,6 +1,7 @@
 #include "TherapistOfficeScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
+#include "SceneDebugCamera.hpp"
 #include <cmath>
 
 static const Color TOM_COLOR      = {139, 172, 15, 255};
@@ -8,18 +9,22 @@ static const Color THERAPIST_COLOR = {22, 160, 133, 255};   // matches JS THERAP
 static const Color NARRATOR_COLOR  = {150, 150, 170, 255};
 
 TherapistOfficeScene::TherapistOfficeScene(DialogBox* sharedDialog)
-    : Scene(1280.0f, 720.0f, {26, 22, 20, 255}), dialog(sharedDialog) {
+    : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {
 }
 
 void TherapistOfficeScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
-    tom = new SceneActor({380.0f, 400.0f}, 48.0f, 64.0f);
+    windowEffect = new TherapistWindowEffect();
+    addEffect(windowEffect);
+
+    // Tom at 1/8 of the scene's width, therapist at 7/8 -- scene is 1280 wide.
+    tom = new SceneActor({160.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
     tom->setVisible(false);
     addActor(tom);
 
-    therapist = new SceneActor({620.0f, 390.0f}, 48.0f, 72.0f);
+    therapist = new SceneActor({1120.0f, 390.0f}, 48.0f, 72.0f);
     therapist->setTag("therapist");
     therapist->setVisible(false);
     addActor(therapist);
@@ -59,14 +64,34 @@ void TherapistOfficeScene::init() {
 void TherapistOfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
+    if (windowEffect) windowEffect->update(deltaTime);
+    updateSceneDebugCamera(windowEffect, getCamera(), deltaTime);
+
+    if (windowEffect) {
+        // Dial-in controls for the backdrop quad's center -- I/K: Y, J/L: X,
+        // U/O: Z. Temporary, for finding the right placement to bake into
+        // the scene as a fixed value once dialed in (roadOrigin/treeOrigin
+        // already went through this same process and are now baked
+        // constants in TherapistWindowEffect.hpp).
+        Vector3 origin = windowEffect->getBackdropOrigin();
+        float moveSpeed = 4.0f * deltaTime;
+        if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
+        if (IsKeyDown(KEY_I)) origin.y += moveSpeed;
+        if (IsKeyDown(KEY_J)) origin.x -= moveSpeed;
+        if (IsKeyDown(KEY_L)) origin.x += moveSpeed;
+        if (IsKeyDown(KEY_U)) origin.z -= moveSpeed;
+        if (IsKeyDown(KEY_O)) origin.z += moveSpeed;
+        windowEffect->setBackdropOrigin(origin);
+    }
+
     if (activeEvent < 0) {
         // Ambient: both sitting, small idle motion -- Tom fidgets slightly
         // more than the therapist, who stays composed/still.
         tomFidgetTimer += deltaTime * 2.5f;
         therapistNodTimer += deltaTime * 0.8f;
 
-        tom->setPosition({380.0f, 400.0f + sinf(tomFidgetTimer) * 3.0f});
-        therapist->setPosition({620.0f, 390.0f + sinf(therapistNodTimer) * 1.5f});
+        tom->setPosition({160.0f, 400.0f + sinf(tomFidgetTimer) * 3.0f});
+        therapist->setPosition({1120.0f, 390.0f + sinf(therapistNodTimer) * 1.5f});
 
         if (!getCamera()->isWideViewEnabled()) {
             getCamera()->setPosition(512.0f, 288.0f);
@@ -92,10 +117,24 @@ void TherapistOfficeScene::draw() {
     drawTom(tom->getPosition());
     drawTherapist(therapist->getPosition());
     EndMode2D();
+
+    // y=40, not 16 -- main.cpp draws a full-width HUD bar over y:0-32 on top
+    // of every scene's own draw(), so a readout at the usual y=16 offset
+    // would sit partly underneath it.
+    drawSceneDebugCameraReadout(windowEffect, 16, 40);
+
+    if (windowEffect) {
+        Vector3 origin = windowEffect->getBackdropOrigin();
+        const char* txt = TextFormat("backdropOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
+            origin.x, origin.y, origin.z);
+        DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
+        DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
+    }
 }
 
 void TherapistOfficeScene::cleanup() {
     Scene::cleanup();
+    windowEffect = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the event table -- reset so events doesn't accumulate

@@ -39,9 +39,19 @@ inline void drawSceneDebugCameraReadout(SceneEffect* effect, int x, int y) {
     if (!effect || !effect->hasDebugCamera()) return;
 
     const char* txt1 = TextFormat("cam dist: %.2f   (Numpad 8/2: closer/farther)", effect->getDebugCamDist());
-    DrawText(txt1, x, y, 18, Color{255, 220, 140, 255});
     const char* txt2 = TextFormat("pitch: %.1f deg (Numpad 9/3)   fov: %.1f deg (Numpad 7/1)",
         effect->getDebugPitch(), effect->getDebugFovy());
+
+    // Dark backing panel behind the text -- the warm yellow readout color
+    // reads fine over most scenes' dark backgrounds, but disappears entirely
+    // over pale backgrounds (e.g. TherapistOfficeScene's yellow walls)
+    // without something behind it.
+    int w1 = MeasureText(txt1, 18);
+    int w2 = MeasureText(txt2, 18);
+    int panelW = (w1 > w2 ? w1 : w2) + 12;
+    DrawRectangle(x - 6, y - 4, panelW, 22 + 22 + 4, Color{0, 0, 0, 160});
+
+    DrawText(txt1, x, y, 18, Color{255, 220, 140, 255});
     DrawText(txt2, x, y + 22, 18, Color{255, 220, 140, 255});
 }
 

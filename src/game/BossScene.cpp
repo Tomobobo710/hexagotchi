@@ -29,6 +29,11 @@ void BossScene::init() {
     };
 
     PlayerActor* player = new PlayerActor({300.0f, 440.0f}, groundY);
+    // Snap the camera to the player immediately -- followActor() alone only
+    // sets targetPosition, leaving the camera to lerp in from the
+    // constructor's default (scene center) over the first several frames.
+    getCamera()->followActor(player, 2.5f);
+    getCamera()->setPosition(player->getPosition());
     addActor(player);
 
     SceneActor* ground = new SceneActor({0.0f, groundY}, 2400.0f, 40.0f);

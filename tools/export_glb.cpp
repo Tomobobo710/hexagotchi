@@ -17,7 +17,7 @@
 // (see build-alt.sh / Makefile's LDFLAGS for the actual link line used here)
 
 #include "raylib.h"
-#include "PortalEffect.hpp"
+#include "VehicleMesh.hpp"
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -140,11 +140,11 @@ int main(int argc, char** argv) {
     SetTraceLogLevel(LOG_WARNING); // quiet raylib's usual per-frame INFO spam
     InitWindow(64, 64, "export_glb (temporary)");
 
-    Mesh ring = BuildRingFrameMesh(RING_RADIUS, RING_TUBE_THICKNESS, RING_SEGMENTS);
-    WriteGlb("build/export/portal_ring.glb", ring);
+    Mesh car = BuildVehicleMesh(false, Color{180, 40, 40, 255});
+    WriteGlb("build/export/vehicle_car.glb", car);
 
-    Mesh membrane = BuildMembraneMesh(RING_RADIUS - RING_TUBE_THICKNESS * 0.5f);
-    WriteGlb("build/export/portal_membrane.glb", membrane);
+    Mesh truck = BuildVehicleMesh(true, Color{200, 160, 40, 255});
+    WriteGlb("build/export/vehicle_truck.glb", truck);
 
     CloseWindow();
     return 0;

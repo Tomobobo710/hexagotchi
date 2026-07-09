@@ -50,6 +50,12 @@ void SceneManager::switchSceneImmediate(const std::string& sceneName) {
     currentSceneName = sceneName;
     currentScene->setSceneManager(this);
     currentScene->init();
+    // Zero-length update lets the scene's own ambient camera re-pinning
+    // (position/zoom set in update(), not init()) take effect before the
+    // first draw -- otherwise the first frame renders at the camera's raw
+    // constructor default (scene center, zoom 1.0) instead of its real
+    // resting framing.
+    currentScene->update(0.0f);
     transitioning = false;
     transitionTimer = 0.0f;
 }
@@ -90,6 +96,10 @@ void SceneManager::updateTransition(float deltaTime) {
         currentSceneName = nextSceneName;
         currentScene->setSceneManager(this);
         currentScene->init();
+        // Same reasoning as switchSceneImmediate() -- get the camera pinned
+        // to its real resting spot before the transition's second half
+        // starts fading the new scene in.
+        currentScene->update(0.0f);
     }
     if (transitionTimer >= transitionDuration) {
         nextScene = nullptr;

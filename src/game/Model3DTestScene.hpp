@@ -25,7 +25,7 @@ private:
     // exactly as PortalEffect draws it -- spinning ring, shimmering
     // membrane shader and all -- so a full combined check doesn't require
     // flying the actual OfficeScene.
-    enum class ModelKind { JET, PORTAL_RING, PORTAL_BASE, PORTAL_COMBINED };
+    enum class ModelKind { JET, PORTAL_RING, PORTAL_BASE, PORTAL_COMBINED, CAR, TRUCK };
     ModelKind modelKind = ModelKind::JET;
 
     Shader shader;
@@ -33,6 +33,8 @@ private:
     Model jetModel;
     Model portalRingModel;
     Model portalBaseModel;
+    Model carModel;
+    Model truckModel;
     Texture2D whiteTex = {0};
 
     // Membrane needs its own shader (unlit, animated) -- see PortalEffect,

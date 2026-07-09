@@ -8,6 +8,25 @@ static const Color TOM_COLOR     = {139, 172, 15, 255};
 static const Color BOSS_COLOR     = {142, 68, 173, 255};   // matches JS BOSS: '#8e44ad'
 static const Color NARRATOR_COLOR = {150, 150, 170, 255};
 
+// The portal's anchor in this scene's 2D world space (same coordinate space
+// as tom/boss's positions) -- where in the room it should visually sit.
+// PortalEffect's own 3D camera is otherwise entirely independent of this
+// scene's 2D SceneCamera, so without projecting this point through the 2D
+// camera every frame (see the exact-projection math in draw()), the portal
+// would either stay glued to screen-center or drift approximately as the 2D
+// camera pans/zooms during dialogue instead of staying pixel-locked to a
+// fixed spot in the room.
+static const Vector2 PORTAL_WORLD_2D = {60.0f, 460.0f};
+// Reference 3D camera framing -- a normal, undistorted view of the model at
+// its native ~1-3 unit scale (NOT solved from the 2D camera's raw zoom
+// value: the model's 3D units and the 2D scene's pixel units are entirely
+// different scales, so forcing "1 3D unit = 1 2D pixel" collapses fovy to
+// ~180 degrees and the model to a degenerate sliver). This framing defines
+// the "1x" pixels-per-3D-unit baseline (see PORTAL_BASE_PPU below); zoom
+// changes scale relative to that baseline instead of in raw pixel units.
+static const float PORTAL_CAM_DIST = 6.0f;
+static const float PORTAL_BASE_FOVY_DEG = 45.0f;
+
 OfficeScene::OfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {20, 22, 28, 255}), dialog(sharedDialog) {
 }
@@ -19,6 +38,11 @@ void OfficeScene::init() {
 
     portal = new PortalEffect();
     portal->init();
+    portal->setDebugCamDist(PORTAL_CAM_DIST);
+    portal->setObjectScale(0.6f);
+    // objectPosition/fovy are recomputed every frame in draw() from
+    // PORTAL_WORLD_2D and the live 2D camera (exact projection sync, not an
+    // initial placement) -- see the comment there.
 
     tom = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
@@ -137,7 +161,46 @@ void OfficeScene::draw() {
     // Portal/merge-machine: renders ON TOP of the background art but BEHIND
     // the actors, since the actor draws come after this. Needs its own 3D
     // mode (can't share the 2D camera), so the 2D pass is split around it.
-    if (portal) portal->drawBackground();
+    //
+    // PortalEffect's 3D camera is otherwise completely independent of this
+    // scene's 2D SceneCamera. To keep the portal pixel-locked to
+    // PORTAL_WORLD_2D as the 2D camera pans/zooms during dialogue (rather
+    // than approximately drifting), this derives the EXACT 3D placement/fovy
+    // that reproduces the 2D camera's own projection at the portal's depth,
+    // relative to PORTAL_CAM_DIST/PORTAL_BASE_FOVY_DEG's own natural
+    // pixels-per-3D-unit baseline (NOT the 2D camera's raw zoom value --
+    // the model's 3D units and the 2D scene's pixel units are unrelated
+    // scales, so equating them directly collapses fovy to ~180 degrees):
+    //
+    //   2D:  screenPos = (worldPos2D - target) * zoom2D + {W/2, H/2}
+    //   3D:  screenPos = objectPosition.xy * pixelsPerWorldUnit3D + {W/2, H/2}
+    //        (camera at Z=camDist looking at Z=0, object sitting at
+    //        Z=-camDist, i.e. exactly on the focal plane)
+    //   where pixelsPerWorldUnit3D = (H/2) / (camDist * tan(fovy/2))
+    //
+    // pixelsPerWorldUnit3D is scaled by zoom2D relative to its baseline value
+    // at PORTAL_BASE_FOVY_DEG (zoom2D == 1.0 reproduces that exact framing),
+    // fovy is solved to hit that scaled value, and objectPosition.xy is
+    // solved from the 2D screen position given that same value -- so the
+    // portal's on-screen size and position both track the 2D camera exactly.
+    if (portal) {
+        float halfHeightWorldBase = PORTAL_CAM_DIST * tanf(PORTAL_BASE_FOVY_DEG * 0.5f * DEG2RAD);
+        float basePixelsPerWorldUnit3D = ((float)GAME_H / 2.0f) / halfHeightWorldBase;
+
+        float zoom2D = getCamera()->getZoom();
+        float pixelsPerWorldUnit3D = basePixelsPerWorldUnit3D * zoom2D;
+        float halfHeightWorld = ((float)GAME_H / 2.0f) / pixelsPerWorldUnit3D;
+        float fovyDeg = 2.0f * atanf(halfHeightWorld / PORTAL_CAM_DIST) * RAD2DEG;
+        portal->setDebugFovy(fovyDeg);
+        portal->setDebugCamDist(PORTAL_CAM_DIST);
+
+        Vector2 screenPos = getCamera()->worldToScreen(PORTAL_WORLD_2D);
+        float objX =  (screenPos.x - (float)GAME_W / 2.0f) / pixelsPerWorldUnit3D;
+        float objY = -(screenPos.y - (float)GAME_H / 2.0f) / pixelsPerWorldUnit3D;
+        portal->setObjectPosition({objX, objY, -PORTAL_CAM_DIST});
+
+        portal->drawBackground();
+    }
 
     // Actors last, on top of the portal.
     BeginMode2D(cam);
@@ -230,32 +293,6 @@ void OfficeScene::focusCameraOn(int actorIndex, bool shake) {
 // --- Set dressing ---------------------------------------------------------
 void OfficeScene::drawOffice() {
     if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
-
-    // Open-plan "flex workspace" -- rows of identical hot-desks, mostly empty
-    Color deskColor = {70, 70, 85, 255};
-    Color deskDark = {50, 50, 62, 255};
-    for (int row = 0; row < 2; row++) {
-        for (int col = 0; col < 3; col++) {
-            float dx = 80.0f + col * 220.0f;
-            float dy = 90.0f + row * 100.0f;
-            DrawRectangle((int)dx, (int)dy, 160, 12, deskColor);
-            DrawRectangle((int)dx, (int)(dy + 12), 160, 4, deskDark);
-        }
-    }
-
-    // Glass-walled "boss office" on the right
-    Color glassFrame = {40, 40, 50, 255};
-    Color glassPane = {90, 100, 120, 120};
-    DrawRectangle(760, 60, 220, 300, glassFrame);
-    DrawRectangle(772, 72, 196, 276, glassPane);
-    // Small nameplate
-    DrawRectangle(790, 40, 100, 16, {30, 30, 38, 255});
-
-    // Motivational poster, because of course there is one
-    Color posterFrame = {60, 55, 40, 255};
-    Color posterBg = {200, 190, 160, 255};
-    DrawRectangle(60, 300, 100, 130, posterFrame);
-    DrawRectangle(68, 308, 84, 114, posterBg);
 }
 
 void OfficeScene::drawTom(Vector2 pos) {

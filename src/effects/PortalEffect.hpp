@@ -59,6 +59,14 @@ public:
     float getObjectYaw() const { return objectYawDeg; }
     void setObjectYaw(float deg) { objectYawDeg = deg; }
 
+    // World-space position of the whole assembled device (ring + pedestal +
+    // membrane), independent of the debug camera -- lets a scene place the
+    // portal off to one side of its 3D space (e.g. OfficeScene tucking it in
+    // the back-left corner) instead of it always sitting dead-center in
+    // front of the camera. Defaults to the origin, i.e. the old behavior.
+    Vector3 getObjectPosition() const { return objectPosition; }
+    void setObjectPosition(Vector3 pos) { objectPosition = pos; }
+
 private:
     Shader litShader;
     Light light;
@@ -81,6 +89,7 @@ private:
 
     float objectScale = 1.0f;
     float objectYawDeg = 0.0f;
+    Vector3 objectPosition = {0.0f, 0.0f, 0.0f};
 
     // Continuous flywheel-style spin around the ring's own facing axis (Z),
     // driven by `time` -- separate from the manual debug yaw above (which

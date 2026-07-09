@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 GPP=/c/devkitPro/msys2/usr/bin/g++.exe
 G=/c/devkitPro/msys2/usr/lib/gcc/x86_64-pc-cygwin/15.2.0
 SYS="-isystem $G/include/c++ -isystem $G/include/c++/x86_64-pc-cygwin -isystem $G/include/c++/backward -isystem $G/include -isystem /c/devkitPro/msys2/usr/include"
-INC="-I src/engine -I src/game -I src/effects -I raylib/src -I glfw/include -I rres/src"
+INC="-I src/engine -I src/game -I src/effects -I src/events -I src/flags -I raylib/src -I glfw/include -I rres/src"
 LD="-L raylib/src -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm"
 OBJ=build/desktop/obj
 
@@ -35,7 +35,7 @@ else
 fi
 
 mkdir -p "$OBJ"
-for f in src/main.cpp src/engine/*.cpp src/game/*.cpp src/effects/*.cpp; do
+for f in src/main.cpp src/engine/*.cpp src/game/*.cpp src/effects/*.cpp src/events/*.cpp; do
   n=$(basename "$f" .cpp)
   echo "  CC  $f"
   timeout 120 $GPP $SYS -std=c++17 $INC -c "$f" -o "$OBJ/$n.o"
