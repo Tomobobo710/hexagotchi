@@ -4,6 +4,8 @@
 #include "Scene.hpp"
 #include "Gotchi.hpp"
 #include "Button.hpp"
+#include "EventType.h"
+#include "EventBus.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -22,6 +24,9 @@ public:
 
     void addButtons();
 
+    // Set the event bus for merge button events
+    void setEventBus(EventBus* bus) { eventBus_ = bus; }
+
 private:
     Gotchi* gotchi = nullptr;
     std::string gotchiDir;
@@ -29,6 +34,7 @@ private:
     int frameCount_ = 0;    // Frame counter for animation
     std::vector<std::unique_ptr<Button>> buttons;
     std::string lastClickedButton_;  // Message to display when a button is clicked
+    EventBus* eventBus_ = nullptr;   // Event bus for merge button events
 
     // Button cooldown system
     std::map<std::string, float> buttonCooldowns_;
@@ -43,7 +49,7 @@ private:
     int actionOverlayMode_ = -1;
 
     void addNavigationButton(const std::string& label, const std::string& targetScene, float x, float y);
-    void addButton(const std::string& label, float x, float y);
+    void addButton(const std::string& label, float x, float y, bool isMergeButton);
 
     // Handle button clicks - routes to specific action handlers
     void handleGotchiAction(const std::string& action);
@@ -53,6 +59,9 @@ private:
 
     // Get the gotchi's screen rectangle for shader overlay
     Rectangle getGotchiScreenRect();
+
+    // Merge button callback - emits MergeRequested on the bus
+    void onMergeButtonClicked();
 };
 
 #endif // GOTCHI_SCENE_HPP

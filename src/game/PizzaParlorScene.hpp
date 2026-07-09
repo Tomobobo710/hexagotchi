@@ -41,6 +41,10 @@ public:
     // Starts scripted event `index` (0-based into the internal event table).
     // Safe to call while ambient; ignored if an event is already playing.
     void triggerEvent(int index);
+
+    // Scene override: calls triggerEvent
+    void triggerStoryEvent(int eventIndex) override;
+
     bool isPlayingEvent() const;
 
 private:
