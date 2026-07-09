@@ -24,6 +24,40 @@ Vector2 HexCoords::toPixel(float hexSize) const {
     return Vector2{xOffset, yOffset};
 }
 
+// Inverse: convert pixel coordinates to hex coordinates
+HexCoords HexCoords::fromPixel(Vector2 p, float hexSize) {
+    const float SQRT3 = 1.7320508f;
+    const float HEX_FILL = 1.10f;
+
+    // Get row first (y is independent of q offset)
+    // y = 0.75 * height * r = 0.75 * 2*S * r = 1.5 * S * r
+    float r = p.y / (1.5f * hexSize);
+
+    // x = width/HEX_FILL * (q + 0.5*(r & 1))
+    // For rounding purposes, we use the continuous approximation first:
+    // x ≈ width/HEX_FILL * (q + 0.5*r)   [treating r&1 as r for continuous]
+    // q = x * HEX_FILL/width - 0.5*r
+    float width = SQRT3 * hexSize;
+    float q_float = p.x * HEX_FILL / width - 0.5f * r;
+
+    // Round to nearest integer hex coordinates
+    int q_rounded = static_cast<int>(std::round(q_float));
+    int r_rounded = static_cast<int>(std::round(r));
+
+    // Now verify: the actual x uses (r & 1), not r
+    // If r is even, offset should be 0; if r is odd, offset should be 0.5
+    // We need to adjust q based on this
+
+    // Get the true row parity from the rounded r
+    int r_parity = r_rounded & 1;
+
+    // Recompute q with correct parity
+    float q_true = p.x * HEX_FILL / width - 0.5f * (float)r_parity;
+    int q_final = static_cast<int>(std::round(q_true));
+
+    return HexCoords(q_final, r_rounded);
+}
+
 HexTile::HexTile(HexCoords coords, TileType* tileType, float hexSize)
     : SceneActor({0, 0}, SQRT3 * hexSize, 2.0f * hexSize),
       coords(coords), tileType(tileType), hexSize(hexSize) {

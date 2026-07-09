@@ -305,7 +305,8 @@ void CityWindowEffect::drawBackground() {
     // tilt the camera). The lens-shift offsets above are computed first,
     // then this rotation is applied to the resulting look vector as a whole.
     Vector3 camPos = {0.0f, 0.0f, camDist};
-    Vector3 forward = Vector3Subtract((Vector3){targetX, targetY, 0.0f}, camPos);
+    Vector3 targetPos = {targetX, targetY, 0.0f};
+    Vector3 forward = Vector3Subtract(targetPos, camPos);
     Vector3 right = {1.0f, 0.0f, 0.0f};
     forward = Vector3RotateByAxisAngle(forward, right, debugPitchDeg * DEG2RAD);
 

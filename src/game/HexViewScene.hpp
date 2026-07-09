@@ -3,6 +3,9 @@
 
 #include "Scene.hpp"
 #include "HexWorld.hpp"
+#include "Gotchi.hpp"
+#include "GotchiStats.hpp"
+#include "GotchiMood.hpp"
 #include <memory>
 
 class PauseMenuOverlay;
@@ -26,10 +29,23 @@ private:
 
 private:
     HexWorld* world;
+    Gotchi* gotchi;
     std::unique_ptr<PauseMenuOverlay> pauseMenu;
 
     // Camera panning state
     bool cameraPanning;
+
+    // World config (stored after init)
+    float hexSize_;
+
+    // Fallback vitals and mood for Gotchi (used if no gameState available)
+    GotchiStats defaultStats_;
+    GotchiMood defaultMood_;
+
+    // Visual probe for click target
+    bool  hasClickMarker_ = false;
+    HexCoords clickMarkerHex_{0, 0};
+    Vector2   clickMarkerWorld_{0, 0};
 };
 
 #endif

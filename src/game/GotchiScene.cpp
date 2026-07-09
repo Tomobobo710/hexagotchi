@@ -77,56 +77,55 @@ void main() {
 
 // Web shader - #version 300 es
 // Identical body to desktop, only header differs
-static const char* ACTION_OVERLAY_FS_WEB = R"(#version 300 es
-precision mediump float;
+static const char* ACTION_OVERLAY_FS_WEB = R"(#version 100
+    precision mediump float;
 
-in vec2 fragTexCoord;
-in vec4 fragColor;
-out vec4 finalColor;
+    varying vec2 fragTexCoord;   // was: in
+    varying vec4 fragColor;      // was: in
+    // (removed: out vec4 finalColor;)
 
-uniform int uMode;
-uniform float uProgress;
-uniform float uTime;
-uniform vec2 uResolution;
+    uniform int uMode;
+    uniform float uProgress;
+    uniform float uTime;
+    uniform vec2 uResolution;
 
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-void main() {
-    // Flip Y because fragTexCoord has Y=0 at bottom in OpenGL/WebGL
-    vec2 uv = fragTexCoord;
-    uv.y = 1.0 - uv.y;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
+    void main() {
+        vec2 uv = fragTexCoord;
+        uv.y = 1.0 - uv.y;
+        float aspect = uResolution.x / max(uResolution.y, 1.0);
 
-    float p = clamp(uProgress, 0.0, 1.0);
-    float ease = sin(p * 3.14159265);
+        float p = clamp(uProgress, 0.0, 1.0);
+        float ease = sin(p * 3.14159265);
 
-    vec3  col  = vec3(0.0);
-    float mask = 0.0;
+        vec3  col  = vec3(0.0);
+        float mask = 0.0;
 
-    if (uMode == 0) {
-        float lines = step(0.75, sin(uv.y * 24.0 + uTime * 6.0) * 0.5 + 0.5);
-        col = vec3(0.75, 0.9, 1.0); mask = lines * 0.7;
-    } else if (uMode == 1) {
-        vec2 g = floor(uv * 12.0);
-        float tw = sin(uTime * 4.0 + hash(g) * 6.2831) * 0.5 + 0.5;
-        mask = step(0.9, hash(g)) * tw; col = vec3(1.0, 0.95, 0.6);
-    } else if (uMode == 2) {
-        vec2 gp = uv * vec2(14.0, 18.0); gp.y += uTime * 4.0;
-        mask = step(0.93, hash(floor(gp))); col = vec3(0.85, 0.6, 0.3);
-    } else if (uMode == 3) {
-        float d = distance(uv, vec2(0.5));
-        mask = smoothstep(0.06, 0.0, abs(d - fract(uTime * 0.5) * 0.5)) * 0.8;
-        col = vec3(1.0, 0.7, 0.65);
-    } else if (uMode == 4) {
-        float colId = floor(uv.x * 10.0);
-        float speed = 0.6 + hash(vec2(colId, 0.0)) * 0.8;
-        float y = fract(uv.y + uTime * speed * 0.5 + hash(vec2(colId, 3.0)));
-        float streak = smoothstep(0.0, 0.08, y) * smoothstep(0.30, 0.10, y);
-        mask = streak * step(0.5, hash(vec2(colId, 7.0))); col = vec3(0.4, 0.7, 1.0);
+        if (uMode == 0) {
+            float lines = step(0.75, sin(uv.y * 24.0 + uTime * 6.0) * 0.5 + 0.5);
+            col = vec3(0.75, 0.9, 1.0); mask = lines * 0.7;
+        } else if (uMode == 1) {
+            vec2 g = floor(uv * 12.0);
+            float tw = sin(uTime * 4.0 + hash(g) * 6.2831) * 0.5 + 0.5;
+            mask = step(0.9, hash(g)) * tw; col = vec3(1.0, 0.95, 0.6);
+        } else if (uMode == 2) {
+            vec2 gp = uv * vec2(14.0, 18.0); gp.y += uTime * 4.0;
+            mask = step(0.93, hash(floor(gp))); col = vec3(0.85, 0.6, 0.3);
+        } else if (uMode == 3) {
+            float d = distance(uv, vec2(0.5));
+            mask = smoothstep(0.06, 0.0, abs(d - fract(uTime * 0.5) * 0.5)) * 0.8;
+            col = vec3(1.0, 0.7, 0.65);
+        } else if (uMode == 4) {
+            float colId = floor(uv.x * 10.0);
+            float speed = 0.6 + hash(vec2(colId, 0.0)) * 0.8;
+            float y = fract(uv.y + uTime * speed * 0.5 + hash(vec2(colId, 3.0)));
+            float streak = smoothstep(0.0, 0.08, y) * smoothstep(0.30, 0.10, y);
+            mask = streak * step(0.5, hash(vec2(colId, 7.0))); col = vec3(0.4, 0.7, 1.0);
+        }
+
+        gl_FragColor = vec4(col, mask * ease * 0.85);   // was: finalColor
     }
-
-    finalColor = vec4(col, mask * ease * 0.85);
-}
 )";
 
 GotchiScene::GotchiScene()
@@ -494,9 +493,9 @@ void GotchiScene::draw() {
         SetShaderValue(actionShader_, locTime_, &t, SHADER_UNIFORM_FLOAT);
         SetShaderValue(actionShader_, locResolution_, &res, SHADER_UNIFORM_VEC2);
         DrawTexturePro(whitePixel_,
-                       (Rectangle){0, 0, 1, 1},   // full source of the 1x1 tex -> UVs 0..1 across dest
-                       r,                          // dest = gotchi screen rect
-                       (Vector2){0, 0}, 0.0f, WHITE);
+                       {0, 0, 1, 1},   // full source of the 1x1 tex -> UVs 0..1 across dest
+                       r,              // dest = gotchi screen rect
+                       {0, 0}, 0.0f, WHITE);
         EndShaderMode();
     }
 }

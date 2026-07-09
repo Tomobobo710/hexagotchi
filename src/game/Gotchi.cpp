@@ -23,7 +23,10 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
       lastUpdate_(0.0f),
       wanderTimer_(0.0f),
       currentAction_("idle"),
-      actionTimer_(0.0f) {
+      actionTimer_(0.0f),
+      hexSize_(64.0f),  // Default hex size, can be set by scene
+      pathIndex_(0),
+      followingPath_(false) {
     // Set physics properties
     setGravityEnabled(false);
     setFriction(0.95f);
@@ -66,6 +69,9 @@ void Gotchi::update(float deltaTime) {
     if (dead_) {
         return;
     }
+
+    TraceLog(LOG_WARNING, "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f)",
+             followingPath_ ? 1 : 0, pathIndex_, position.x, position.y);
 
     // Update timing
     tickTimer_ += deltaTime;
@@ -122,10 +128,56 @@ void Gotchi::update(float deltaTime) {
         }
     }
 
-    // Move towards target if set
+    // Path-based movement (higher priority than wander/target)
+    if (followingPath_ && !currentPath_.empty()) {
+        updatePathMovement(deltaTime);
+    }
+
+    // Move towards target if set (fallback for non-path movement)
     if (targetPosition_.x != 0 || targetPosition_.y != 0) {
         moveToTarget(deltaTime);
     }
+}
+
+void Gotchi::updatePathMovement(float deltaTime) {
+    TraceLog(LOG_WARNING,
+        "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f) dead=%d sleeping=%d pathN=%d",
+        followingPath_ ? 1 : 0, pathIndex_, position.x, position.y,
+        dead_ ? 1 : 0, sleeping_ ? 1 : 0, (int)currentPath_.size());
+
+    if (dead_ || sleeping_) return;
+    if (currentPath_.empty()) { followingPath_ = false; return; }
+    if (pathIndex_ >= static_cast<int>(currentPath_.size())) {
+        // Path complete - snap to exact center of final hex and stop
+        HexCoords finalHex = currentPath_[currentPath_.size() - 1];
+        position = finalHex.toPixel(hexSize_);
+        followingPath_ = false;
+        setAction("idle");
+        velocity = {0, 0};
+        return;
+    }
+
+    Vector2 targetPos = currentPath_[pathIndex_].toPixel(hexSize_);
+    Vector2 delta = { targetPos.x - position.x, targetPos.y - position.y };
+    float distance = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+
+    float step = GOTCHI_MOVE_SPEED * 0.8f * deltaTime;  // pixels this frame
+
+    if (distance <= step || distance <= 1.0f) {
+        // Snap to exact hex center; advance to the next hex next frame.
+        position = targetPos;
+        pathIndex_++;
+        if (pathIndex_ >= static_cast<int>(currentPath_.size())) {
+            followingPath_ = false;
+            setAction("idle");
+        }
+    } else {
+        position.x += (delta.x / distance) * step;
+        position.y += (delta.y / distance) * step;
+        setScale({ delta.x >= 0.0f ? 1.0f : -1.0f, 1.0f });  // face travel direction
+        setAction("walk");
+    }
+    velocity = {0, 0};  // do not fight or depend on base physics
 }
 
 void Gotchi::updateStats(float ticks) {
@@ -194,8 +246,36 @@ void Gotchi::updateStats(float ticks) {
 void Gotchi::draw() {
     if (!visible) return;
 
-    // Call parent draw (handles texture and animation)
-    SceneActor::draw();
+    float w = width * std::fabs(scale.x);
+    float h = height * std::fabs(scale.y);
+    Rectangle dest = { position.x - w * 0.5f, position.y - h * 0.5f, w, h };  // centered
+
+    const Texture2D* drawTexture = nullptr;
+    Rectangle src = { 0.0f, 0.0f, 0.0f, 0.0f };   // always initialized
+
+    if (animating && animIsFrameList) {
+        if (!animFrames.empty()) {
+            int idx = currentFrame % static_cast<int>(animFrames.size());  // bounds-safe
+            if (idx < 0) idx = 0;
+            drawTexture = &animFrames[idx];
+            src = { 0.0f, 0.0f, (float)drawTexture->width, (float)drawTexture->height };
+        }
+    } else if (animating) {
+        drawTexture = &texture;
+        src = { (float)(currentFrame * frameWidth), 0.0f, (float)frameWidth, (float)frameHeight };
+    } else if (texture.id != 0) {
+        drawTexture = &texture;
+        src = { 0.0f, 0.0f, (float)texture.width, (float)texture.height };
+    }
+
+    if (drawTexture && drawTexture->id != 0) {
+        if (scale.x < 0.0f) src.width  = -src.width;   // horizontal flip
+        if (scale.y < 0.0f) src.height = -src.height;  // (harmless; y flip unused)
+        DrawTexturePro(*drawTexture, src, dest, { 0.0f, 0.0f }, 0.0f, color);
+    } else {
+        // No valid texture/frame yet: centered placeholder, and do NOT fall through.
+        DrawRectangleV({ dest.x, dest.y }, { w, h }, color);
+    }
 
     // Draw debug info if enabled
     if (debugMode_) {
@@ -454,6 +534,17 @@ void Gotchi::setAction(const std::string& action) {
             setAnimationFrames(animMove_, 0.1f, true);
             play();
         }
+    } else if (action == "walk") {
+        // Explicit walk animation for path following
+        clearAnimation();
+        if (!animWalk_.empty()) {
+            setAnimationFrames(animWalk_, 0.15f, true);
+            play();
+        } else if (!animMove_.empty()) {
+            // Fallback to move animation
+            setAnimationFrames(animMove_, 0.15f, true);
+            play();
+        }
     } else if (action == "eat") {
         // Map 'eat' to 'bounce' animation (mouth movement)
         clearAnimation();
@@ -562,6 +653,20 @@ std::string Gotchi::serialize() const {
 void Gotchi::deserialize(const std::string& data) {
     // Deserialize Gotchi state from save file
     // Placeholder for deserialization
+}
+
+HexCoords Gotchi::getCurrentHex() const {
+    // Use the canonical inverse from HexCoords
+    return HexCoords::fromPixel(position, hexSize_);
+}
+
+void Gotchi::setPath(const std::vector<HexCoords>& path) {
+    currentPath_ = path;
+    pathIndex_ = 0;
+    followingPath_ = true;
+
+    // Start with walk animation
+    setAction("walk");
 }
 
 void Gotchi::setDebugMode(bool debug) {

@@ -56,6 +56,7 @@ if(RBUILD_DESKTOP)
     set(TEST_GAME_SRCS
         src/game/MergeController.cpp
         src/game/StorySequencer.cpp
+        src/game/GotchiSim.cpp
         src/game/GotchiStats.cpp
         src/game/GotchiMood.cpp
     )
@@ -72,6 +73,17 @@ if(RBUILD_DESKTOP)
     target_include_directories(test_merge_controller PRIVATE . src src/engine src/game src/events src/flags raylib/src)
     target_link_libraries(test_merge_controller PRIVATE raylib glfw)
 
+    # Test executable for GotchiSim
+    set(GOTCHI_SIM_TEST_SRCS
+        tests/TestGotchiSim.cpp
+        ${TEST_ENGINE_SRCS}
+        ${TEST_EVENT_SRCS}
+        ${TEST_GAME_SRCS}
+    )
+    add_executable(test_gotchi_sim ${GOTCHI_SIM_TEST_SRCS})
+    target_include_directories(test_gotchi_sim PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+    target_link_libraries(test_gotchi_sim PRIVATE raylib glfw)
+
     # Test executable for StorySequencer
     add_executable(test_story_sequencer
         tests/TestStorySequencer.cpp
@@ -82,20 +94,32 @@ if(RBUILD_DESKTOP)
     target_include_directories(test_story_sequencer PRIVATE . src src/engine src/game src/events src/flags raylib/src)
     target_link_libraries(test_story_sequencer PRIVATE raylib glfw)
 
-    # Test executable for SaveManager (keep existing)
-    # (This test requires additional files that are not in the test source list)
-    # Build test executable if test sources exist
-    if(GRIME_TEST_SRCS)
-        add_executable(tests ${GRIME_TEST_SRCS})
-        target_include_directories(tests PRIVATE
-            src
-            raylib/src
-            rres/src
-        )
-        # Include the grime shader source for the test
-        target_sources(tests PRIVATE ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp)
-        target_link_libraries(tests PRIVATE raylib glfw)
-    endif()
+    # Test executable for SaveManager
+    set(SAVE_TEST_SRCS
+        tests/TestSaveManager.cpp
+        src/engine/SaveManager.cpp
+        src/engine/GameState.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
+    )
+    add_executable(test_save_manager ${SAVE_TEST_SRCS})
+    target_include_directories(test_save_manager PRIVATE . src src/engine src/game raylib/src rres/src)
+    target_link_libraries(test_save_manager PRIVATE raylib glfw)
+
+    # Test executable for SaveWiring (includes SaveManager tests)
+    set(SAVE_WIRING_TEST_SRCS
+        tests/TestSaveWiring.cpp
+        src/engine/SaveManager.cpp
+        src/engine/GameState.cpp
+        src/game/GotchiStats.cpp
+        src/game/GotchiMood.cpp
+        src/events/EventBus.cpp
+    )
+    add_executable(test_save_wiring ${SAVE_WIRING_TEST_SRCS})
+    target_include_directories(test_save_wiring PRIVATE . src src/engine src/game src/events src/flags raylib/src rres/src)
+    target_link_libraries(test_save_wiring PRIVATE raylib glfw)
+
+    # Test executable for MergeController
 
 
     # Build raylib as a static library
@@ -232,8 +256,11 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/AssetPack.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/GameState.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/HexPathFinder.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexTile.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/HexWorld.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/SaveManager.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Scene.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneActor.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneCamera.cpp
@@ -250,6 +277,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/HexBoard.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexViewScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/MergeController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PizzaParlorScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
@@ -258,6 +286,8 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/GotchiSim.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
@@ -268,11 +298,16 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/LitShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/MergeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
-        ${CMAKE_SOURCE_DIR}/src/game/ScenePreviewScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalEffect.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalBaseMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalRingMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/PortalShader.cpp
+        ${CMAKE_SOURCE_DIR}/src/events/EventBus.cpp
     )
     add_custom_target(game-web ALL
-        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
+        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/src/events -I ${CMAKE_SOURCE_DIR}/src/flags -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
         DEPENDS raylib-web ${WEB_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )

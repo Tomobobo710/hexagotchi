@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 
+// Include HexTile for HexCoords definition
+#include "HexTile.hpp"
+
 // Forward declaration
 class GameState;
 
@@ -57,6 +60,15 @@ public:
     void moveToTarget(float deltaTime);
     void wander(float deltaTime);
 
+    // Path-based movement
+    HexCoords getCurrentHex() const;
+    void setPath(const std::vector<HexCoords>& path);
+    void updatePathMovement(float deltaTime);
+
+    // Hex grid configuration (set by scene)
+    void setHexSize(float size) { hexSize_ = size; }
+    float getHexSize() const { return hexSize_; }
+
     // Animation control
     void setAction(const std::string& action);
     void updateAnimation(float deltaTime);
@@ -64,6 +76,11 @@ public:
     // Texture loading helpers - public for scene initialization
     bool loadAnimationFrames(const std::string& basePath);
     void unloadAnimations();
+
+    // Animation frame count accessors (for debug/probe)
+    size_t animIdleCount() const { return animIdle_.size(); }
+    size_t animWalkCount() const { return animWalk_.size(); }
+    size_t animMoveCount() const { return animMove_.size(); }
 
     // Tick-based updates (private)
     void updateStats(float ticks);
@@ -112,6 +129,15 @@ private:
     std::vector<Texture2D> animBounce_;    // available animation
     std::vector<Texture2D> animHurt_;      // available animation
     std::vector<Texture2D> animWalk_;      // available animation
+
+private:
+    // Path-based movement state
+    std::vector<HexCoords> currentPath_;
+    int pathIndex_;
+    bool followingPath_;
+
+    // Hex grid configuration (set by scene)
+    float hexSize_;
 };
 
 #endif // GOTCHI_HPP
