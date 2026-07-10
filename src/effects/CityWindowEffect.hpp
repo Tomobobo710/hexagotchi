@@ -92,7 +92,7 @@ private:
     // Train: a dark box with lit windows that races across close to the
     // glass (small Z, near the camera) on a slow repeating timer.
     float trainTimer = 0.0f;
-    float trainInterval = 2.0f;   // TRAINDBG temp
+    float trainInterval = 14.0f;   // seconds of quiet between passes
     bool trainActive = false;
     float trainT = 0.0f;           // 0..1 progress across its pass
     float trainDuration = 2.8f;    // seconds for a car to cross the full X path
