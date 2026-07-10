@@ -92,10 +92,18 @@ void SchoolScene::update(float deltaTime) {
         }
     }
 
-    if (activeScenario >= 0 && dialog->isVisible() && dialog->isFinished()) {
+    if (activeScenario >= 0 && dialog->isVisible()) {
         SceneInputHandler* ih = getInputHandler();
-        if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
-            advanceLine();
+        // Check for skip action (jump to end of scenario)
+        if (ih && ih->isActionPressed(INPUT_ACTION_SKIP)) {
+            endScenario();
+            return;
+        }
+        // Check for normal advance (next line)
+        if (dialog->isFinished()) {
+            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
+                advanceLine();
+            }
         }
     }
 }

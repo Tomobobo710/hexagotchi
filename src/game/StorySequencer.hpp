@@ -39,6 +39,9 @@ public:
     // scenario (not just its current dialog line) has actually finished.
     void update(float dt);
 
+    // Skip the current step and move to the next one (or finish if last step)
+    void skipCurrentStep();
+
 private:
     // Phases of one sequence playthrough, one merge's worth of content --
     // position in the sequence (start vs end), NOT which MergeScene::Mode

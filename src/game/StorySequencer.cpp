@@ -182,6 +182,15 @@ void StorySequencer::onStepFinished() {
     }
 }
 
+void StorySequencer::skipCurrentStep() {
+    if (phase_ == Phase::PlayingStep && activeStepIndex_ >= 0) {
+        if (DEBUG_LOG) {
+            std::cout << "[StorySequencer] Skipping current step " << activeStepIndex_ << std::endl;
+        }
+        onStepFinished();
+    }
+}
+
 void StorySequencer::finishSequence() {
     if (DEBUG_LOG) {
         std::cout << "[StorySequencer] Sequence completed" << std::endl;

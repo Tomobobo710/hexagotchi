@@ -17,6 +17,7 @@ const std::string INPUT_ACTION_INTERACT = "interact";
 const std::string INPUT_ACTION_PAUSE = "pause";
 const std::string INPUT_ACTION_ACCEPT = "accept";
 const std::string INPUT_ACTION_CANCEL = "cancel";
+const std::string INPUT_ACTION_SKIP = "skip";
 
 // Mouse button actions
 const std::string INPUT_ACTION_MOUSE_LEFT = "mouse_left";
@@ -33,6 +34,7 @@ const int INPUT_DEFAULT_INTERACT = KEY_E;
 const int INPUT_DEFAULT_PAUSE = KEY_P;
 const int INPUT_DEFAULT_ACCEPT = KEY_ENTER;
 const int INPUT_DEFAULT_CANCEL = KEY_ESCAPE;
+const int INPUT_DEFAULT_SKIP = KEY_SPACE;
 
 class SceneInputHandler {
 public:

@@ -184,6 +184,11 @@ void UpdateDrawFrame() {
     }
     if (storySequencer) {
         storySequencer->update(dt);
+        // Handle skip action - skip current story step (for testing)
+        // Key S works in any scene when story sequencer is active
+        if (IsKeyPressed(KEY_S)) {
+            storySequencer->skipCurrentStep();
+        }
     }
     if (gotchiSim) {
         gotchiSim->update(dt);
@@ -193,6 +198,11 @@ void UpdateDrawFrame() {
     }
 
     dialog->update(dt);
+
+    // Update dialog box click state for skip button
+    bool mousePressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool mouseReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+    dialog->updateClickState(mousePressed, mouseReleased);
 
     BeginTextureMode(gameTarget);
         ClearBackground(BLACK);
