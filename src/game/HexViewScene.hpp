@@ -66,6 +66,9 @@ private:
 
     // Back button
     std::unique_ptr<Button> backButton_;
+
+    // Vitals display
+    void drawVitals() const;
 };
 
 #endif

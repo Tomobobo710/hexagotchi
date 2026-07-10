@@ -9,6 +9,7 @@
 #include "PauseMenuOverlay.hpp"
 #include "Hotbar.hpp"
 #include <cmath>
+#include <string>
 
 // ============================================================================
 // HexViewScene implementation
@@ -170,6 +171,9 @@ void HexViewScene::draw() {
     if (hotbar_) {
         hotbar_->draw();
     }
+
+    // Draw vitals at top right
+    drawVitals();
 
     // Draw instructions
     DrawText("HEX VIEW", 14, 8, 18, Color{180, 180, 255, 255});
@@ -380,5 +384,80 @@ void HexViewScene::onBackButtonClicked() {
     if (getSceneManager()) {
         SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
         mgr->switchScene("gotchi");
+    }
+}
+
+// ============================================================================
+// Vitals Display Implementation
+// ============================================================================
+
+void HexViewScene::drawVitals() const {
+    if (!gotchi) return;
+
+    const GotchiStats& stats = gotchi->getStats();
+
+    // Vitals to display: Hunger, Thirst, Hygiene, Sleep
+    struct Vital {
+        std::string name;
+        float value;
+        Color color;
+    };
+
+    // Get normalized values (0-1 range) and create vital records
+    // Lower is better for Hunger, Thirst, Hygiene (need to invert for display)
+    // Higher sleep debt means more sleep needed (higher = worse)
+    float hunger = stats.getHunger();      // 0=full, 100=starving
+    float thirst = stats.getThirst();      // 0=hydrated, 100=dehydrated
+    float hygiene = stats.getHygiene();    // 0=clean, 100=dirty (higher is worse)
+    float sleep = stats.getSleep();        // 0=rested, 100=exhausted
+
+    std::vector<Vital> vitals = {
+        {"Hunger", hunger, Color{255, 160, 0, 255}},      // Orange
+        {"Thirst", thirst, Color{0, 160, 255, 255}},      // Blue
+        {"Hygiene", hygiene, Color{0, 200, 100, 255}},    // Green
+        {"Sleep", sleep, Color{160, 0, 255, 255}}         // Purple
+    };
+
+    // Position at top right
+    float x = GAME_W - 140.0f;  // Right side
+    float y = 40.0f;            // Near top
+    float barWidth = 120.0f;
+    float barHeight = 8.0f;
+    float spacing = 16.0f;
+
+    // Draw title
+    DrawText("VITALS", static_cast<int>(x - 35), static_cast<int>(y - 20), 12, WHITE);
+
+    // Draw each vital bar
+    for (size_t i = 0; i < vitals.size(); i++) {
+        float vitalY = y + i * spacing;
+        const Vital& vital = vitals[i];
+
+        // Convert 0-100 to 0-1 for bar
+        float normalized = vital.value / 100.0f;
+
+        // Background (empty bar)
+        DrawRectangle(static_cast<int>(x), static_cast<int>(vitalY),
+                      static_cast<int>(barWidth), static_cast<int>(barHeight),
+                      Color{40, 40, 40, 200});
+
+        // Foreground (filled bar) - red for high values (bad)
+        // Use color that indicates severity (green = good, red = bad)
+        // For these vitals, higher = worse, so red = bad
+        Color barColor = Color{200, 50, 50, 255};  // Reddish for "needs attention"
+        if (vital.value < 30) {
+            barColor = Color{50, 200, 50, 255};    // Green for healthy
+        } else if (vital.value < 60) {
+            barColor = Color{200, 200, 50, 255};   // Yellow for moderate
+        }
+
+        DrawRectangle(static_cast<int>(x), static_cast<int>(vitalY),
+                      static_cast<int>(barWidth * normalized), static_cast<int>(barHeight),
+                      barColor);
+
+        // Label with percentage
+        std::string label = vital.name + " " + std::to_string(static_cast<int>(vital.value)) + "%";
+        DrawText(label.c_str(), static_cast<int>(x - 75), static_cast<int>(vitalY - 1),
+                 10, Color{200, 200, 200, 255});
     }
 }
