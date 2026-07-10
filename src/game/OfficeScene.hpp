@@ -3,28 +3,24 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "CharacterRegistry.hpp"
 #include "PortalEffect.hpp"
 #include <vector>
 #include <string>
 
 struct OfficeLine {
-    std::string speaker;
+    CharacterId speaker;
     std::string text;
-    Color speakerColor;
     int focusActor;   // 0 = Tom, 1 = Larry, -1 = none
     bool shake;
+    PortraitEmotion emotion = PortraitEmotion::Mid;
 
-    // Marks this line as the character's introduction -- playLine() shows
-    // firstTimeName above the dialog box instead of speaker, just for this
-    // one line (e.g. "Larry (Tom's boss)" instead of "Larry"). Set this on
-    // whichever line in the scenario is that character's actual first line
-    // -- there's no automatic first-appearance tracking.
-    bool firstTime = false;
+    // Marks this line as the character's introduction -- playLine() passes
+    // firstTimeName to DialogBox::setCharacter() as the name-plate override,
+    // just for this one line (e.g. "Larry (Tom's boss)" instead of "Larry").
+    // Set this on whichever line in the scenario is that character's actual
+    // first line -- there's no automatic first-appearance tracking.
     std::string firstTimeName;
-
-    // Portrait emotion (0=sad, 1=mid, 2=happy) for whichever actor
-    // focusActor names.
-    int emotion = 1;
 };
 
 // Datatek Solutions -- ported from the JS prototype's "Performance Review"
@@ -61,14 +57,11 @@ private:
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     // Full-body pose art, [0]=sad [1]=mid [2]=happy -- loaded via
-    // CharacterRegistry (see init()).
+    // CharacterRegistry (see init()). Dialog-box portraits are no longer
+    // loaded/owned here at all -- DialogBox::setCharacter() loads and
+    // caches those itself.
     Texture2D tomPoses[3] = {};
     Texture2D larryPoses[3] = {};
-
-    // Dialog-box portraits, same [0]=sad [1]=mid [2]=happy indexing --
-    // loaded via CharacterRegistry (see init()).
-    Texture2D tomPortraits[3] = {};
-    Texture2D larryPortraits[3] = {};
 
     float tomWobbleTimer = 0.0f;
 

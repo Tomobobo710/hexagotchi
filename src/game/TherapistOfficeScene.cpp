@@ -5,10 +5,6 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
-static const Color JUDY_COLOR     = CharacterRegistry::get(CharacterId::Judy).nameColor;
-static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
-
 TherapistOfficeScene::TherapistOfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {
 }
@@ -39,40 +35,33 @@ void TherapistOfficeScene::init() {
     judyPoses[1] = CharacterRegistry::loadPose(CharacterId::Judy, PoseEmotion::Mid);
     judyPoses[2] = CharacterRegistry::loadPose(CharacterId::Judy, PoseEmotion::Happy);
 
-    tomPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Sad);
-    tomPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
-    tomPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Happy);
-    judyPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Judy, PortraitEmotion::Sad);
-    judyPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Judy, PortraitEmotion::Mid);
-    judyPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Judy, PortraitEmotion::Happy);
-
     // Ported from the JS prototype's "The Last Session" episode almost
     // line-for-line -- the digital-pet metaphor breakdown, ending on the
     // copay hike. NARRATOR lines have no speaking actor, matching how the
     // apartment scene handles them.
     scenarios.push_back({
-        { "Narrator",  "Tom's last covered therapy session.\nHe has been saving the hard stuff for today.",
-          NARRATOR_COLOR, -1, false },
-        { "Judy", "So Tom, how have you been\nprocessing the divorce?",
-          JUDY_COLOR, 1, false },
-        { "Tom",      "I... okay so you know how I'm\nsometimes a digital pet?",
-          TOM_COLOR, 0, false },
-        { "Judy", "We've talked about this metaphor.",
-          JUDY_COLOR, 1, false },
-        { "Tom",      "It's not a metaphor.\nSomebody watches me.\nI have to poop in front of them.",
-          TOM_COLOR, 0, false },
-        { "Judy", "...Tom.",
-          JUDY_COLOR, 1, false },
-        { "Tom",      "I have to perform happiness.\nOn demand.\nWhile they press little buttons at me.",
-          TOM_COLOR, 0, false },
-        { "Judy", "I think that IS a metaphor Tom.\nFor work maybe? For the marriage?",
-          JUDY_COLOR, 1, false },
-        { "Tom",      "Last week they made me eat\nthree meals in a row.\nI was not hungry.",
-          TOM_COLOR, 0, true },
-        { "Judy", "...Your copay has increased\nto $200 starting next session.",
-          JUDY_COLOR, 1, true },
-        { "Tom",      "Of course it has.",
-          TOM_COLOR, 0, false },
+        { CharacterId::Narrator, "Tom's last covered therapy session.\nHe has been saving the hard stuff for today.",
+          -1, false },
+        { CharacterId::Judy, "So Tom, how have you been\nprocessing the divorce?",
+          1, false },
+        { CharacterId::Tom, "I... okay so you know how I'm\nsometimes a digital pet?",
+          0, false },
+        { CharacterId::Judy, "We've talked about this metaphor.",
+          1, false },
+        { CharacterId::Tom, "It's not a metaphor.\nSomebody watches me.\nI have to poop in front of them.",
+          0, false },
+        { CharacterId::Judy, "...Tom.",
+          1, false },
+        { CharacterId::Tom, "I have to perform happiness.\nOn demand.\nWhile they press little buttons at me.",
+          0, false },
+        { CharacterId::Judy, "I think that IS a metaphor Tom.\nFor work maybe? For the marriage?",
+          1, false },
+        { CharacterId::Tom, "Last week they made me eat\nthree meals in a row.\nI was not hungry.",
+          0, true },
+        { CharacterId::Judy, "...Your copay has increased\nto $200 starting next session.",
+          1, true },
+        { CharacterId::Tom, "Of course it has.",
+          0, false },
     });
 }
 
@@ -158,8 +147,6 @@ void TherapistOfficeScene::cleanup() {
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
         if (judyPoses[i].id != 0) UnloadTexture(judyPoses[i]);
-        if (tomPortraits[i].id != 0) UnloadTexture(tomPortraits[i]);
-        if (judyPortraits[i].id != 0) UnloadTexture(judyPortraits[i]);
     }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the scenario table -- reset so scenarios doesn't
@@ -201,20 +188,8 @@ void TherapistOfficeScene::advanceLine() {
 }
 
 void TherapistOfficeScene::playLine(const TherapistLine& line) {
-    dialog->setSpeakerName(line.speaker);
-    dialog->setSpeakerColor(line.speakerColor);
+    dialog->setCharacter(line.speaker, line.emotion);
     dialog->setText(line.text);
-
-    if (line.focusActor == 0) {
-        dialog->setPortraitTexture(tomPortraits[line.emotion]);
-        dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
-    } else if (line.focusActor == 1) {
-        dialog->setPortraitTexture(judyPortraits[line.emotion]);
-        dialog->setPortraitGradient({20, 140, 120, 255}, {8, 60, 50, 255});
-    } else {
-        dialog->clearPortraitTexture();
-    }
-
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
 }

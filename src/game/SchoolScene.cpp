@@ -5,11 +5,6 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
-static const Color KAREN_COLOR    = CharacterRegistry::get(CharacterId::Karen).nameColor;
-static const Color JIMMY_COLOR    = CharacterRegistry::get(CharacterId::Jimmy).nameColor;
-static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
-
 // Matches the opaque sky color actually painted in schoolbg.png's daytime
 // sky, sampled from the art -- schoolbg.png's sky region is otherwise
 // transparent (see the scene-effect background discussion), so this is what
@@ -55,30 +50,30 @@ void SchoolScene::init() {
     // tooth, the tooth fairy inflation joke, ending on Tom quietly giving up
     // his last $5.
     scenarios.push_back({
-        { "Narrator", "Tom arrives at Jimmy's school.\n3:35 PM. Pickup was at 3:30.",
-          NARRATOR_COLOR, -1, false },
-        { "Karen", "You're late.",
-          KAREN_COLOR, 1, false },
-        { "Tom",  "I'm FIVE minutes late Karen,\nI drove the whole way here.",
-          TOM_COLOR, 0, false },
-        { "Karen", "Jimmy waited.\nBy himself.\nAgain.",
-          KAREN_COLOR, 1, false },
-        { "Tom",  "There are TEACHERS here,\nhe wasn't ALONE --",
-          TOM_COLOR, 0, true },
-        { "Jimmy",   "Hi Dad! I lost a tooth!",
-          JIMMY_COLOR, 2, false },
-        { "Tom",  "Oh buddy! Which one?",
-          TOM_COLOR, 0, false },
-        { "Jimmy",   "This one! Mom says the fairy\ngives five dollars now.",
-          JIMMY_COLOR, 2, false },
-        { "Tom",  "...Five dollars.",
-          TOM_COLOR, 0, false },
-        { "Karen", "Inflation, Tom.",
-          KAREN_COLOR, 1, false },
-        { "Tom",  "I know what inflation IS Karen.\nI AM experiencing it.",
-          TOM_COLOR, 0, true },
-        { "Narrator", "Tom gives Jimmy the tooth fairy money.\nIt is his last $5 bill.\nHe does not tell Jimmy this.",
-          NARRATOR_COLOR, -1, false },
+        { CharacterId::Narrator, "Tom arrives at Jimmy's school.\n3:35 PM. Pickup was at 3:30.",
+          -1, false },
+        { CharacterId::Karen, "You're late.",
+          1, false },
+        { CharacterId::Tom, "I'm FIVE minutes late Karen,\nI drove the whole way here.",
+          0, false },
+        { CharacterId::Karen, "Jimmy waited.\nBy himself.\nAgain.",
+          1, false },
+        { CharacterId::Tom, "There are TEACHERS here,\nhe wasn't ALONE --",
+          0, true },
+        { CharacterId::Jimmy, "Hi Dad! I lost a tooth!",
+          2, false, PortraitEmotion::Happy },
+        { CharacterId::Tom, "Oh buddy! Which one?",
+          0, false },
+        { CharacterId::Jimmy, "This one! Mom says the fairy\ngives five dollars now.",
+          2, false, PortraitEmotion::Happy },
+        { CharacterId::Tom, "...Five dollars.",
+          0, false },
+        { CharacterId::Karen, "Inflation, Tom.",
+          1, false },
+        { CharacterId::Tom, "I know what inflation IS Karen.\nI AM experiencing it.",
+          0, true },
+        { CharacterId::Narrator, "Tom gives Jimmy the tooth fairy money.\nIt is his last $5 bill.\nHe does not tell Jimmy this.",
+          -1, false },
     });
 }
 
@@ -168,8 +163,7 @@ void SchoolScene::advanceLine() {
 }
 
 void SchoolScene::playLine(const SchoolLine& line) {
-    dialog->setSpeakerName(line.speaker);
-    dialog->setSpeakerColor(line.speakerColor);
+    dialog->setCharacter(line.speaker, line.emotion);
     dialog->setText(line.text);
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);

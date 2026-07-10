@@ -5,10 +5,6 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
-static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
-static const Color PHONE_COLOR    = CharacterRegistry::get(CharacterId::Phone).nameColor;
-
 ApartmentScene::ApartmentScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {22, 18, 26, 255}), dialog(sharedDialog) {
 }
@@ -27,9 +23,6 @@ void ApartmentScene::init() {
     tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
     tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
 
-    tomPortrait = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
-    phonePortrait = CharacterRegistry::loadPortrait(CharacterId::Phone, PortraitEmotion::Mid);
-
     cityWindow = new CityWindowEffect();
     addEffect(cityWindow);
 
@@ -39,22 +32,22 @@ void ApartmentScene::init() {
     // plays through a "KAREN (TEXT)" speaker, matching the original's PHONE
     // insert convention.
     scenarios.push_back({
-        { "Tom", "Ugh. 6:47 AM. Already late.",
-          TOM_COLOR, 0, false },
-        { "Tom", "The alarm has been going off for 40 minutes.\nI just... couldn't.",
-          TOM_COLOR, 0, false },
-        { "Narrator", "Tom shuffles to the bathroom.\nHe stares at himself in the mirror for 90 seconds.",
-          NARRATOR_COLOR, -1, false },
-        { "Tom", "I am a digital being.\nI do not have pores.\nWhy do I look like this.",
-          TOM_COLOR, 0, false },
-        { "Karen (text)", "'You were supposed to have the kids\nlast weekend. TOM.'",
-          PHONE_COLOR, 0, true },
-        { "Tom", "I KNOW Karen.\nI HAD THE KIDS.\nBloop ate my only good spatula.",
-          TOM_COLOR, 0, false },
-        { "Narrator", "Tom makes coffee.\nThe machine is broken.\nHe stares at it.",
-          NARRATOR_COLOR, -1, false },
-        { "Tom", "I need to go back out there soon.\nAct happy. Be a good pet.\n...I just need one minute.",
-          TOM_COLOR, 0, false },
+        { CharacterId::Tom, "Ugh. 6:47 AM. Already late.",
+          0, false },
+        { CharacterId::Tom, "The alarm has been going off for 40 minutes.\nI just... couldn't.",
+          0, false },
+        { CharacterId::Narrator, "Tom shuffles to the bathroom.\nHe stares at himself in the mirror for 90 seconds.",
+          -1, false },
+        { CharacterId::Tom, "I am a digital being.\nI do not have pores.\nWhy do I look like this.",
+          0, false },
+        { CharacterId::Phone, "'You were supposed to have the kids\nlast weekend. TOM.'",
+          0, true },
+        { CharacterId::Tom, "I KNOW Karen.\nI HAD THE KIDS.\nBimmy ate my only good spatula.",
+          0, false },
+        { CharacterId::Narrator, "Tom makes coffee.\nThe machine is broken.\nHe stares at it.",
+          -1, false },
+        { CharacterId::Tom, "I need to go back out there soon.\nAct happy. Be a good pet.\n...I just need one minute.",
+          0, false },
     });
 }
 
@@ -117,8 +110,6 @@ void ApartmentScene::cleanup() {
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
     }
-    if (tomPortrait.id != 0) { UnloadTexture(tomPortrait); tomPortrait = {0}; }
-    if (phonePortrait.id != 0) { UnloadTexture(phonePortrait); phonePortrait = {0}; }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the scenario table -- reset so scenarios doesn't
     // accumulate duplicates and a mid-scenario exit doesn't permanently
@@ -159,20 +150,8 @@ void ApartmentScene::advanceLine() {
 }
 
 void ApartmentScene::playLine(const ApartmentLine& line) {
-    dialog->setSpeakerName(line.speaker);
-    dialog->setSpeakerColor(line.speakerColor);
+    dialog->setCharacter(line.speaker, line.emotion);
     dialog->setText(line.text);
-
-    if (line.speaker == "Karen (text)") {
-        dialog->setPortraitTexture(phonePortrait);
-        dialog->setPortraitGradient({160, 110, 30, 255}, {70, 45, 10, 255});
-    } else if (line.speaker == "Tom") {
-        dialog->setPortraitTexture(tomPortrait);
-        dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
-    } else {
-        dialog->clearPortraitTexture();
-    }
-
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
 }

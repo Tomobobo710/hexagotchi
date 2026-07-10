@@ -3,29 +3,29 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "CharacterRegistry.hpp"
 #include "SunEffect.hpp"
 #include <vector>
 #include <string>
 
 // One line of a scripted exchange -- who's talking, what they say, and
 // which character should visibly react (camera push/shake target) when
-// this line plays. Shapes/placeholder colors for now; real portraits and
-// on-screen character art come later.
+// this line plays. speaker names the character whose registry entry
+// (name/color/portrait/gradient) DialogBox::setCharacter() pulls from --
+// speaker == Narrator has no on-screen actor and just clears the portrait.
 struct PizzaLine {
-    std::string speaker;
+    CharacterId speaker;
     std::string text;
-    Color speakerColor;
     int focusActor;   // index into `actors[]` the camera should favor, or -1 for none
     bool shake;        // punch-in beat: small camera shake when this line shows
-    int portraitActor;  // which actor's portrait set to draw, or -1 for none (defaults to focusActor via playLine)
-    int emotion;         // 0 = sad, 1 = mid, 2 = happy -- index into that actor's portrait set
+    PortraitEmotion emotion = PortraitEmotion::Mid;
 
-    // Marks this line as the character's introduction -- playLine() shows
-    // firstTimeName above the dialog box instead of speaker, just for this
-    // one line (e.g. "Karen (Tom's ex-wife)" instead of "Karen"). Set this
-    // on whichever line in the scenario is that character's actual first
-    // line -- there's no automatic first-appearance tracking.
-    bool firstTime = false;
+    // Marks this line as the character's introduction -- playLine() passes
+    // firstTimeName to DialogBox::setCharacter() as the name-plate override,
+    // just for this one line (e.g. "Karen (Tom's ex-wife)" instead of
+    // "Karen"). Set this on whichever line in the scenario is that
+    // character's actual first line -- there's no automatic
+    // first-appearance tracking.
     std::string firstTimeName;
 };
 
@@ -75,12 +75,10 @@ private:
 
     Texture2D background = {0};
 
-    // Portraits per actor per emotion: [0]=Tom, [1]=wife/Karen, [2]=pokemon/Ronzer,
-    // each with [0]=sad, [1]=mid, [2]=happy -- loaded via CharacterRegistry
-    // (see init()), which owns the actual asset paths/colors per character.
-    Texture2D portraits[3][3] = {};
-
-    // Full-body pose art, same [actor][emotion] indexing as portraits --
+    // Full-body pose art, [0]=Tom, [1]=wife/Karen, [2]=pokemon/Ronzer,
+    // each [0]=sad [1]=mid [2]=happy -- loaded via CharacterRegistry
+    // (see init()). Dialog-box portraits are no longer loaded/owned here at
+    // all -- DialogBox::setCharacter() loads and caches those itself.
     // loaded via CharacterRegistry::loadPose(). Only "mid" is used for now
     // (see drawTom/drawWife/drawPokemon); the other two slots are loaded
     // too so swapping which emotion's pose is drawn later is just an index

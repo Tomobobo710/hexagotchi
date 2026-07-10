@@ -3,17 +3,17 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "CharacterRegistry.hpp"
 #include "TherapistWindowEffect.hpp"
 #include <vector>
 #include <string>
 
 struct TherapistLine {
-    std::string speaker;
+    CharacterId speaker;
     std::string text;
-    Color speakerColor;
     int focusActor;   // 0 = Tom, 1 = Judy, -1 = none
     bool shake;
-    int emotion = 1;  // 0 = sad, 1 = mid, 2 = happy -- portrait for whichever actor focusActor names
+    PortraitEmotion emotion = PortraitEmotion::Mid;
 };
 
 // Tom's therapist's office -- ported from the JS prototype's "The Last
@@ -42,14 +42,11 @@ private:
     Texture2D background = {0};
 
     // Full-body pose art, [0]=sad [1]=mid [2]=happy -- loaded via
-    // CharacterRegistry (see init()).
+    // CharacterRegistry (see init()). Dialog-box portraits are no longer
+    // loaded/owned here at all -- DialogBox::setCharacter() loads and
+    // caches those itself.
     Texture2D tomPoses[3] = {};
     Texture2D judyPoses[3] = {};
-
-    // Dialog-box portraits, same [0]=sad [1]=mid [2]=happy indexing --
-    // loaded via CharacterRegistry (see init()).
-    Texture2D tomPortraits[3] = {};
-    Texture2D judyPortraits[3] = {};
 
     float tomFidgetTimer = 0.0f;
     float judyNodTimer = 0.0f;

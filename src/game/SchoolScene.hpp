@@ -3,15 +3,16 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "CharacterRegistry.hpp"
 #include <vector>
 #include <string>
 
 struct SchoolLine {
-    std::string speaker;
+    CharacterId speaker;
     std::string text;
-    Color speakerColor;
     int focusActor;   // 0 = Tom, 1 = Karen, 2 = Jimmy, -1 = none
     bool shake;
+    PortraitEmotion emotion = PortraitEmotion::Mid;
 };
 
 // Jimmy's school pickup -- ported from the JS prototype's "The School Pickup

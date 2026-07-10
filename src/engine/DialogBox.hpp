@@ -2,9 +2,11 @@
 #define DIALOG_BOX_HPP
 
 #include "raylib.h"
+#include "CharacterRegistry.hpp"
 #include <string>
 #include <vector>
 #include <functional>
+#include <map>
 
 // DialogBox constants
 const Color DIALOG_BG_COLOR = {0, 0, 0, 200};
@@ -31,7 +33,8 @@ const float DIALOG_AUTO_CONTINUE_BAR_HEIGHT = 5.0f;
 class DialogBox {
 public:
     DialogBox(Vector2 position, float width, float height);
-    
+    ~DialogBox();
+
     void update(float deltaTime);
     void draw();
     
@@ -48,6 +51,25 @@ public:
     // silhouette without needing to unload/reset the texture yourself.
     void setPortraitTexture(Texture2D tex);
     void clearPortraitTexture();
+
+    // One-call alternative to hand-picking name/color/gradient/portrait per
+    // line: pulls the character's display name, name color, and portrait
+    // gradient straight from CharacterRegistry, and loads (and internally
+    // caches) that character's portrait texture for the given emotion --
+    // callers no longer need their own per-scene portrait Texture2D arrays
+    // or per-line setSpeakerName()/setSpeakerColor()/setPortraitGradient()/
+    // setPortraitTexture() calls. overrideName, if non-empty, replaces the
+    // registry's display name just for this call (e.g. "Larry (Tom's boss)"
+    // for a first-time introduction line) without touching the registry
+    // entry itself. Clears the portrait entirely (silhouette placeholder)
+    // if the character has no art for that emotion or any fallback.
+    void setCharacter(CharacterId id, PortraitEmotion emotion, const std::string& overrideName = "");
+
+    // Clears the dialog box's speaker identity back to the base "no one
+    // set" state -- same as calling clearPortraitTexture() plus resetting
+    // the name/color, for lines with no on-screen speaker (e.g. Narrator
+    // lines that don't go through setCharacter()).
+    void clearCharacter();
     void setOptions(const std::vector<std::string>& opts);
     void addOption(const std::string& option);
     void clearOptions();
@@ -148,7 +170,15 @@ protected:
     
     std::function<void(int)> onOptionSelected;
     std::function<void()> onFinished;
-    
+
+    // Portrait textures loaded via setCharacter(), cached and owned here --
+    // load-once-per-(character,emotion), unloaded in the destructor. Keyed
+    // on the packed (CharacterId, PortraitEmotion) pair rather than a
+    // struct/pair key to avoid pulling in <utility> just for std::pair's
+    // comparison operators.
+    std::map<int, Texture2D> portraitCache;
+    Texture2D getCachedPortrait(CharacterId id, PortraitEmotion emotion);
+
     void wrapText();
     void updateFade(float deltaTime);
     void updateCharReveal(float deltaTime);

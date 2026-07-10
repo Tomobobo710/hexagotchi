@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "DialogBox.hpp"
+#include "CharacterRegistry.hpp"
 #include "CityWindowEffect.hpp"
 #include <vector>
 #include <string>
@@ -12,11 +13,11 @@
 // owns its own small cast/focus-target list; worth sharing later if a third
 // scene needs the identical shape.
 struct ApartmentLine {
-    std::string speaker;
+    CharacterId speaker;
     std::string text;
-    Color speakerColor;
     int focusActor;   // index into this scene's actor slots, or -1 for none
     bool shake;
+    PortraitEmotion emotion = PortraitEmotion::Mid;
 };
 
 // Tom alone in his apartment -- the other recurring "check in on the
@@ -43,13 +44,10 @@ private:
     CityWindowEffect* cityWindow = nullptr;
 
     // Full-body pose art for Tom, [0]=sad [1]=mid [2]=happy -- loaded via
-    // CharacterRegistry (see init()).
+    // CharacterRegistry (see init()). Dialog-box portraits are no longer
+    // loaded/owned here at all -- DialogBox::setCharacter() loads and
+    // caches those itself.
     Texture2D tomPoses[3] = {};
-
-    // Dialog-box portraits -- Tom uses his Mid emotion throughout this scene
-    // (no per-line emotion selection here yet); Phone only has Mid art.
-    Texture2D tomPortrait = {0};
-    Texture2D phonePortrait = {0};
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 

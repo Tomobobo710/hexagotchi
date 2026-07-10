@@ -20,6 +20,12 @@ DialogBox::DialogBox(Vector2 pos, float w, float h)
       autoContinueTimer(0.0f), autoAdvancePending(false) {
 }
 
+DialogBox::~DialogBox() {
+    for (auto& entry : portraitCache) {
+        if (entry.second.id != 0) UnloadTexture(entry.second);
+    }
+}
+
 void DialogBox::update(float deltaTime) {
     updateFade(deltaTime);
     if (visible) {
@@ -205,6 +211,38 @@ void DialogBox::setPortraitGradient(Color top, Color bottom) {
 }
 void DialogBox::setPortraitTexture(Texture2D tex) { portraitTexture = tex; }
 void DialogBox::clearPortraitTexture() { portraitTexture = {0}; }
+
+Texture2D DialogBox::getCachedPortrait(CharacterId id, PortraitEmotion emotion) {
+    // Packs (id, emotion) into one int key -- both are small closed enums,
+    // so id * 8 + emotion never collides for any real CharacterId/
+    // PortraitEmotion combination.
+    int key = (int)id * 8 + (int)emotion;
+    auto it = portraitCache.find(key);
+    if (it != portraitCache.end()) return it->second;
+
+    Texture2D tex = CharacterRegistry::loadPortrait(id, emotion);
+    portraitCache[key] = tex;
+    return tex;
+}
+
+void DialogBox::setCharacter(CharacterId id, PortraitEmotion emotion, const std::string& overrideName) {
+    const CharacterInfo& info = CharacterRegistry::get(id);
+    setSpeakerName(overrideName.empty() ? info.displayName : overrideName);
+    setSpeakerColor(info.nameColor);
+    setPortraitGradient(info.portraitGradientTop, info.portraitGradientBottom);
+
+    Texture2D tex = getCachedPortrait(id, emotion);
+    if (tex.id != 0) {
+        setPortraitTexture(tex);
+    } else {
+        clearPortraitTexture();
+    }
+}
+
+void DialogBox::clearCharacter() {
+    speakerName = "";
+    clearPortraitTexture();
+}
 
 void DialogBox::setText(const std::string& text) {
     fullText = text;

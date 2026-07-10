@@ -5,10 +5,6 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
-static const Color LARRY_COLOR    = CharacterRegistry::get(CharacterId::Larry).nameColor;
-static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
-
 // The portal's anchor in this scene's 2D world space (same coordinate space
 // as tom/larry's positions) -- where in the room it should visually sit.
 // PortalEffect's own 3D camera is otherwise entirely independent of this
@@ -44,13 +40,6 @@ void OfficeScene::init() {
     larryPoses[1] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Mid);
     larryPoses[2] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Happy);
 
-    tomPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Sad);
-    tomPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
-    tomPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Happy);
-    larryPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Larry, PortraitEmotion::Sad);
-    larryPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Larry, PortraitEmotion::Mid);
-    larryPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Larry, PortraitEmotion::Happy);
-
     portal = new PortalEffect();
     portal->init();
     portal->setDebugCamDist(PORTAL_CAM_DIST);
@@ -71,52 +60,52 @@ void OfficeScene::init() {
 
     // --- Scenario 0: "Performance Review", ported almost line-for-line ---
     scenarios.push_back({
-        { "Narrator", "Tom arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
-          NARRATOR_COLOR, -1, false },
-        { "Larry",  "Tom. My office.\nBring the Hendricks file.",
-          LARRY_COLOR, 1, false },
-        { "Tom",  "...What's the Hendricks file.",
-          TOM_COLOR, 0, false },
-        { "Larry",  "The one I emailed you about.\nFive times.\nAlso on the physical memo.",
-          LARRY_COLOR, 1, false },
-        { "Tom",  "I don't have a desk.\nYou took my desk.",
-          TOM_COLOR, 0, true },
-        { "Larry",  "We hot-desk now Tom.\nIt's a flex workspace environment.",
-          LARRY_COLOR, 1, false },
-        { "Tom",  "I sit on a yoga ball.\nI am 34 years old.",
-          TOM_COLOR, 0, false },
-        { "Narrator", "The review goes poorly.\nTom does not receive the 3% raise.\nHe receives a 'verbal commendation'.",
-          NARRATOR_COLOR, -1, false },
-        { "Tom",  "A verbal commendation.\nI have $11 in my account.\nA verbal commendation.",
-          TOM_COLOR, 0, true },
+        { CharacterId::Narrator, "Tom arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
+          -1, false },
+        { CharacterId::Larry, "Tom. My office.\nBring the Hendricks file.",
+          1, false },
+        { CharacterId::Tom, "...What's the Hendricks file.",
+          0, false },
+        { CharacterId::Larry, "The one I emailed you about.\nFive times.\nAlso on the physical memo.",
+          1, false },
+        { CharacterId::Tom, "I don't have a desk.\nYou took my desk.",
+          0, true },
+        { CharacterId::Larry, "We hot-desk now Tom.\nIt's a flex workspace environment.",
+          1, false },
+        { CharacterId::Tom, "I sit on a yoga ball.\nI am 34 years old.",
+          0, false },
+        { CharacterId::Narrator, "The review goes poorly.\nTom does not receive the 3% raise.\nHe receives a 'verbal commendation'.",
+          -1, false },
+        { CharacterId::Tom, "A verbal commendation.\nI have $11 in my account.\nA verbal commendation.",
+          0, true },
     });
 
     // --- Scenario 1 (Scenario C): "The Promotion (Sort Of)", ported almost line-for-line ---
     scenarios.push_back({
-        { "Narrator", "Tom's boss calls him in.\nThis time it's different.",
-          NARRATOR_COLOR, -1, false },
-        { "Larry",  "Tom we're expanding your role.\nCongratulations.",
-          LARRY_COLOR, 1, false, true, "Larry (Tom's boss)" },
-        { "Tom",  "...A raise?",
-          TOM_COLOR, 0, false, true, "Tom Gotchi" },
-        { "Larry",  "More responsibility!\nYou'll now manage the Henderson account\nAND the Brickford account.",
-          LARRY_COLOR, 1, false },
-        { "Tom",  "Okay and the raise --",
-          TOM_COLOR, 0, false },
-        { "Larry",  "We're calling it a 'growth opportunity'.",
-          LARRY_COLOR, 1, false },
-        { "Tom",  "So no raise.",
-          TOM_COLOR, 0, false },
-        { "Larry",  "We're also moving your start time to 8:30.",
-          LARRY_COLOR, 1, false },
-        { "Tom",  "Earlier?!",
-          TOM_COLOR, 0, true },
-        { "Larry",  "It's the flex workspace, Tom.\nThe ball yoga spot is first come, first served now.",
-          LARRY_COLOR, 1, false },
-        { "Tom",  "I... cannot process this\nright now.",
-          TOM_COLOR, 0, false },
-        { "Narrator", "Tom processes it on his commute home.\nHe misses his exit.\nTwice.",
-          NARRATOR_COLOR, -1, false },
+        { CharacterId::Narrator, "Tom's boss calls him in.\nThis time it's different.",
+          -1, false },
+        { CharacterId::Larry, "Tom we're expanding your role.\nCongratulations.",
+          1, false, PortraitEmotion::Mid, "Larry (Tom's boss)" },
+        { CharacterId::Tom, "...A raise?",
+          0, false, PortraitEmotion::Mid, "Tom Gotchi" },
+        { CharacterId::Larry, "More responsibility!\nYou'll now manage the Henderson account\nAND the Brickford account.",
+          1, false },
+        { CharacterId::Tom, "Okay and the raise --",
+          0, false },
+        { CharacterId::Larry, "We're calling it a 'growth opportunity'.",
+          1, false },
+        { CharacterId::Tom, "So no raise.",
+          0, false },
+        { CharacterId::Larry, "We're also moving your start time to 8:30.",
+          1, false },
+        { CharacterId::Tom, "Earlier?!",
+          0, true },
+        { CharacterId::Larry, "It's the flex workspace, Tom.\nThe ball yoga spot is first come, first served now.",
+          1, false },
+        { CharacterId::Tom, "I... cannot process this\nright now.",
+          0, false },
+        { CharacterId::Narrator, "Tom processes it on his commute home.\nHe misses his exit.\nTwice.",
+          -1, false },
     });
 }
 
@@ -271,8 +260,6 @@ void OfficeScene::cleanup() {
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
         if (larryPoses[i].id != 0) UnloadTexture(larryPoses[i]);
-        if (tomPortraits[i].id != 0) UnloadTexture(tomPortraits[i]);
-        if (larryPortraits[i].id != 0) UnloadTexture(larryPortraits[i]);
     }
 
     if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
@@ -309,20 +296,11 @@ void OfficeScene::advanceLine() {
 }
 
 void OfficeScene::playLine(const OfficeLine& line) {
-    dialog->setSpeakerName(line.firstTime ? line.firstTimeName : line.speaker);
-    dialog->setSpeakerColor(line.speakerColor);
+    // setCharacter() naturally handles Narrator too -- no portrait art
+    // registered for it, so the portrait clears on its own; only the name
+    // plate and its color show.
+    dialog->setCharacter(line.speaker, line.emotion, line.firstTimeName);
     dialog->setText(line.text);
-
-    if (line.focusActor == 0) {
-        dialog->setPortraitTexture(tomPortraits[line.emotion]);
-        dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
-    } else if (line.focusActor == 1) {
-        dialog->setPortraitTexture(larryPortraits[line.emotion]);
-        dialog->setPortraitGradient({80, 50, 100, 255}, {35, 20, 45, 255});
-    } else {
-        dialog->clearPortraitTexture();
-    }
-
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
 }

@@ -42,8 +42,14 @@ enum class PoseEmotion {
 };
 
 struct CharacterInfo {
-    // Dialogue speaker-name label color (and portrait background gradient) --
-    // this is the character's "identity color" (Karen=yellow, Ronzer=red).
+    // Display name shown on the dialog box's name plate. Scene-specific
+    // one-off overrides (e.g. "Larry (Tom's boss)" for a first-time intro
+    // line) are passed separately to DialogBox::setCharacter() rather than
+    // living here, since they're not this character's actual name.
+    std::string displayName;
+
+    // Dialogue speaker-name label color -- this is the character's
+    // "identity color" (Karen=yellow, Ronzer=red).
     Color nameColor;
     // Placeholder silhouette-art fill color, used only by each scene's
     // hand-drawn shape stand-ins (drawWife/drawKaren/drawPokemon/etc).
@@ -51,6 +57,14 @@ struct CharacterInfo {
     // right at its own color and isn't meant to follow the name label if
     // that gets changed for legibility/identity reasons.
     Color bodyColor;
+
+    // Portrait background gradient (top/bottom), drawn behind the portrait
+    // texture in the dialog box. One place per character to tune instead of
+    // every scene's playLine() hand-picking its own gradient inline --
+    // that's what caused Judy's portrait background not matching her name
+    // color in the first place.
+    Color portraitGradientTop;
+    Color portraitGradientBottom;
     // Portrait asset keys (relative to assets/, matches AssetPack::loadTexture
     // keys), indexed by PortraitEmotion. Empty string means no art for that
     // emotion -- callers should fall back to Mid, or to no portrait at all if

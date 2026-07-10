@@ -6,10 +6,6 @@
 #include <cstdlib>
 #include <cmath>
 
-static const Color TOM_COLOR     = CharacterRegistry::get(CharacterId::Tom).nameColor;
-static const Color WIFE_COLOR    = CharacterRegistry::get(CharacterId::Karen).nameColor;
-static const Color POKEMON_COLOR = CharacterRegistry::get(CharacterId::Ronzer).nameColor;
-
 // Ambient-only lines the Pokemon shouts unprompted, popped through the same
 // shared DialogBox as scripted scenarios. Its entire personality is its own name.
 static const char* POKEMON_QUIPS[] = {
@@ -53,19 +49,7 @@ void PizzaParlorScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/parlorbg.png");
 
-    // Portraits: [actor][emotion], sad/mid/happy -- loaded via the shared
-    // CharacterRegistry rather than hand-listing asset paths per scene.
-    portraits[0][0] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Sad);
-    portraits[0][1] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
-    portraits[0][2] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Happy);
-    portraits[1][0] = CharacterRegistry::loadPortrait(CharacterId::Karen, PortraitEmotion::Sad);
-    portraits[1][1] = CharacterRegistry::loadPortrait(CharacterId::Karen, PortraitEmotion::Mid);
-    portraits[1][2] = CharacterRegistry::loadPortrait(CharacterId::Karen, PortraitEmotion::Happy);
-    portraits[2][0] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, PortraitEmotion::Sad);
-    portraits[2][1] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, PortraitEmotion::Mid);
-    portraits[2][2] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, PortraitEmotion::Happy);
-
-    // Full-body pose art, same [actor][emotion] layout as portraits above.
+    // Full-body pose art, [actor][emotion].
     poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
     poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
     poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
@@ -78,31 +62,34 @@ void PizzaParlorScene::init() {
 
     // --- Scenario 0: the wife needling Tom while the Pokemon heckles from the sideline ---
     scenarios.push_back({
-        { "Tom",    "Oh -- hey. I didn't know you two ate here too.",
-          TOM_COLOR, 0, false, 0, 1 },
-        { "Karen",   "We come here every Tuesday, Tom. We've come here every\nTuesday for six weeks.",
-          WIFE_COLOR, 1, false, 1, 1, true, "Karen (Tom's ex-wife)" },
-        { "Ronzer",  "Ronzer.", POKEMON_COLOR, 2, false, 2, 2, true, "Ronzer (her new boyfriend)" },
-        { "Tom",    "Right. Tuesdays. I knew that.",
-          TOM_COLOR, 0, false, 0, 0 },
-        { "Karen",   "Did you get my email about Jimmy's recital?",
-          WIFE_COLOR, 1, false, 1, 1 },
-        { "Tom",    "I -- yeah, I'm looking into it. Work's been --",
-          TOM_COLOR, 0, false, 0, 0 },
-        { "Karen",   "You're a digital pet, Tom. What work.",
-          WIFE_COLOR, 1, true, 1, 0 },
-        { "Ronzer",  "RONZER RONZER RONZER.", POKEMON_COLOR, 2, false, 2, 2 },
-        { "Tom",    "...I have a job. I make kids happy...",
-          TOM_COLOR, 0, false, 0, 0 },
-        { "Karen",   "Ronzer got a promotion at the gym he doesn't even work at.\nThey just gave it to him.",
-          WIFE_COLOR, 1, false, 1, 2 },
-        { "Ronzer",  "Ronzer.", POKEMON_COLOR, 2, false, 2, 2 },
-        { "Tom",    "That's not -- that isn't how promotions --",
-          TOM_COLOR, 0, false, 0, 0 },
-        { "Karen",   "Get the pizza to go next time, Tom. It's for the kids.",
-          WIFE_COLOR, 1, false, 1, 0 },
-        { "Tom",    "It's always been for the kids.",
-          TOM_COLOR, 0, false, 0, 0 },
+        { CharacterId::Tom,    "Oh -- hey. I didn't know you two ate here too.",
+          0, false, PortraitEmotion::Mid },
+        { CharacterId::Karen,  "We come here every Tuesday, Tom. We've come here every\nTuesday for six weeks.",
+          1, false, PortraitEmotion::Mid, "Karen (Tom's ex-wife)" },
+        { CharacterId::Ronzer, "Ronzer.",
+          2, false, PortraitEmotion::Happy, "Ronzer (her new boyfriend)" },
+        { CharacterId::Tom,    "Right. Tuesdays. I knew that.",
+          0, false, PortraitEmotion::Sad },
+        { CharacterId::Karen,  "Did you get my email about Jimmy's recital?",
+          1, false, PortraitEmotion::Mid },
+        { CharacterId::Tom,    "I -- yeah, I'm looking into it. Work's been --",
+          0, false, PortraitEmotion::Sad },
+        { CharacterId::Karen,  "You're a digital pet, Tom. What work.",
+          1, true, PortraitEmotion::Sad },
+        { CharacterId::Ronzer, "RONZER RONZER RONZER.",
+          2, false, PortraitEmotion::Happy },
+        { CharacterId::Tom,    "...I have a job. I make kids happy...",
+          0, false, PortraitEmotion::Sad },
+        { CharacterId::Karen,  "Ronzer got a promotion at the gym he doesn't even work at.\nThey just gave it to him.",
+          1, false, PortraitEmotion::Happy },
+        { CharacterId::Ronzer, "Ronzer.",
+          2, false, PortraitEmotion::Happy },
+        { CharacterId::Tom,    "That's not -- that isn't how promotions --",
+          0, false, PortraitEmotion::Sad },
+        { CharacterId::Karen,  "Get the pizza to go next time, Tom. It's for the kids.",
+          1, false, PortraitEmotion::Sad },
+        { CharacterId::Tom,    "It's always been for the kids.",
+          0, false, PortraitEmotion::Sad },
     });
 }
 
@@ -157,11 +144,8 @@ void PizzaParlorScene::update(float deltaTime) {
                 nextQuipTime = 4.0f + (float)(rand() % 500) / 100.0f;
 
                 int idx = rand() % (sizeof(POKEMON_QUIPS) / sizeof(POKEMON_QUIPS[0]));
-                dialog->setSpeakerName("Ronzer");
-                dialog->setSpeakerColor(POKEMON_COLOR);
+                dialog->setCharacter(CharacterId::Ronzer, PortraitEmotion::Happy);
                 dialog->setText(POKEMON_QUIPS[idx]);
-                dialog->setPortraitTexture(portraits[2][2]);
-                dialog->setPortraitGradient({200, 40, 40, 255}, {90, 10, 10, 255});
                 dialog->show();
                 quipTimer = POKEMON_QUIP_DURATION;
             }
@@ -225,15 +209,6 @@ void PizzaParlorScene::cleanup() {
     Scene::cleanup();
     sunEffect = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
-    if (portraits[0][0].id != 0) UnloadTexture(portraits[0][0]);
-    if (portraits[0][1].id != 0) UnloadTexture(portraits[0][1]);
-    if (portraits[0][2].id != 0) UnloadTexture(portraits[0][2]);
-    if (portraits[1][0].id != 0) UnloadTexture(portraits[1][0]);
-    if (portraits[1][1].id != 0) UnloadTexture(portraits[1][1]);
-    if (portraits[1][2].id != 0) UnloadTexture(portraits[1][2]);
-    if (portraits[2][0].id != 0) UnloadTexture(portraits[2][0]);
-    if (portraits[2][1].id != 0) UnloadTexture(portraits[2][1]);
-    if (portraits[2][2].id != 0) UnloadTexture(portraits[2][2]);
     for (int actor = 0; actor < 3; actor++) {
         for (int emotion = 0; emotion < 3; emotion++) {
             if (poses[actor][emotion].id != 0) UnloadTexture(poses[actor][emotion]);
@@ -283,22 +258,8 @@ void PizzaParlorScene::advanceLine() {
 }
 
 void PizzaParlorScene::playLine(const PizzaLine& line) {
-    dialog->setSpeakerName(line.firstTime ? line.firstTimeName : line.speaker);
-    dialog->setSpeakerColor(line.speakerColor);
+    dialog->setCharacter(line.speaker, line.emotion, line.firstTimeName);
     dialog->setText(line.text);
-
-    int portraitActor = line.portraitActor >= 0 ? line.portraitActor : line.focusActor;
-    if (portraitActor >= 0 && portraitActor < 3) {
-        dialog->setPortraitTexture(portraits[portraitActor][line.emotion]);
-        // Per-character gradient behind the portrait -- Tom green, Karen
-        // yellow, Ronzer red -- to contrast against each one's own color.
-        if (portraitActor == 0) dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
-        else if (portraitActor == 1) dialog->setPortraitGradient({230, 200, 40, 255}, {120, 100, 10, 255});
-        else dialog->setPortraitGradient({200, 40, 40, 255}, {90, 10, 10, 255});
-    } else {
-        dialog->clearPortraitTexture();
-    }
-
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
 }
@@ -308,7 +269,7 @@ void PizzaParlorScene::endScenario() {
     lineIndex = 0;
     endElapsed = 0.0f;
     dialog->hide();
-    dialog->clearPortraitTexture();
+    dialog->clearCharacter();
     getCamera()->zoomTo(1.0f, 0.6f);
 }
 
