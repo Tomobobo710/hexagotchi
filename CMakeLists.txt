@@ -57,6 +57,7 @@ if(RBUILD_DESKTOP)
         "src/game/ScenarioDirector.cpp"
         "src/game/TherapistOfficeScene.cpp"
         "src/game/TitleScene.cpp"
+        "src/game/ToyAnimationScene.cpp"
     )
     file(GLOB EFFECTS_SRCS "src/effects/*.cpp")
     file(GLOB EVENT_SRCS "src/events/*.cpp")
@@ -83,6 +84,7 @@ if(RBUILD_DESKTOP)
 
     # Test executable for MergeController
     set(TEST_ENGINE_SRCS
+        src/engine/AssetPack.cpp
         src/engine/DialogBox.cpp
         src/engine/GameState.cpp
         src/engine/SaveManager.cpp
@@ -103,8 +105,7 @@ if(RBUILD_DESKTOP)
         src/game/GotchiSim.cpp
         src/game/GotchiStats.cpp
         src/game/GotchiMood.cpp
-        src/game/MergeScene.cpp
-        src/game/ScenarioDirector.cpp
+        src/game/CharacterRegistry.cpp
     )
     set(TEST_EFFECTS_SRCS
         src/effects/PortalEffect.cpp
@@ -113,9 +114,6 @@ if(RBUILD_DESKTOP)
         src/effects/PortalRingMesh.cpp
         src/effects/PortalBaseMesh.cpp
         src/effects/MoonEffect.cpp
-    )
-    set(TEST_EVENT_SRCS
-        src/events/EventBus.cpp
     )
     set(TEST_SRCS
         tests/TestMergeController.cpp

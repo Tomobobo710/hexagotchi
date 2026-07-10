@@ -280,6 +280,7 @@ int main() {
     // Wire up the merge controller
     mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);
     gotchiScene->setEventBus(&globalEventBus);
+    gotchiScene->setMergeController(mergeController);
 
     // Wire up the story sequencer
     storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);

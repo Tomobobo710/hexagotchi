@@ -234,7 +234,13 @@ void GotchiScene::addButtons() {
     float startX = (GAME_W - totalWidth) / 2.0f;
     float y = GAME_H - 40.0f;
 
-    std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Water", "Give a Break"};
+    // Determine initial merge button label based on seenReality
+    std::string mergeLabel = "Give a Break";
+    if (mergeController_) {
+        mergeLabel = mergeController_->mergeButtonLabel();
+    }
+
+    std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Water", mergeLabel};
     for (size_t i = 0; i < labels.size(); i++) {
         float x = startX + i * (buttonWidth + 10.0f);
         // The 6th button (index 5) is the merge button
@@ -288,6 +294,18 @@ void GotchiScene::update(float deltaTime) {
     // Update the Gotchi every frame
     if (gotchi) {
         gotchi->update(deltaTime);
+    }
+
+    // Update merge button label if seenReality has changed
+    if (mergeController_) {
+        const char* currentLabel = mergeController_->mergeButtonLabel();
+        // Check if the merge button label needs to be updated
+        if (buttons.size() > 5) {
+            std::string currentButtonLabel = buttons[5]->getLabel();
+            if (currentButtonLabel != currentLabel) {
+                buttons[5]->setLabel(currentLabel);
+            }
+        }
     }
 
     // Update button states
