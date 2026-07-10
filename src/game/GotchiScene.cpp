@@ -159,6 +159,9 @@ void GotchiScene::init() {
     // Center camera
     getCamera()->setBoundary(0, 0, 720.0f, 720.0f);
 
+    // Load gotchi background (default to grass_bg)
+    background_ = AssetPack::loadTexture("gotchi_backgrounds/grass_bg.png");
+
     // Create Gotchi with shared vitals and mood from GameState
     // If gameState_ is not set (e.g., in tests), use fallback defaults
     GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
@@ -372,6 +375,12 @@ void GotchiScene::update(float deltaTime) {
 }
 
 void GotchiScene::draw() {
+    // Draw background first (fills 720x720 window)
+    // Must be before Scene::draw() so gotchi appears on top
+    if (background_.id != 0) {
+        DrawTexture(background_, 0, 0, WHITE);
+    }
+
     Scene::draw();
 
     if (!gotchi) return;
@@ -734,6 +743,12 @@ void GotchiScene::triggerActionShader(int mode, float duration) {
 
 void GotchiScene::cleanup() {
     Scene::cleanup();
+
+    // Unload background texture
+    if (background_.id != 0) {
+        UnloadTexture(background_);
+        background_ = {0};
+    }
 
     // Unload action shader
     if (actionShader_.id != 0) {
