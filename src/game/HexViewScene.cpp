@@ -3,11 +3,11 @@
 #include "../engine/GameConstants.hpp"
 #include "../engine/SceneInputHandler.hpp"
 #include "../engine/HexPathFinder.hpp"
+#include "../engine/Item.hpp"
 #include "../engine/SceneManager.hpp"
 #include "EventBus.h"
 #include "PauseMenuOverlay.hpp"
 #include "Hotbar.hpp"
-#include "HexItemOverlay.hpp"
 #include <cmath>
 
 // ============================================================================
@@ -70,6 +70,8 @@ void HexViewScene::init() {
     TraceLog(LOG_WARNING, "GOTCHI_ASSETS path=gotchis/001 idle=%d walk=%d move=%d",
              (int)gotchi->animIdleCount(), (int)gotchi->animWalkCount(), (int)gotchi->animMoveCount());
     gotchi->setAction("idle");
+    gotchi->setWorld(world);  // Set world for item detection
+    gotchi->setEventBus(eventBus_);  // Set event bus for CareAction emission
     addActor(gotchi);
 
     // Camera setup with smooth panning
@@ -86,8 +88,6 @@ void HexViewScene::init() {
     hotbar_ = std::make_unique<Hotbar>();
     hotbar_->init(GAME_W, GAME_H);
     hotbar_->setInputHandler(getInputHandler());
-
-    itemOverlays_.clear();
 
     // Add Back button
     addBackButton();
@@ -119,10 +119,35 @@ void HexViewScene::draw() {
         gotchi->draw();
     }
 
-    // Draw item overlays on hexes (on top of gotchi)
-    for (const auto& overlay : itemOverlays_) {
-        if (overlay) {
-            overlay->draw(hexSize_);
+    // Draw items on the hex world (from direct placement)
+    if (world) {
+        for (const auto& item : world->getItems()) {
+            if (item.consumed) continue;
+
+            // Draw item marker at hex center
+            Vector2 itemPos = HexCoords(item.hexQ, item.hexR).toPixel(hexSize_);
+            Color itemColor;
+
+            // Color based on item type
+            switch (item.type) {
+                case ItemType::FOOD:       itemColor = YELLOW; break;   // Orange/Yellow for food
+                case ItemType::WATER:      itemColor = BLUE; break;     // Blue for water
+                case ItemType::MEDICINE:   itemColor = RED; break;      // Red for medicine
+                case ItemType::TOY:        itemColor = PINK; break;     // Pink for toys
+                case ItemType::CLEANING:   itemColor = GREEN; break;    // Green for cleaning
+                case ItemType::SLEEP:      itemColor = PURPLE; break;   // Purple for sleep
+                case ItemType::ENERGY:     itemColor = ORANGE; break;   // Orange for energy
+                case ItemType::HAPPINESS:  itemColor = {100, 200, 255, 255}; break;     // Cyan-like for happiness
+                default:                   itemColor = WHITE; break;
+            }
+
+            // Draw item as a circle
+            DrawCircleV(itemPos, 12.0f, itemColor);
+            DrawCircleLines((int)itemPos.x, (int)itemPos.y, 12.0f, Color{255, 255, 255, 200});
+
+            // Draw a small indicator of item value
+            DrawText(std::to_string((int)item.value).c_str(),
+                    (int)itemPos.x, (int)itemPos.y - 18, 10, WHITE);
         }
     }
 
@@ -198,27 +223,34 @@ void HexViewScene::update(float deltaTime) {
     // Update hotbar and check for drops
     if (hotbar_) {
         if (hotbar_->update(deltaTime, getCamera())) {
-            // A valid drop occurred - add overlay at the target hex
+            // A valid drop occurred
             if (hotbar_->hasPendingDrop()) {
                 HexItemOverlay::ItemType itemType = hotbar_->getDroppedItemType();
                 Vector2 dropWorldPos = hotbar_->getDroppedWorldPosition();
 
                 // Convert world position to hex using the same canonical method as click-to-move
                 HexCoords targetHex = HexCoords::fromPixel(dropWorldPos, hexSize_);
-                Vector2 targetPos = targetHex.toPixel(hexSize_);
 
-                // Create overlay with the hex coordinates (for arrival check)
-                itemOverlays_.push_back(
-                    std::make_unique<HexItemOverlay>(targetHex, itemType, targetPos, hexSize_)
-                );
+                // Validate: only place on existing tile with non-ocean biome
+                HexTile* tile = world->getTileAt(targetHex.q, targetHex.r);
+                if (tile && tile->getTileType()) {
+                    std::string biome = tile->getTileType()->getBiome();
+                    if (biome != "ocean") {
+                        // Map Hotbar::ItemType to Item::ItemType
+                        ItemType itemTypeMap;
+                        switch (itemType) {
+                            case HexItemOverlay::ItemType::FOOD:   itemTypeMap = ItemType::FOOD; break;
+                            case HexItemOverlay::ItemType::BALL:   itemTypeMap = ItemType::TOY; break;  // BALL -> TOY for affection
+                            case HexItemOverlay::ItemType::WATER:  itemTypeMap = ItemType::WATER; break;
+                            default:                                 itemTypeMap = ItemType::FOOD; break;
+                        }
 
-                // Also move the gotchi to that hex
-                if (gotchi) {
-                    gotchi->setTargetPosition(targetPos);
+                        // Place item directly into HexWorld::items
+                        Item newItem(itemTypeMap, 25.0f, targetHex.q, targetHex.r);
+                        world->placeItem(newItem);
 
-                    TraceLog(LOG_WARNING,
-                        "HEXITEM_DROP: item=%d at hex=(%d,%d) world=(%.0f,%.0f)",
-                        static_cast<int>(itemType), targetHex.q, targetHex.r, targetPos.x, targetPos.y);
+                        TraceLog(LOG_WARNING, "ITEM_DROPPED hex=(%d,%d) type=%d", targetHex.q, targetHex.r, (int)itemTypeMap);
+                    }
                 }
 
                 hotbar_->clearPendingDrop();
@@ -265,33 +297,12 @@ void HexViewScene::update(float deltaTime) {
         }
     }
 
-    // Update overlays and remove consumed ones
-    for (auto it = itemOverlays_.begin(); it != itemOverlays_.end();) {
-        if (*it) {
-            HexCoords gotchiCurrentHex = gotchi ? gotchi->getCurrentHex() : HexCoords{-1, -1};
-
-            bool consumed = (*it)->update(deltaTime, gotchiCurrentHex);
-
-            if (consumed) {
-                // Fire the care effect and remove overlay
-                HexItemOverlay::ItemType itemType = (*it)->getItemType();
-                int careActionCode = HexItemOverlay::careActionCodeForItem(itemType);
-
-                HexCoords itemHex = (*it)->getHex();
-                TraceLog(LOG_WARNING,
-                    "HEXITEM_CONSUMED: item=%d actionCode=%d at hex=(%d,%d)",
-                    static_cast<int>(itemType), careActionCode, itemHex.q, itemHex.r);
-
-                // Emit CareAction event for C-core to process
-                if (eventBus_ && careActionCode >= 0) {
-                    eventBus_->emit(Event::careAction(careActionCode, 1.0f));
-                }
-
-                it = itemOverlays_.erase(it);
-                continue;
-            }
-        }
-        ++it;
+    // Periodically remove consumed items (every 5 seconds)
+    static float cleanupTimer = 0.0f;
+    cleanupTimer += deltaTime;
+    if (cleanupTimer >= 5.0f) {
+        world->removeConsumedItems();
+        cleanupTimer = 0.0f;
     }
 
     // Clear click marker when gotchi moves
@@ -300,6 +311,11 @@ void HexViewScene::update(float deltaTime) {
         if (gotchiHex.q != clickMarkerHex_.q || gotchiHex.r != clickMarkerHex_.r) {
             hasClickMarker_ = false;
         }
+    }
+
+    // Update back button
+    if (backButton_) {
+        backButton_->update(ih, deltaTime);
     }
 }
 

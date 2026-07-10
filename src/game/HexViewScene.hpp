@@ -7,13 +7,12 @@
 #include "GotchiStats.hpp"
 #include "GotchiMood.hpp"
 #include "Button.hpp"
+#include "PauseMenuOverlay.hpp"
 #include <memory>
 #include <vector>
-
-class PauseMenuOverlay;
 class Hotbar;
-class HexItemOverlay;
 class EventBus;
+class Item;
 
 class HexViewScene : public Scene {
 public:
@@ -61,9 +60,6 @@ private:
 
     // Hotbar UI (screen-space palette of items)
     std::unique_ptr<Hotbar> hotbar_;
-
-    // Item overlays on hexes
-    std::vector<std::unique_ptr<HexItemOverlay>> itemOverlays_;
 
     // Event bus for emitting CareAction events
     EventBus* eventBus_ = nullptr;

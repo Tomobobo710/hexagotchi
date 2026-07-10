@@ -1,8 +1,12 @@
 #define _USE_MATH_DEFINES
 #include "Gotchi.hpp"
 #include "AssetPack.hpp"
+#include "HexPathFinder.hpp"
+#include "Item.hpp"
+#include "EventBus.h"
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 // Gotchi constants
 const float GOTCHI_WIDTH = 64.0f;
@@ -26,7 +30,13 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
       actionTimer_(0.0f),
       hexSize_(64.0f),  // Default hex size, can be set by scene
       pathIndex_(0),
-      followingPath_(false) {
+      followingPath_(false),
+      currentState_(GotchiState::IDLE),
+      stateTimer_(0.0f),
+      hasTarget_(false),
+      targetQ_(0),
+      targetR_(0),
+      world_(nullptr) {
     // Set physics properties
     setGravityEnabled(false);
     setFriction(0.95f);
@@ -134,6 +144,9 @@ void Gotchi::update(float deltaTime) {
             wanderTimer_ = 2.0f + (rand() % 3) * 0.5f;  // 2-3.5 seconds
         }
     }
+
+    // State machine update (handles autonomous item-based behavior)
+    updateStateMachine(deltaTime);
 
     // Path-based movement (higher priority than wander/target)
     if (followingPath_ && !currentPath_.empty()) {
@@ -870,4 +883,221 @@ void Gotchi::setDebugMode(bool debug) {
 
 bool Gotchi::isDebugMode() const {
     return debugMode_;
+}
+
+// ============================================================================
+// State Machine Implementation
+// ============================================================================
+
+void Gotchi::updateStateMachine(float deltaTime) {
+    // Skip state machine if dead or sleeping
+    if (dead_ || sleeping_) {
+        if (currentState_ != GotchiState::SLEEPING && currentState_ != GotchiState::DEAD) {
+            currentState_ = sleeping_ ? GotchiState::SLEEPING : GotchiState::DEAD;
+        }
+        return;
+    }
+
+    switch (currentState_) {
+        case GotchiState::IDLE:
+            updateIdleState(deltaTime);
+            break;
+        case GotchiState::PATH_TO_ITEM:
+            updatePathToItemState(deltaTime);
+            break;
+        case GotchiState::CONSUME_ITEM:
+            updateConsumeItemState(deltaTime);
+            break;
+        default:
+            break;
+    }
+}
+
+void Gotchi::updateIdleState(float deltaTime) {
+    stateTimer_ += deltaTime;
+
+    // Check for nearby items every tick
+    if (world_) {
+        Item* nearest = findNearestItem();
+        if (nearest) {
+            // Found an item! Path to it and consume it
+            // Store hex coordinates instead of Item* to avoid dangling pointer
+            targetQ_ = nearest->hexQ;
+            targetR_ = nearest->hexR;
+            hasTarget_ = true;
+            HexCoords targetHex(targetQ_, targetR_);
+            HexCoords currentHex = getCurrentHex();
+
+            if (currentHex.q == targetHex.q && currentHex.r == targetHex.r) {
+                // Already on the item hex - consume immediately
+                currentState_ = GotchiState::CONSUME_ITEM;
+                stateTimer_ = 0.0f;
+            } else {
+                // Path to the item
+                HexPathFinder pathfinder(world_);
+                std::vector<HexCoords> path = pathfinder.findPath(
+                    currentHex.q, currentHex.r,
+                    targetHex.q, targetHex.r
+                );
+
+                if (!path.empty()) {
+                    setPath(path);
+                    currentState_ = GotchiState::PATH_TO_ITEM;
+                    stateTimer_ = 0.0f;
+                    if (debugMode_) {
+                        std::cout << "[Gotchi] Found item, path length: " << path.size() << "\n";
+                    }
+                }
+            }
+        } else {
+            // No target found - clear any stale target
+            hasTarget_ = false;
+        }
+    }
+}
+
+void Gotchi::updatePathToItemState(float deltaTime) {
+    // Re-resolve item each frame using hex coordinates (avoids dangling pointer)
+    Item* currentTarget = world_ ? world_->getItemAt(targetQ_, targetR_) : nullptr;
+
+    // Check if we've reached the target
+    if (followingPath_ && !currentPath_.empty()) {
+        // Check if we're at the last hex of the path (the item's hex)
+        HexCoords currentHex = getCurrentHex();
+        if (currentHex.q == targetQ_ && currentHex.r == targetR_) {
+            // Reached the item hex
+            currentState_ = GotchiState::CONSUME_ITEM;
+            stateTimer_ = 0.0f;
+            if (debugMode_) {
+                std::cout << "[Gotchi] Reached item hex, ready to consume\n";
+            }
+        }
+    } else if (!currentTarget) {
+        // Target item was consumed by another gotchi or removed
+        // Return to idle without consuming
+        currentState_ = GotchiState::IDLE;
+        stateTimer_ = 0.0f;
+        hasTarget_ = false;
+    } else {
+        // Path following ended unexpectedly (e.g., obstacle) - go back to idle
+        currentState_ = GotchiState::IDLE;
+        stateTimer_ = 0.0f;
+        hasTarget_ = false;
+    }
+}
+
+void Gotchi::updateConsumeItemState(float deltaTime) {
+    stateTimer_ += deltaTime;
+
+    // Consuming takes a short time (1 second)
+    if (stateTimer_ >= 1.0f) {
+        // Re-resolve item using hex coordinates
+        Item* currentTarget = world_ ? world_->getItemAt(targetQ_, targetR_) : nullptr;
+
+        if (currentTarget) {
+            consumeItem(currentTarget);
+            hasTarget_ = false;
+        } else {
+            // Target was consumed by someone else - nothing to do
+            if (debugMode_) {
+                std::cout << "[Gotchi] Target item no longer exists\n";
+            }
+        }
+        currentState_ = GotchiState::IDLE;
+        stateTimer_ = 0.0f;
+    }
+}
+
+void Gotchi::consumeItem(Item* item) {
+    if (!item || item->consumed) return;
+
+    item->consumed = true;
+    if (debugMode_) {
+        std::cout << "[Gotchi] Consuming item: " << item->getStatName() << " value=" << item->value << "\n";
+    }
+
+    // Route through the shared care action path - call the same gotchi methods
+    // used by the care buttons, which modify stats and emit CareAction
+    switch (item->type) {
+        case ItemType::FOOD:
+            feed();
+            break;
+        case ItemType::WATER:
+            // Water reduces hydration (thirst) - similar to feed for hunger
+            // Call feed() as the shared path (both reduce their respective needs)
+            feed();
+            break;
+        case ItemType::MEDICINE:
+            // Medicine heals health - similar to the heal button effect
+            heal();
+            break;
+        case ItemType::TOY:
+        case ItemType::HAPPINESS:
+            // Toys and happiness boost - similar to pet interaction
+            interact();
+            break;
+        case ItemType::CLEANING:
+            // Cleaning improves hygiene - similar to the clean button
+            clean();
+            break;
+        case ItemType::SLEEP:
+            // Sleep reduces sleep debt - similar to water for hydration
+            // Use feed as the shared path
+            feed();
+            break;
+        case ItemType::ENERGY:
+            // Energy boost - similar to pet/affection boost
+            interact();
+            break;
+        default:
+            // Default to feed
+            feed();
+            break;
+    }
+
+    // Set action for consumption animation
+    setAction("eat");
+    actionTimer_ = 1.5f;
+
+    if (debugMode_) {
+        std::cout << "[Gotchi] Item consumed.\n";
+    }
+}
+
+Item* Gotchi::findNearestItem() {
+    if (!world_) return nullptr;
+
+    HexCoords currentHex = getCurrentHex();
+    Item* nearest = nullptr;
+    float nearestDist = std::numeric_limits<float>::max();
+
+    const std::vector<Item>& items = world_->getItems();
+    for (const auto& item : items) {
+        if (item.consumed) continue;
+
+        HexCoords itemHex(item.hexQ, item.hexR);
+        // Manhattan distance
+        int dist = std::abs(itemHex.q - currentHex.q) + std::abs(itemHex.r - currentHex.r);
+
+        // Only consider items within a reasonable range (10 hexes)
+        if (dist < 10 && dist < nearestDist) {
+            nearest = const_cast<Item*>(&item);
+            nearestDist = dist;
+        }
+    }
+
+    return nearest;
+}
+
+void Gotchi::decideNextAction() {
+    // This is called during idle state to decide what to do next
+    // For now, it just calls findNearestItem which is already done in updateIdleState
+    // This can be expanded later for more complex decision making
+}
+
+Item* Gotchi::getItemOnCurrentHex() {
+    if (!world_) return nullptr;
+
+    HexCoords currentHex = getCurrentHex();
+    return world_->getItemAt(currentHex.q, currentHex.r);
 }

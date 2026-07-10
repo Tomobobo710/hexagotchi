@@ -10,8 +10,13 @@
 // Include HexTile for HexCoords definition
 #include "HexTile.hpp"
 
-// Forward declaration
+// Include Item for item-based decision making
+#include "Item.hpp"
+
+// Forward declarations
 class GameState;
+class HexWorld;
+class EventBus;
 
 // Gotchi class - the main pet entity
 // Extends SceneActor with mood, stats, and AI behavior
@@ -64,6 +69,35 @@ public:
     HexCoords getCurrentHex() const;
     void setPath(const std::vector<HexCoords>& path);
     void updatePathMovement(float deltaTime);
+
+    // State machine for autonomous behavior
+    enum class GotchiState {
+        IDLE,              // Default state - wandering or waiting
+        PATH_TO_ITEM,      // Moving to consume an item
+        CONSUME_ITEM,      // Currently consuming an item
+        SLEEPING,          // Sleeping
+        DEAD               // Dead
+    };
+
+    // Set the world for item detection
+    void setWorld(HexWorld* world) { world_ = world; }
+
+    // Set the event bus for emitting CareAction events
+    void setEventBus(EventBus* bus) { eventBus_ = bus; }
+
+    // State machine control
+    void updateStateMachine(float deltaTime);
+    void consumeItem(Item* item);
+    Item* findNearestItem();
+    void decideNextAction();
+
+    // State machine helper methods
+    void updateIdleState(float deltaTime);
+    void updatePathToItemState(float deltaTime);
+    void updateConsumeItemState(float deltaTime);
+
+    // Item on current hex
+    Item* getItemOnCurrentHex();
 
     // Hex grid configuration (set by scene)
     void setHexSize(float size) { hexSize_ = size; }
@@ -150,6 +184,21 @@ private:
 
     // Hex grid configuration (set by scene)
     float hexSize_;
+
+    // State machine state
+    GotchiState currentState_;
+    float stateTimer_;      // Timer for state transitions
+
+    // Hex-coordinate targeting (replaces dangling Item* pointer)
+    bool hasTarget_;        // True if there's a valid target item
+    int targetQ_;           // Hex coordinate of target item
+    int targetR_;           // Hex coordinate of target item
+
+    // HexWorld reference for item detection
+    HexWorld* world_;
+
+    // Event bus for emitting CareAction events
+    EventBus* eventBus_ = nullptr;
 };
 
 #endif // GOTCHI_HPP

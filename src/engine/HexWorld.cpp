@@ -244,3 +244,37 @@ std::string HexWorld::getBiomeAt(float x, float y) const {
 
     return "unknown";
 }
+
+void HexWorld::placeItem(const Item& item) {
+    items.push_back(item);
+}
+
+Item* HexWorld::getItemAt(int q, int r) {
+    for (auto& item : items) {
+        if (item.hexQ == q && item.hexR == r && !item.consumed) {
+            return &item;
+        }
+    }
+    return nullptr;
+}
+
+void HexWorld::removeConsumedItems() {
+    items.erase(
+        std::remove_if(items.begin(), items.end(), [](const Item& item) {
+            return item.consumed;
+        }),
+        items.end()
+    );
+}
+
+std::vector<Item*> HexWorld::getItemsNear(int q, int r, int radius) {
+    std::vector<Item*> nearby;
+    for (auto& item : items) {
+        if (item.consumed) continue;
+        int dist = std::abs(item.hexQ - q) + std::abs(item.hexR - r);
+        if (dist <= radius) {
+            nearby.push_back(&item);
+        }
+    }
+    return nearby;
+}

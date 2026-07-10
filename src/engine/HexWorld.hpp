@@ -2,6 +2,7 @@
 #define HEX_WORLD_HPP
 
 #include "HexTile.hpp"
+#include "Item.hpp"
 #include <vector>
 #include <map>
 #include <string>
@@ -70,10 +71,20 @@ public:
     // Get biome type at a position (returns string name)
     std::string getBiomeAt(float x, float y) const;
 
+    // Item management
+    void placeItem(const Item& item);
+    Item* getItemAt(int q, int r);
+    const std::vector<Item>& getItems() const { return items; }
+    void removeConsumedItems();
+
+    // Find items near a hex position
+    std::vector<Item*> getItemsNear(int q, int r, int radius = 1);
+
 private:
     HexWorldConfig config;
     std::vector<HexTile*> tiles;
     std::map<std::string, std::vector<HexTile*>> biomeGroups;
+    std::vector<Item> items;
 
     // Perlin noise generation
     float perlinNoise(float x, float y) const;
