@@ -3,9 +3,16 @@
 #include "../engine/GameConstants.hpp"
 #include "../engine/SceneInputHandler.hpp"
 #include "../engine/HexPathFinder.hpp"
+#include "../engine/SceneManager.hpp"
+#include "EventBus.h"
 #include "PauseMenuOverlay.hpp"
-#include "SceneManager.hpp"
+#include "Hotbar.hpp"
+#include "HexItemOverlay.hpp"
 #include <cmath>
+
+// ============================================================================
+// HexViewScene implementation
+// ============================================================================
 
 HexViewScene::HexViewScene() : Scene(4800.0f, 900.0f, {12, 14, 28, 255}) {
     world = nullptr;
@@ -75,6 +82,13 @@ void HexViewScene::init() {
     getCamera()->setPosition(startX, startY);
     getCamera()->setZoom(0.8f);
 
+    // Initialize the hotbar (screen-space UI)
+    hotbar_ = std::make_unique<Hotbar>();
+    hotbar_->init(GAME_W, GAME_H);
+    hotbar_->setInputHandler(getInputHandler());
+
+    itemOverlays_.clear();
+
     // Add Back button
     addBackButton();
 }
@@ -105,6 +119,13 @@ void HexViewScene::draw() {
         gotchi->draw();
     }
 
+    // Draw item overlays on hexes (on top of gotchi)
+    for (const auto& overlay : itemOverlays_) {
+        if (overlay) {
+            overlay->draw(hexSize_);
+        }
+    }
+
     // Visual probe: draw click marker (red dot = world point, green ring = hex center)
     if (hasClickMarker_) {
         // Raw world point the click resolved to (red dot)
@@ -121,9 +142,17 @@ void HexViewScene::draw() {
         DrawText("PANNING (drag to move)", 20, GAME_H - 40, 20, Color{255, 255, 255, 200});
     }
 
+    // Draw hotbar at screen bottom
+    if (hotbar_) {
+        hotbar_->draw();
+    }
+
     // Draw instructions
     DrawText("HEX VIEW", 14, 8, 18, Color{180, 180, 255, 255});
     DrawText("Right-click drag to pan  Mouse wheel to zoom", GAME_W - 290, 8, 12, Color{140, 140, 180, 255});
+
+    // Hotbar instructions
+    DrawText("Drag items from bottom palette onto hexes", 20, GAME_H - 75, 14, Color{180, 220, 255, 200});
 
     // Draw back button
     if (backButton_) {
@@ -163,8 +192,42 @@ void HexViewScene::update(float deltaTime) {
         cam->zoomAtScreen(mouse, wheelMove * ZOOM_STEP);
     }
 
-    // Check for left-click to select a hex destination
-    if (gotchi && ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    // Check if we're dragging from the hotbar
+    bool isDraggingFromHotbar = hotbar_ ? hotbar_->isMouseOverSlot() : false;
+
+    // Update hotbar and check for drops
+    if (hotbar_) {
+        if (hotbar_->update(deltaTime, getCamera())) {
+            // A valid drop occurred - add overlay at the target hex
+            if (hotbar_->hasPendingDrop()) {
+                HexItemOverlay::ItemType itemType = hotbar_->getDroppedItemType();
+                Vector2 dropWorldPos = hotbar_->getDroppedWorldPosition();
+
+                // Convert world position to hex using the same canonical method as click-to-move
+                HexCoords targetHex = HexCoords::fromPixel(dropWorldPos, hexSize_);
+                Vector2 targetPos = targetHex.toPixel(hexSize_);
+
+                // Create overlay with the hex coordinates (for arrival check)
+                itemOverlays_.push_back(
+                    std::make_unique<HexItemOverlay>(targetHex, itemType, targetPos, hexSize_)
+                );
+
+                // Also move the gotchi to that hex
+                if (gotchi) {
+                    gotchi->setTargetPosition(targetPos);
+
+                    TraceLog(LOG_WARNING,
+                        "HEXITEM_DROP: item=%d at hex=(%d,%d) world=(%.0f,%.0f)",
+                        static_cast<int>(itemType), targetHex.q, targetHex.r, targetPos.x, targetPos.y);
+                }
+
+                hotbar_->clearPendingDrop();
+            }
+        }
+    }
+
+    // Check for left-click to select a hex destination (only if NOT dragging from hotbar)
+    if (!isDraggingFromHotbar && gotchi && ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         Vector2 mouseWorldPos = ih->getMouseWorldPosition();
 
         // Convert world position to hex coordinates using canonical method
@@ -202,9 +265,41 @@ void HexViewScene::update(float deltaTime) {
         }
     }
 
-    // Update back button
-    if (backButton_) {
-        backButton_->update(ih, deltaTime);
+    // Update overlays and remove consumed ones
+    for (auto it = itemOverlays_.begin(); it != itemOverlays_.end();) {
+        if (*it) {
+            HexCoords gotchiCurrentHex = gotchi ? gotchi->getCurrentHex() : HexCoords{-1, -1};
+
+            bool consumed = (*it)->update(deltaTime, gotchiCurrentHex);
+
+            if (consumed) {
+                // Fire the care effect and remove overlay
+                HexItemOverlay::ItemType itemType = (*it)->getItemType();
+                int careActionCode = HexItemOverlay::careActionCodeForItem(itemType);
+
+                HexCoords itemHex = (*it)->getHex();
+                TraceLog(LOG_WARNING,
+                    "HEXITEM_CONSUMED: item=%d actionCode=%d at hex=(%d,%d)",
+                    static_cast<int>(itemType), careActionCode, itemHex.q, itemHex.r);
+
+                // Emit CareAction event for C-core to process
+                if (eventBus_ && careActionCode >= 0) {
+                    eventBus_->emit(Event::careAction(careActionCode, 1.0f));
+                }
+
+                it = itemOverlays_.erase(it);
+                continue;
+            }
+        }
+        ++it;
+    }
+
+    // Clear click marker when gotchi moves
+    if (gotchi && hasClickMarker_) {
+        HexCoords gotchiHex = gotchi->getCurrentHex();
+        if (gotchiHex.q != clickMarkerHex_.q || gotchiHex.r != clickMarkerHex_.r) {
+            hasClickMarker_ = false;
+        }
     }
 }
 

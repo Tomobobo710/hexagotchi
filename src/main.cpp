@@ -266,6 +266,12 @@ int main() {
     gotchiScene->setGameState(&globalGameState);
     gotchiStatsScene->setGameState(&globalGameState);
 
+    // Wire up event bus for hexboard scene
+    HexViewScene* hexViewScene = static_cast<HexViewScene*>(sceneManager->getScene("hexboard"));
+    if (hexViewScene) {
+        hexViewScene->setEventBus(&globalEventBus);
+    }
+
     // Initialize save directory
     saveManager.initSaveDir();
 

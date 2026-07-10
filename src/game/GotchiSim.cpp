@@ -108,9 +108,8 @@ void GotchiSim::onMergeCompleted(const Event& e) {
 }
 
 bool GotchiSim::isWarmthAction(int actionType) const {
-    // Warmth actions: pet (1), groom (3), water (4) - these are affection-building
-    // Feed (0) and wash (2) are not warmth actions per design §5
-    return actionType == CARE_ACTION_PET ||
-           actionType == CARE_ACTION_GROOM ||
-           actionType == CARE_ACTION_WATER;
+    // Warmth actions (affection-building): pet/ball only (code 1)
+    // Feed (0), wash (2), groom (3), water (4) are NOT warmth actions
+    // per design §5 - warmth is specifically for affection/driver
+    return actionType == CARE_ACTION_PET;
 }

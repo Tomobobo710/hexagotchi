@@ -133,6 +133,9 @@ gotchis/001/wobble_05.png
 gotchis/001/wobble_06.png
 gotchis/001/wobble_07.png
 gotchis/001/wobble_08.png
+portraits/bimmy/bimmyhappy.png
+portraits/bimmy/bimmymid.png
+portraits/bimmy/bimmysad.png
 portraits/jimmy/jimmyhappy.png
 portraits/jimmy/jimmymid.png
 portraits/jimmy/jimmysad.png
@@ -145,6 +148,10 @@ portraits/ronzer/ronzersad.png
 portraits/tom/gotchiportraithappy.png
 portraits/tom/gotchiportraitmid.png
 portraits/tom/gotchiportraitsad.png
+poses/bimmy/bimmyposehappy.png
+poses/bimmy/bimmyposemid.png
+poses/bimmy/bimmyposesad.png
+poses/bimmy/bimmyposescared.png
 poses/jimmy/jimmyposehappy.png
 poses/jimmy/jimmyposemid.png
 poses/jimmy/jimmyposesad.png

@@ -38,7 +38,9 @@ if(RBUILD_DESKTOP)
         "src/game/GotchiStatsScene.cpp"
         "src/game/GotchiSim.cpp"
         "src/game/HexBoard.cpp"
+        "src/game/HexItemOverlay.cpp"
         "src/game/HexViewScene.cpp"
+        "src/game/Hotbar.cpp"
         "src/game/InputTestScene.cpp"
         "src/game/MergeController.cpp"
         "src/game/MergeScene.cpp"
@@ -347,7 +349,9 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/GotchiScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStats.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexBoard.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/HexItemOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexViewScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/Hotbar.cpp
         ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/MergeController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
@@ -384,12 +388,18 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/PortalShader.cpp
         ${CMAKE_SOURCE_DIR}/src/events/EventBus.cpp
     )
-    # Ensure assets.rres is built before web build (rebuild target added in desktop section)
-    add_dependencies(game-web assets.rres)
+
+    # Ensure assets.rres and assets_manifest.txt exist for web build (copy from project root if not present)
+    add_custom_target(web_assets_rres
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/assets.rres ${WEB_OUTPUT_DIR}/assets.rres
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/assets_manifest.txt ${WEB_OUTPUT_DIR}/assets_manifest.txt
+        DEPENDS ${CMAKE_SOURCE_DIR}/assets.rres ${CMAKE_SOURCE_DIR}/assets_manifest.txt
+        WORKING_DIRECTORY ${WEB_OUTPUT_DIR}
+    )
 
     add_custom_target(game-web ALL
-        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/src/events -I ${CMAKE_SOURCE_DIR}/src/flags -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${CMAKE_SOURCE_DIR}/assets.rres@assets.rres
-        DEPENDS raylib-web ${WEB_SOURCES}
+        COMMAND ${EMSCRIPTEN_EXECUTABLE} ${WEB_SOURCES} ${WEB_OUTPUT_DIR}/libraylib.web.a -o ${WEB_OUTPUT_DIR}/game.html -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I ${CMAKE_SOURCE_DIR}/src/engine -I ${CMAKE_SOURCE_DIR}/src/game -I ${CMAKE_SOURCE_DIR}/src/effects -I ${CMAKE_SOURCE_DIR}/src/events -I ${CMAKE_SOURCE_DIR}/src/flags -I ${CMAKE_SOURCE_DIR}/raylib/src -I ${CMAKE_SOURCE_DIR}/rres/src --shell-file ${CMAKE_SOURCE_DIR}/web/shell.html -s USE_GLFW=3 -s ASYNCIFY -s WASM=1 -s TOTAL_MEMORY=67108864 -s GL_ENABLE_GET_PROC_ADDRESS --preload-file ${WEB_OUTPUT_DIR}/assets.rres@assets.rres
+        DEPENDS raylib-web web_assets_rres ${WEB_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 
