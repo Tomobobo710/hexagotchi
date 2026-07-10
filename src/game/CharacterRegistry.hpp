@@ -18,7 +18,7 @@ enum class CharacterId {
     Ronzer,
     Jimmy,
     Therapist,
-    Boss,
+    Larry,
     Narrator,
     Phone,          // "Karen (text)" phone-insert lines in ApartmentScene
 };
@@ -46,12 +46,12 @@ struct CharacterInfo {
     // Portrait asset keys (relative to assets/, matches AssetPack::loadTexture
     // keys), indexed by Emotion. Empty string means no art for that emotion --
     // callers should fall back to Mid, or to no portrait at all if Mid is
-    // also empty (e.g. Narrator/Boss/Therapist, which have no portrait art).
+    // also empty (e.g. Narrator/Larry/Therapist, which have no portrait art).
     std::string portraitPath[3];
 
     // Full-body pose asset keys, same convention/fallback rules as
     // portraitPath. Separate art from portraits (poses/ vs portraits/) --
-    // characters without pose art (Therapist, Boss, Narrator, Phone) are
+    // characters without pose art (Therapist, Larry, Narrator, Phone) are
     // left default-empty and scenes fall back to their procedural silhouette
     // drawing for those.
     std::string posePath[3];

@@ -6,11 +6,11 @@
 #include <cmath>
 
 static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
-static const Color BOSS_COLOR     = CharacterRegistry::get(CharacterId::Boss).nameColor;
+static const Color LARRY_COLOR    = CharacterRegistry::get(CharacterId::Larry).nameColor;
 static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
 
 // The portal's anchor in this scene's 2D world space (same coordinate space
-// as tom/boss's positions) -- where in the room it should visually sit.
+// as tom/larry's positions) -- where in the room it should visually sit.
 // PortalEffect's own 3D camera is otherwise entirely independent of this
 // scene's 2D SceneCamera, so without projecting this point through the 2D
 // camera every frame (see the exact-projection math in draw()), the portal
@@ -41,6 +41,10 @@ void OfficeScene::init() {
     tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
     tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
 
+    tomPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Sad);
+    tomPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Mid);
+    tomPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Happy);
+
     portal = new PortalEffect();
     portal->init();
     portal->setDebugCamDist(PORTAL_CAM_DIST);
@@ -54,25 +58,25 @@ void OfficeScene::init() {
     tom->setVisible(false);
     addActor(tom);
 
-    boss = new SceneActor({650.0f, 380.0f}, 50.0f, 76.0f);
-    boss->setTag("boss");
-    boss->setVisible(false);
-    addActor(boss);
+    larry = new SceneActor({650.0f, 380.0f}, 50.0f, 76.0f);
+    larry->setTag("larry");
+    larry->setVisible(false);
+    addActor(larry);
 
     // --- Scenario 0: "Performance Review", ported almost line-for-line ---
     scenarios.push_back({
         { "Narrator", "Tom arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
           NARRATOR_COLOR, -1, false },
-        { "Boss",  "Tom. My office.\nBring the Hendricks file.",
-          BOSS_COLOR, 1, false },
+        { "Larry",  "Tom. My office.\nBring the Hendricks file.",
+          LARRY_COLOR, 1, false },
         { "Tom",  "...What's the Hendricks file.",
           TOM_COLOR, 0, false },
-        { "Boss",  "The one I emailed you about.\nFive times.\nAlso on the physical memo.",
-          BOSS_COLOR, 1, false },
+        { "Larry",  "The one I emailed you about.\nFive times.\nAlso on the physical memo.",
+          LARRY_COLOR, 1, false },
         { "Tom",  "I don't have a desk.\nYou took my desk.",
           TOM_COLOR, 0, true },
-        { "Boss",  "We hot-desk now Tom.\nIt's a flex workspace environment.",
-          BOSS_COLOR, 1, false },
+        { "Larry",  "We hot-desk now Tom.\nIt's a flex workspace environment.",
+          LARRY_COLOR, 1, false },
         { "Tom",  "I sit on a yoga ball.\nI am 34 years old.",
           TOM_COLOR, 0, false },
         { "Narrator", "The review goes poorly.\nTom does not receive the 3% raise.\nHe receives a 'verbal commendation'.",
@@ -85,24 +89,24 @@ void OfficeScene::init() {
     scenarios.push_back({
         { "Narrator", "Tom's boss calls him in.\nThis time it's different.",
           NARRATOR_COLOR, -1, false },
-        { "Boss",  "Tom we're expanding your role.\nCongratulations.",
-          BOSS_COLOR, 1, false },
+        { "Larry",  "Tom we're expanding your role.\nCongratulations.",
+          LARRY_COLOR, 1, false, true, "Larry (Tom's boss)" },
         { "Tom",  "...A raise?",
-          TOM_COLOR, 0, false },
-        { "Boss",  "More responsibility!\nYou'll now manage the Henderson account\nAND the Brickford account.",
-          BOSS_COLOR, 1, false },
+          TOM_COLOR, 0, false, true, "Tom Gotchi" },
+        { "Larry",  "More responsibility!\nYou'll now manage the Henderson account\nAND the Brickford account.",
+          LARRY_COLOR, 1, false },
         { "Tom",  "Okay and the raise --",
           TOM_COLOR, 0, false },
-        { "Boss",  "We're calling it a 'growth opportunity'.",
-          BOSS_COLOR, 1, false },
+        { "Larry",  "We're calling it a 'growth opportunity'.",
+          LARRY_COLOR, 1, false },
         { "Tom",  "So no raise.",
           TOM_COLOR, 0, false },
-        { "Boss",  "We're also moving your start time to 8:30.",
-          BOSS_COLOR, 1, false },
+        { "Larry",  "We're also moving your start time to 8:30.",
+          LARRY_COLOR, 1, false },
         { "Tom",  "Earlier?!",
           TOM_COLOR, 0, true },
-        { "Boss",  "It's the flex workspace, Tom.\nThe ball yoga spot is first come, first served now.",
-          BOSS_COLOR, 1, false },
+        { "Larry",  "It's the flex workspace, Tom.\nThe ball yoga spot is first come, first served now.",
+          LARRY_COLOR, 1, false },
         { "Tom",  "I... cannot process this\nright now.",
           TOM_COLOR, 0, false },
         { "Narrator", "Tom processes it on his commute home.\nHe misses his exit.\nTwice.",
@@ -143,7 +147,7 @@ void OfficeScene::update(float deltaTime) {
     }
 
     if (activeScenario < 0) {
-        // Ambient: Tom balancing/wobbling on the yoga ball, boss absent
+        // Ambient: Tom balancing/wobbling on the yoga ball, Larry absent
         // (only appears during the scripted scenarios, called into "his office").
         tomWobbleTimer += deltaTime * 3.0f;
         tom->setPosition({420.0f, 400.0f + sinf(tomWobbleTimer) * 6.0f});
@@ -219,7 +223,7 @@ void OfficeScene::draw() {
     // Actors last, on top of the portal.
     BeginMode2D(cam);
     drawTom(tom->getPosition());
-    if (activeScenario >= 0) drawBoss(boss->getPosition());
+    if (activeScenario >= 0) drawLarry(larry->getPosition());
     EndMode2D();
 
     if (getEntrySceneName() == "scene_select") {
@@ -260,6 +264,7 @@ void OfficeScene::cleanup() {
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
+        if (tomPortraits[i].id != 0) UnloadTexture(tomPortraits[i]);
     }
 
     if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
@@ -296,9 +301,19 @@ void OfficeScene::advanceLine() {
 }
 
 void OfficeScene::playLine(const OfficeLine& line) {
-    dialog->setSpeakerName(line.speaker);
+    dialog->setSpeakerName(line.firstTime ? line.firstTimeName : line.speaker);
     dialog->setSpeakerColor(line.speakerColor);
     dialog->setText(line.text);
+
+    if (line.focusActor == 0) {
+        dialog->setPortraitTexture(tomPortraits[line.emotion]);
+        dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
+    } else {
+        // Larry has no portrait art -- clear so the placeholder silhouette
+        // doesn't linger from Tom's previous line.
+        dialog->clearPortraitTexture();
+    }
+
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
 }
@@ -314,7 +329,7 @@ void OfficeScene::endScenario() {
 void OfficeScene::focusCameraOn(int actorIndex, bool shake) {
     SceneActor* target = nullptr;
     if (actorIndex == 0) target = tom;
-    else if (actorIndex == 1) target = boss;
+    else if (actorIndex == 1) target = larry;
 
     if (target) {
         Vector2 pos = target->getCenter();
@@ -359,21 +374,21 @@ void OfficeScene::drawTom(Vector2 pos) {
     DrawLineEx({cx + 24, cy}, {cx + 34, cy + 10}, 5.0f, TOM_COLOR);
 }
 
-void OfficeScene::drawBoss(Vector2 pos) {
+void OfficeScene::drawLarry(Vector2 pos) {
     float cx = pos.x + 25.0f;
     float cy = pos.y + 38.0f;
 
     // Sharp-suited, imposing -- taller and boxier than Tom
-    Color darkBoss = {90, 40, 110, 255};
-    DrawRectangle((int)(cx - 20), (int)(cy - 6), 40, 52, BOSS_COLOR);
-    DrawCircle((int)cx, (int)(cy - 30), 18, BOSS_COLOR);
+    Color darkLarry = {90, 40, 110, 255};
+    DrawRectangle((int)(cx - 20), (int)(cy - 6), 40, 52, LARRY_COLOR);
+    DrawCircle((int)cx, (int)(cy - 30), 18, LARRY_COLOR);
 
     // Stern narrow eyes
-    DrawRectangle((int)(cx - 11), (int)(cy - 32), 6, 2, darkBoss);
-    DrawRectangle((int)(cx + 5), (int)(cy - 32), 6, 2, darkBoss);
+    DrawRectangle((int)(cx - 11), (int)(cy - 32), 6, 2, darkLarry);
+    DrawRectangle((int)(cx + 5), (int)(cy - 32), 6, 2, darkLarry);
     // Flat unimpressed mouth
-    DrawLineEx({cx - 6, cy - 22}, {cx + 6, cy - 22}, 2.0f, darkBoss);
+    DrawLineEx({cx - 6, cy - 22}, {cx + 6, cy - 22}, 2.0f, darkLarry);
 
     // Tie
-    DrawTriangle({cx - 3, cy - 4}, {cx + 3, cy - 4}, {cx, cy + 10}, darkBoss);
+    DrawTriangle({cx - 3, cy - 4}, {cx + 3, cy - 4}, {cx, cy + 10}, darkLarry);
 }

@@ -154,8 +154,14 @@ private:
     // half-width/half-height in clampToBoundary() -- keeps the camera's
     // actual visible frame at least this far inside the true boundary rect
     // at all times, so panning/zooming to frame an off-center actor (or
-    // camera shake) never reveals empty space past the scene's edge.
-    static constexpr float BOUNDARY_SAFETY_INSET = 30.0f;
+    // camera shake) never reveals empty space past the scene's edge. Split
+    // into separate X/Y insets (rather than one shared value) so a focus
+    // shot's vertical framing can be held back further from the top/bottom
+    // edges than horizontal -- most scenes are wider than they are tall, so
+    // a small vertical pan already gets much closer to the edge than the
+    // same horizontal pan would.
+    static constexpr float BOUNDARY_SAFETY_INSET_X = 30.0f;
+    static constexpr float BOUNDARY_SAFETY_INSET_Y = 90.0f;
 
     // Inertia state (for fling momentum)
     Vector2 velocity;

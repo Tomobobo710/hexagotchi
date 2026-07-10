@@ -19,6 +19,14 @@ struct PizzaLine {
     bool shake;        // punch-in beat: small camera shake when this line shows
     int portraitActor;  // which actor's portrait set to draw, or -1 for none (defaults to focusActor via playLine)
     int emotion;         // 0 = sad, 1 = mid, 2 = happy -- index into that actor's portrait set
+
+    // Marks this line as the character's introduction -- playLine() shows
+    // firstTimeName above the dialog box instead of speaker, just for this
+    // one line (e.g. "Karen (Tom's ex-wife)" instead of "Karen"). Set this
+    // on whichever line in the scenario is that character's actual first
+    // line -- there's no automatic first-appearance tracking.
+    bool firstTime = false;
+    std::string firstTimeName;
 };
 
 // Recurring "check in on the gotchi's world" hangout location. Most visits

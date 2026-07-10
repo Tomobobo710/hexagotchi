@@ -11,8 +11,21 @@ struct OfficeLine {
     std::string speaker;
     std::string text;
     Color speakerColor;
-    int focusActor;   // 0 = Tom, 1 = Boss, -1 = none
+    int focusActor;   // 0 = Tom, 1 = Larry, -1 = none
     bool shake;
+
+    // Marks this line as the character's introduction -- playLine() shows
+    // firstTimeName above the dialog box instead of speaker, just for this
+    // one line (e.g. "Larry (Tom's boss)" instead of "Larry"). Set this on
+    // whichever line in the scenario is that character's actual first line
+    // -- there's no automatic first-appearance tracking.
+    bool firstTime = false;
+    std::string firstTimeName;
+
+    // Tom's portrait emotion (0=sad, 1=mid, 2=happy). Only meaningful when
+    // focusActor == 0 -- Larry has no portrait art, so his lines just clear
+    // the portrait instead (see playLine()).
+    int emotion = 1;
 };
 
 // Datatek Solutions -- ported from the JS prototype's "Performance Review"
@@ -44,14 +57,19 @@ private:
     Texture2D background = {0};
 
     SceneActor* tom = nullptr;
-    SceneActor* boss  = nullptr;
+    SceneActor* larry  = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     // Full-body pose art for Tom, [0]=sad [1]=mid [2]=happy -- loaded via
-    // CharacterRegistry (see init()). Boss has no pose art, so drawBoss()
+    // CharacterRegistry (see init()). Larry has no pose art, so drawLarry()
     // stays procedural-only.
     Texture2D tomPoses[3] = {};
+
+    // Tom's dialog-box portraits, same [0]=sad [1]=mid [2]=happy indexing --
+    // loaded via CharacterRegistry (see init()). Larry has no portrait art,
+    // so his lines just clear the dialog box's portrait (see playLine()).
+    Texture2D tomPortraits[3] = {};
 
     float tomWobbleTimer = 0.0f;
 
@@ -69,7 +87,7 @@ private:
     void focusCameraOn(int actorIndex, bool shake);
 
     void drawTom(Vector2 pos);
-    void drawBoss(Vector2 pos);
+    void drawLarry(Vector2 pos);
     void drawOffice();
 
     // The merge-machine/teleporter, drawn in front of the background art but

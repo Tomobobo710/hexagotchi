@@ -294,15 +294,18 @@ void SceneCamera::updatePulse(float deltaTime) {
 
 void SceneCamera::clampToBoundary() {
     // Visible half-width/half-height, shrunk by a fixed inward safety
-    // margin (see BOUNDARY_SAFETY_INSET) -- this is the hard clamp every
-    // scene's setPosition()/zoomTo()/focus shot is subject to, using the
-    // TRUE boundary rect (not inflated by panMargin, which is drag-overscroll
-    // UX padding, a different concern -- see the field comment in the
-    // header). Without this, a story-camera focus shot near the scene edge
-    // (e.g. an actor placed near a wall) could center on empty space past
-    // the boundary, or leave no room for shake before revealing it.
-    float hw = (GAME_W / zoom) * 0.5f + BOUNDARY_SAFETY_INSET;
-    float hh = (GAME_H / zoom) * 0.5f + BOUNDARY_SAFETY_INSET;
+    // margin (see BOUNDARY_SAFETY_INSET_X/_Y) -- this is the hard clamp
+    // every scene's setPosition()/zoomTo()/focus shot is subject to, using
+    // the TRUE boundary rect (not inflated by panMargin, which is
+    // drag-overscroll UX padding, a different concern -- see the field
+    // comment in the header). Without this, a story-camera focus shot near
+    // the scene edge (e.g. an actor placed near a wall) could center on
+    // empty space past the boundary, or leave no room for shake before
+    // revealing it. This is unconditional -- wide view overrides
+    // position/zoom entirely after this runs (see update()), so it's
+    // unaffected by either inset.
+    float hw = (GAME_W / zoom) * 0.5f + BOUNDARY_SAFETY_INSET_X;
+    float hh = (GAME_H / zoom) * 0.5f + BOUNDARY_SAFETY_INSET_Y;
 
     float loX = boundaryMinX + hw, hiX = boundaryMaxX - hw;
     if (loX <= hiX) { if (position.x < loX) position.x = loX; if (position.x > hiX) position.x = hiX; }

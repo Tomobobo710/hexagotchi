@@ -85,8 +85,8 @@ void PizzaParlorScene::init() {
         { "Tom",    "Oh -- hey. I didn't know you two ate here too.",
           TOM_COLOR, 0, false, 0, 1 },
         { "Karen",   "We come here every Tuesday, Tom. We've come here every\nTuesday for six weeks.",
-          WIFE_COLOR, 1, false, 1, 1 },
-        { "Ronzer",  "Ronzer.", POKEMON_COLOR, 2, false, 2, 2 },
+          WIFE_COLOR, 1, false, 1, 1, true, "Karen (Tom's ex-wife)" },
+        { "Ronzer",  "Ronzer.", POKEMON_COLOR, 2, false, 2, 2, true, "Ronzer (her new boyfriend)" },
         { "Tom",    "Right. Tuesdays. I knew that.",
           TOM_COLOR, 0, false, 0, 0 },
         { "Karen",   "Did you get my email about Jimmy's recital?",
@@ -287,7 +287,7 @@ void PizzaParlorScene::advanceLine() {
 }
 
 void PizzaParlorScene::playLine(const PizzaLine& line) {
-    dialog->setSpeakerName(line.speaker);
+    dialog->setSpeakerName(line.firstTime ? line.firstTimeName : line.speaker);
     dialog->setSpeakerColor(line.speakerColor);
     dialog->setText(line.text);
 
