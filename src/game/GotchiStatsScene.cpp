@@ -67,8 +67,20 @@ void GotchiStatsScene::init() {
 
     gotchi = new Gotchi({360.0f, 360.0f}, stats, mood);
     gotchi->setTag("gotchi");
-    gotchi->setScale({4.0f, 4.0f});  // Scale up for visibility
+    gotchi->setWanderEnabled(false);   // Stop floating in idle state
     addActor(gotchi);
+
+    // Framing: set fixed world scale and compute camera zoom to fill ~60% of screen
+    gotchi->setScale({ GOTCHI_WORLD_SCALE, GOTCHI_WORLD_SCALE });
+    float spriteWorldPx = gotchi->getHeight() * GOTCHI_WORLD_SCALE;      // 64 * 2 = 128px
+    float targetPx      = GOTCHI_SCREEN_FRAC * (float)GAME_H;            // 0.60 * 720 = 432px
+    float framingZoom   = targetPx / spriteWorldPx;                       // 3.375
+    getCamera()->setPosition(360.0f, 360.0f);                             // center on the gotchi
+    getCamera()->setZoom(framingZoom);
+
+    TraceLog(LOG_INFO, "GOTCHI_STATS_FRAME sprPx=%.0f targetPx=%.0f wantZoom=%.3f setZoom=%.3f minZoom=%.3f",
+             spriteWorldPx, targetPx, framingZoom,
+             getCamera()->getZoom(), getCamera()->minZoomForBounds());
 
     // Initialize the Gotchi (no longer resets vitals - they persist in GameState)
     gotchi->init();
@@ -116,6 +128,10 @@ void GotchiStatsScene::update(float deltaTime) {
     if (gotchi) {
         gotchi->update(deltaTime);
     }
+
+    // Mouse wheel zoom - allows zooming in/out around cursor position
+    float wheel = GetMouseWheelMove();
+    if (wheel != 0.0f) getCamera()->zoomAtScreen(GetMousePosition(), wheel * 0.25f);
 
     // Update button states
     SceneInputHandler* input = getInputHandler();

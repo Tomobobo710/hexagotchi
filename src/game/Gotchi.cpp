@@ -23,6 +23,7 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
       sleeping_(false),
       dead_(false),
       debugMode_(false),
+      wanderEnabled_(true),  // Default to enabled for compatibility
       tickTimer_(0.0f),
       lastUpdate_(0.0f),
       wanderTimer_(0.0f),
@@ -90,7 +91,7 @@ void Gotchi::update(float deltaTime) {
         return;
     }
 
-    TraceLog(LOG_WARNING, "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f)",
+    TraceLog(LOG_DEBUG, "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f)",
              followingPath_ ? 1 : 0, pathIndex_, position.x, position.y);
 
     // Update timing
@@ -138,8 +139,8 @@ void Gotchi::update(float deltaTime) {
     // Animation update
     updateAnimation(deltaTime);
 
-    // Movement logic
-    if (!sleeping_ && currentAction_ == "idle") {
+    // Movement logic - only if wander is enabled
+    if (!sleeping_ && currentAction_ == "idle" && wanderEnabled_) {
         // Random wandering
         wanderTimer_ -= deltaTime;
         if (wanderTimer_ <= 0) {
@@ -163,7 +164,7 @@ void Gotchi::update(float deltaTime) {
 }
 
 void Gotchi::updatePathMovement(float deltaTime) {
-    TraceLog(LOG_WARNING,
+    TraceLog(LOG_DEBUG,
         "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f) dead=%d sleeping=%d pathN=%d",
         followingPath_ ? 1 : 0, pathIndex_, position.x, position.y,
         dead_ ? 1 : 0, sleeping_ ? 1 : 0, (int)currentPath_.size());
@@ -548,7 +549,9 @@ void Gotchi::wander(float deltaTime) {
 }
 
 void Gotchi::setAction(const std::string& action) {
-    if (currentAction_ == action) return;
+    // Only early-return if same action AND animating with valid frames
+    // This ensures idle animation starts properly after loadAnimationFrames()
+    if (currentAction_ == action && animating && !animFrames.empty()) return;
 
     currentAction_ = action;
     actionTimer_ = 0.0f;
@@ -1135,4 +1138,20 @@ Item* Gotchi::getItemOnCurrentHex() {
 
     HexCoords currentHex = getCurrentHex();
     return world_->getItemAt(currentHex.q, currentHex.r);
+}
+
+Vector2 Gotchi::getFrameSize() const {
+    // Return size of first idle frame if available (idle has highest priority)
+    if (!animIdle_.empty()) {
+        return { (float)animIdle_[0].width, (float)animIdle_[0].height };
+    }
+    // Fall back to any loaded animation
+    if (!animWalk_.empty()) {
+        return { (float)animWalk_[0].width, (float)animWalk_[0].height };
+    }
+    if (!animMove_.empty()) {
+        return { (float)animMove_[0].width, (float)animMove_[0].height };
+    }
+    // Default to base size if no frames loaded
+    return { 64.0f, 64.0f };
 }

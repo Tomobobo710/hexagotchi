@@ -30,4 +30,12 @@ inline bool IsIntegerScalingEnabled() {
     return IntegerScalingState();
 }
 
+// Gotchi world scale - fixed sprite scale in world space (64→128px)
+// The gotchi's native frame is 64px; this scales it to 128px in the world
+inline constexpr float GOTCHI_WORLD_SCALE = 2.0f;
+
+// Gotchi screen fraction - target fraction of framebuffer height to fill with the gotchi
+// 0.60 means the gotchi will fill ~60% of the 720px framebuffer height (~432px)
+inline constexpr float GOTCHI_SCREEN_FRAC = 0.60f;
+
 #endif // GAME_CONSTANTS_HPP

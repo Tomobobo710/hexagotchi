@@ -42,6 +42,8 @@ static bool isHygieneAction(int actionCode) {
     return actionCode == 0 || actionCode == 1;  // Wash or Groom
 }
 
+// Gotchi pixel scale - now in GameConstants.hpp for shared use across scenes
+
 // Desktop shader - #version 330
 static const char* ACTION_OVERLAY_FS_DESKTOP = R"(#version 330
 
@@ -164,7 +166,6 @@ void GotchiScene::init() {
 
     gotchi = new Gotchi({360.0f, 360.0f}, stats, mood);
     gotchi->setTag("gotchi");
-    gotchi->setScale({12.0f, 12.0f});  // Scale up ~3x for visibility (was 4.0)
     addActor(gotchi);
 
     // Initialize the Gotchi (no longer resets vitals - they persist in GameState)
@@ -173,8 +174,34 @@ void GotchiScene::init() {
     // Load animation frames using the Gotchi's loader
     gotchi->loadAnimationFrames(gotchiDir);
 
-    // Set initial action (will use the loaded frames)
+    // Fix 1: Set initial action AFTER loading frames - this now properly starts idle animation
     gotchi->setAction("idle");
+
+    // Fix 2: Disable wandering so gotchi stays still in idle state
+    gotchi->setWanderEnabled(false);
+
+    // Fix 3: Size the gotchi based on actual frame dimensions (native 64px)
+    Vector2 frameSize = gotchi->getFrameSize();
+    if (frameSize.x > 0 && frameSize.y > 0) {
+        gotchi->setSize(frameSize.x, frameSize.y);  // Base size = native frame pixels
+    }
+
+    // Framing: set fixed world scale and compute camera zoom to fill ~60% of screen
+    gotchi->setScale({ GOTCHI_WORLD_SCALE, GOTCHI_WORLD_SCALE });
+    float spriteWorldPx = gotchi->getHeight() * GOTCHI_WORLD_SCALE;      // 64 * 2 = 128px
+    float targetPx      = GOTCHI_SCREEN_FRAC * (float)GAME_H;            // 0.60 * 720 = 432px
+    float framingZoom   = targetPx / spriteWorldPx;                       // 3.375
+    getCamera()->setPosition(360.0f, 360.0f);                             // center on the gotchi
+    getCamera()->setZoom(framingZoom);
+
+    TraceLog(LOG_INFO, "GOTCHI_FRAME sprPx=%.0f targetPx=%.0f wantZoom=%.3f setZoom=%.3f minZoom=%.3f",
+             spriteWorldPx, targetPx, framingZoom,
+             getCamera()->getZoom(), getCamera()->minZoomForBounds());
+
+    TraceLog(LOG_INFO, "GOTCHI_INIT idleFrames=%zu animating=%d scale=(%.1f,%.1f) size=(%.0f,%.0f)",
+             gotchi->animIdleCount(), (int)gotchi->isAnimating(),
+             gotchi->getScale().x, gotchi->getScale().y,
+             gotchi->getWidth(), gotchi->getHeight());
 
     // Initialize action shader with platform-specific version
 #if defined(PLATFORM_WEB)
@@ -295,6 +322,10 @@ void GotchiScene::update(float deltaTime) {
     if (gotchi) {
         gotchi->update(deltaTime);
     }
+
+    // Mouse wheel zoom - allows zooming in/out around cursor position
+    float wheel = GetMouseWheelMove();
+    if (wheel != 0.0f) getCamera()->zoomAtScreen(GetMousePosition(), wheel * 0.25f);
 
     // Update merge button label if seenReality has changed
     if (mergeController_) {

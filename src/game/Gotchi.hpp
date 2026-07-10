@@ -65,6 +65,9 @@ public:
     void moveToTarget(float deltaTime);
     void wander(float deltaTime);
 
+    // Wander control - public for scene initialization
+    void setWanderEnabled(bool e) { wanderEnabled_ = e; }
+
     // Path-based movement
     HexCoords getCurrentHex() const;
     void setPath(const std::vector<HexCoords>& path);
@@ -111,6 +114,9 @@ public:
     bool loadAnimationFrames(const std::string& basePath);
     void unloadAnimations();
 
+    // Frame size accessor (for proper sizing based on actual sprite)
+    Vector2 getFrameSize() const;
+
     // Animation frame count accessors (for debug/probe)
     size_t animIdleCount() const { return animIdle_.size(); }
     size_t animWalkCount() const { return animWalk_.size(); }
@@ -137,6 +143,9 @@ private:
     bool sleeping_;
     bool dead_;
     bool debugMode_;
+
+    // Wander control
+    bool wanderEnabled_;
 
     // Timing
     float tickTimer_;       // For tick-based updates
