@@ -196,6 +196,12 @@ void HexViewScene::update(float deltaTime) {
         return;
     }
 
+    // Update back button first (before click handlers)
+    if (backButton_) {
+        SceneInputHandler* ih = getInputHandler();
+        backButton_->update(ih, deltaTime);
+    }
+
     // Camera panning logic
     SceneInputHandler* ih = getInputHandler();
     SceneCamera* cam = getCamera();
@@ -259,39 +265,43 @@ void HexViewScene::update(float deltaTime) {
     }
 
     // Check for left-click to select a hex destination (only if NOT dragging from hotbar)
+    // and only if we're not clicking on the back button
     if (!isDraggingFromHotbar && gotchi && ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        Vector2 mouseWorldPos = ih->getMouseWorldPosition();
+        // Don't process hex click if mouse is over the back button
+        if (!(backButton_ && backButton_->isHovered())) {
+            Vector2 mouseWorldPos = ih->getMouseWorldPosition();
 
-        // Convert world position to hex coordinates using canonical method
-        HexCoords target = HexCoords::fromPixel(mouseWorldPos, hexSize_);
-        int targetQ = target.q;
-        int targetR = target.r;
+            // Convert world position to hex coordinates using canonical method
+            HexCoords target = HexCoords::fromPixel(mouseWorldPos, hexSize_);
+            int targetQ = target.q;
+            int targetR = target.r;
 
-        // Get current Gotchi hex position
-        HexCoords gotchiHex = gotchi->getCurrentHex();
+            // Get current Gotchi hex position
+            HexCoords gotchiHex = gotchi->getCurrentHex();
 
-        // Check if the clicked tile is walkable
-        HexTile* clickedTile = world->getTileAt(targetQ, targetR);
-        TraceLog(LOG_WARNING,
-            "CLICK fired world=(%.0f,%.0f) target=(%d,%d) tile=%s gotchi=(%d,%d)",
-            mouseWorldPos.x, mouseWorldPos.y, targetQ, targetR,
-            clickedTile ? "OK" : "NULL", gotchiHex.q, gotchiHex.r);
+            // Check if the clicked tile is walkable
+            HexTile* clickedTile = world->getTileAt(targetQ, targetR);
+            TraceLog(LOG_WARNING,
+                "CLICK fired world=(%.0f,%.0f) target=(%d,%d) tile=%s gotchi=(%d,%d)",
+                mouseWorldPos.x, mouseWorldPos.y, targetQ, targetR,
+                clickedTile ? "OK" : "NULL", gotchiHex.q, gotchiHex.r);
 
-        // Visual probe: store the click marker for rendering
-        hasClickMarker_   = true;
-        clickMarkerHex_   = target;
-        clickMarkerWorld_ = mouseWorldPos;
+            // Visual probe: store the click marker for rendering
+            hasClickMarker_   = true;
+            clickMarkerHex_   = target;
+            clickMarkerWorld_ = mouseWorldPos;
 
-        if (clickedTile && clickedTile->getTileType()) {
-            std::string biome = clickedTile->getTileType()->getBiome();
-            if (biome != "ocean") {
-                // Find path and set Gotchi moving
-                HexPathFinder pathfinder(world);
-                std::vector<HexCoords> path = pathfinder.findPath(gotchiHex.q, gotchiHex.r, targetQ, targetR);
-                TraceLog(LOG_WARNING, "CLICK pathN=%d biome=%s", (int)path.size(), biome.c_str());
+            if (clickedTile && clickedTile->getTileType()) {
+                std::string biome = clickedTile->getTileType()->getBiome();
+                if (biome != "ocean") {
+                    // Find path and set Gotchi moving
+                    HexPathFinder pathfinder(world);
+                    std::vector<HexCoords> path = pathfinder.findPath(gotchiHex.q, gotchiHex.r, targetQ, targetR);
+                    TraceLog(LOG_WARNING, "CLICK pathN=%d biome=%s", (int)path.size(), biome.c_str());
 
-                if (!path.empty()) {
-                    gotchi->setPath(path);
+                    if (!path.empty()) {
+                        gotchi->setPath(path);
+                    }
                 }
             }
         }

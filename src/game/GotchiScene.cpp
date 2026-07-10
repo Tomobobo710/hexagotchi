@@ -753,14 +753,12 @@ void GotchiScene::addExploreButton() {
 }
 
 void GotchiScene::updateExploreButtonVisibility() {
-    // Get confidence and excitement from the Gotchi's stats
-    if (!gotchi) return;
-
-    float confidence = gotchi->getStats().getNormalizedStat(EmotionalStat::CONFIDENCE);
-    float excitement = gotchi->getStats().getNormalizedStat(EmotionalStat::EXCITEMENT);
-
-    // Use the predicate to determine visibility
-    bool shouldShow = shouldShowExplore(confidence, excitement);
+    // The Explore button is visible when:
+    // - seenReality is true (player has visited the real world - same condition as Merge button)
+    bool shouldShow = false;
+    if (gameState_ && gameState_->seenReality) {
+        shouldShow = true;
+    }
 
     // Find the Explore button and set its visibility
     for (auto& btn : buttons) {
