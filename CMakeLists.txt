@@ -148,30 +148,31 @@ if(RBUILD_DESKTOP)
     target_include_directories(test_story_sequencer PRIVATE . src src/engine src/game src/events src/flags raylib/src)
     target_link_libraries(test_story_sequencer PRIVATE raylib glfw)
 
+    # DISABLED: Save system shut off for game jam
     # Test executable for SaveManager
-    set(SAVE_TEST_SRCS
-        tests/TestSaveManager.cpp
-        src/engine/SaveManager.cpp
-        src/engine/GameState.cpp
-        src/game/GotchiStats.cpp
-        src/game/GotchiMood.cpp
-    )
-    add_executable(test_save_manager ${SAVE_TEST_SRCS})
-    target_include_directories(test_save_manager PRIVATE . src src/engine src/game raylib/src rres/src)
-    target_link_libraries(test_save_manager PRIVATE raylib glfw)
+    # set(SAVE_TEST_SRCS
+    #     tests/TestSaveManager.cpp
+    #     src/engine/SaveManager.cpp
+    #     src/engine/GameState.cpp
+    #     src/game/GotchiStats.cpp
+    #     src/game/GotchiMood.cpp
+    # )
+    # add_executable(test_save_manager ${SAVE_TEST_SRCS})
+    # target_include_directories(test_save_manager PRIVATE . src src/engine src/game raylib/src rres/src)
+    # target_link_libraries(test_save_manager PRIVATE raylib glfw)
 
     # Test executable for SaveWiring (includes SaveManager tests)
-    set(SAVE_WIRING_TEST_SRCS
-        tests/TestSaveWiring.cpp
-        src/engine/SaveManager.cpp
-        src/engine/GameState.cpp
-        src/game/GotchiStats.cpp
-        src/game/GotchiMood.cpp
-        src/events/EventBus.cpp
-    )
-    add_executable(test_save_wiring ${SAVE_WIRING_TEST_SRCS})
-    target_include_directories(test_save_wiring PRIVATE . src src/engine src/game src/events src/flags raylib/src rres/src)
-    target_link_libraries(test_save_wiring PRIVATE raylib glfw)
+    # set(SAVE_WIRING_TEST_SRCS
+    #     tests/TestSaveWiring.cpp
+    #     src/engine/SaveManager.cpp
+    #     src/engine/GameState.cpp
+    #     src/game/GotchiStats.cpp
+    #     src/game/GotchiMood.cpp
+    #     src/events/EventBus.cpp
+    # )
+    # add_executable(test_save_wiring ${SAVE_WIRING_TEST_SRCS})
+    # target_include_directories(test_save_wiring PRIVATE . src src/engine src/game src/events src/flags raylib/src rres/src)
+    # target_link_libraries(test_save_wiring PRIVATE raylib glfw)
 
     # Test executable for MergeController
 
