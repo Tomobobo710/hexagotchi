@@ -9,11 +9,19 @@
 set -e
 cd "$(dirname "$0")/.."
 
-GPP=/c/devkitPro/msys2/usr/bin/g++.exe
-G=/c/devkitPro/msys2/usr/lib/gcc/x86_64-pc-cygwin/15.2.0
-SYS="-isystem $G/include/c++ -isystem $G/include/c++/x86_64-pc-cygwin -isystem $G/include/c++/backward -isystem $G/include -isystem /c/devkitPro/msys2/usr/include"
+# Try devkitPro first (Windows paths), fall back to system g++ (Linux)
+if [ -f /c/devkitPro/msys2/usr/bin/g++.exe ]; then
+    GPP=/c/devkitPro/msys2/usr/bin/g++.exe
+    G=/c/devkitPro/msys2/usr/lib/gcc/x86_64-pc-cygwin/15.2.0
+    SYS="-isystem $G/include/c++ -isystem $G/include/c++/x86_64-pc-cygwin -isystem $G/include/c++/backward -isystem $G/include -isystem /c/devkitPro/msys2/usr/include"
+    LD="-L raylib/src -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm"
+else
+    # Linux: use system g++
+    GPP=g++
+    SYS=""
+    LD="-L raylib/src -L glfw/build/src -lraylib -lglfw3 -lGL -ldl -lm"
+fi
 INC="-I raylib/src -I rres/src"
-LD="-L raylib/src -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm"
 
 BIN=build/devtools/pack_assets.exe
 OBJ=build/devtools/pack_assets.o

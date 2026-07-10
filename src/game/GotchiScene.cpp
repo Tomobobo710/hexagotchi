@@ -65,6 +65,10 @@ void main() {
     uv.y = 1.0 - uv.y;
     float aspect = uResolution.x / max(uResolution.y, 1.0);
 
+    // Scale UVs by aspect ratio to make effects cover the rect properly
+    // This stretches the effect to fill the destination rectangle
+    uv.x *= aspect;
+
     float p = clamp(uProgress, 0.0, 1.0);
     float ease = sin(p * 3.14159265);   // 0 -> 1 -> 0 across the action
 
@@ -79,8 +83,14 @@ void main() {
         float tw = sin(uTime * 4.0 + hash(g) * 6.2831) * 0.5 + 0.5;
         mask = step(0.9, hash(g)) * tw; col = vec3(1.0, 0.95, 0.6);
     } else if (uMode == 2) {             // Feed: falling crumbs
-        vec2 gp = uv * vec2(14.0, 18.0); gp.y += uTime * 4.0;
-        mask = step(0.93, hash(floor(gp))); col = vec3(0.85, 0.6, 0.3);
+        // Similar to Water mode - use smoothstep for soft transitions
+        vec2 gp = uv * vec2(14.0, 18.0);
+        float y = fract(gp.y + uTime * 4.0);  // animated Y position
+        float streak = smoothstep(0.0, 0.1, y) * smoothstep(0.40, 0.10, y);
+        float colId = floor(gp.x);
+        float hashVal = hash(vec2(colId, uTime * 0.5));
+        mask = streak * step(0.5, hashVal);
+        col = vec3(0.85, 0.6, 0.3);
     } else if (uMode == 3) {             // Pet: warm expanding ring
         float d = distance(uv, vec2(0.5));
         mask = smoothstep(0.06, 0.0, abs(d - fract(uTime * 0.5) * 0.5)) * 0.8;
@@ -118,6 +128,9 @@ static const char* ACTION_OVERLAY_FS_WEB = R"(#version 100
         uv.y = 1.0 - uv.y;
         float aspect = uResolution.x / max(uResolution.y, 1.0);
 
+        // Scale UVs by aspect ratio to make effects cover the rect properly
+        uv.x *= aspect;
+
         float p = clamp(uProgress, 0.0, 1.0);
         float ease = sin(p * 3.14159265);
 
@@ -132,8 +145,14 @@ static const char* ACTION_OVERLAY_FS_WEB = R"(#version 100
             float tw = sin(uTime * 4.0 + hash(g) * 6.2831) * 0.5 + 0.5;
             mask = step(0.9, hash(g)) * tw; col = vec3(1.0, 0.95, 0.6);
         } else if (uMode == 2) {
-            vec2 gp = uv * vec2(14.0, 18.0); gp.y += uTime * 4.0;
-            mask = step(0.93, hash(floor(gp))); col = vec3(0.85, 0.6, 0.3);
+            // Similar to Water mode - use smoothstep for soft transitions
+            vec2 gp = uv * vec2(14.0, 18.0);
+            float y = fract(gp.y + uTime * 4.0);  // animated Y position
+            float streak = smoothstep(0.0, 0.1, y) * smoothstep(0.40, 0.10, y);
+            float colId = floor(gp.x);
+            float hashVal = hash(vec2(colId, uTime * 0.5));
+            mask = streak * step(0.5, hashVal);
+            col = vec3(0.85, 0.6, 0.3);
         } else if (uMode == 3) {
             float d = distance(uv, vec2(0.5));
             mask = smoothstep(0.06, 0.0, abs(d - fract(uTime * 0.5) * 0.5)) * 0.8;
@@ -574,7 +593,23 @@ void GotchiScene::draw() {
 
     // Draw action shader overlay on top of the gotchi
     if (actionOverlayTimer_ > 0.0f && actionOverlayMode_ >= 0) {
-        Rectangle r = getGotchiScreenRect();
+        Rectangle worldRect = getGotchiScreenRect();
+
+        // Get the four corners in world space
+        Vector2 worldTL = {worldRect.x, worldRect.y};
+        Vector2 worldBR = {worldRect.x + worldRect.width, worldRect.y + worldRect.height};
+
+        // Convert to screen coordinates
+        Vector2 screenTL = getCamera()->worldToScreen(worldTL);
+        Vector2 screenBR = getCamera()->worldToScreen(worldBR);
+
+        Rectangle r = {
+            screenTL.x,
+            screenTL.y,
+            screenBR.x - screenTL.x,
+            screenBR.y - screenTL.y
+        };
+
         float progress = 1.0f - (actionOverlayTimer_ / actionOverlayDuration_);
         float t = (float)GetTime();
         Vector2 res = {r.width, r.height};
