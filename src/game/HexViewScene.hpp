@@ -13,6 +13,7 @@
 class Hotbar;
 class EventBus;
 class Item;
+class GameState;
 
 class HexViewScene : public Scene {
 public:
@@ -25,6 +26,9 @@ public:
 
     // Set the event bus for emitting CareAction events
     void setEventBus(EventBus* bus) { eventBus_ = bus; }
+
+    // Set the shared game state for vitals and mood
+    void setGameState(GameState* state) { gameState_ = state; }
 
 private:
     // Pause functionality
@@ -48,6 +52,9 @@ private:
 
     // World config (stored after init)
     float hexSize_;
+
+    // Shared game state (owned by main.cpp)
+    GameState* gameState_ = nullptr;
 
     // Fallback vitals and mood for Gotchi (used if no gameState available)
     GotchiStats defaultStats_;

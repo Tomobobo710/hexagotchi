@@ -282,6 +282,7 @@ int main() {
     HexViewScene* hexViewScene = static_cast<HexViewScene*>(sceneManager->getScene("hexboard"));
     if (hexViewScene) {
         hexViewScene->setEventBus(&globalEventBus);
+        hexViewScene->setGameState(&globalGameState);  // Share vitals and mood
     }
 
     // Initialize save directory - DISABLED for game jam

@@ -15,6 +15,10 @@ const float GOTCHI_MOVE_SPEED = 50.0f;
 const float GOTCHI_WANDER_SPEED = 20.0f;
 const float GOTCHI_TICK_RATE = 10.0f;  // Base tick rate in seconds
 
+// Static tick timer state - shared across all Gotchi instances
+float Gotchi::tickTimer_ = 0.0f;
+float Gotchi::lastUpdate_ = 0.0f;
+
 Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
     : SceneActor(position, GOTCHI_WIDTH, GOTCHI_HEIGHT),
       stats_(statsRef),
@@ -24,8 +28,6 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
       dead_(false),
       debugMode_(false),
       wanderEnabled_(true),  // Default to enabled for compatibility
-      tickTimer_(0.0f),
-      lastUpdate_(0.0f),
       wanderTimer_(0.0f),
       currentAction_("idle"),
       actionTimer_(0.0f),
@@ -94,17 +96,17 @@ void Gotchi::update(float deltaTime) {
     TraceLog(LOG_DEBUG, "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f)",
              followingPath_ ? 1 : 0, pathIndex_, position.x, position.y);
 
-    // Update timing
-    tickTimer_ += deltaTime;
-    lastUpdate_ += deltaTime;
+    // Update timing - use static tick state for shared timer across all Gotchi instances
+    Gotchi::tickTimer_ += deltaTime;
+    Gotchi::lastUpdate_ += deltaTime;
 
     // Update SceneActor base class (physics, etc.)
     SceneActor::update(deltaTime);
 
     // Tick-based updates (every GOTCHI_TICK_RATE seconds)
-    if (tickTimer_ >= GOTCHI_TICK_RATE) {
-        float ticks = tickTimer_ / GOTCHI_TICK_RATE;
-        tickTimer_ -= (ticks * GOTCHI_TICK_RATE);
+    if (Gotchi::tickTimer_ >= GOTCHI_TICK_RATE) {
+        float ticks = Gotchi::tickTimer_ / GOTCHI_TICK_RATE;
+        Gotchi::tickTimer_ -= (ticks * GOTCHI_TICK_RATE);
 
         // Update stats over time
         updateStats(ticks);
@@ -126,8 +128,8 @@ void Gotchi::update(float deltaTime) {
 
         if (debugMode_) {
             // Debug output every 5 ticks
-            if (static_cast<int>(lastUpdate_) % 5 == 0) {
-                std::cout << "[Gotchi] Tick " << static_cast<int>(lastUpdate_) / 5
+            if (static_cast<int>(Gotchi::lastUpdate_) % 5 == 0) {
+                std::cout << "[Gotchi] Tick " << static_cast<int>(Gotchi::lastUpdate_) / 5
                           << " | Mood: " << mood_.getMoodName()
                           << " | Hunger: " << stats_.getHunger()
                           << " | Energy: " << stats_.getEnergy()

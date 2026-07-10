@@ -51,6 +51,12 @@ public:
     void setDead(bool dead);
     bool isDead() const;
 
+    // Tick timer access - shared across all Gotchi instances
+    static float getTickTimer() { return tickTimer_; }
+    static void setTickTimer(float t) { tickTimer_ = t; }
+    static float getLastUpdate() { return lastUpdate_; }
+    static void setLastUpdate(float t) { lastUpdate_ = t; }
+
     // Interaction
     void interact();  // Player interaction
     void feed();      // Give food
@@ -147,9 +153,10 @@ private:
     // Wander control
     bool wanderEnabled_;
 
-    // Timing
-    float tickTimer_;       // For tick-based updates
-    float lastUpdate_;      // Last update time
+    // Timing - STATIC so all Gotchi instances share the same tick state
+    // This ensures consistent timing when switching between scenes
+    static float tickTimer_;
+    static float lastUpdate_;
 
     // Movement
     Vector2 targetPosition_;
