@@ -164,7 +164,7 @@ void GotchiScene::init() {
 
     gotchi = new Gotchi({360.0f, 360.0f}, stats, mood);
     gotchi->setTag("gotchi");
-    gotchi->setScale({4.0f, 4.0f});  // Scale up for visibility
+    gotchi->setScale({12.0f, 12.0f});  // Scale up ~3x for visibility (was 4.0)
     addActor(gotchi);
 
     // Initialize the Gotchi (no longer resets vitals - they persist in GameState)

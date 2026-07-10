@@ -1,10 +1,12 @@
 #include "SpriteTestScene.hpp"
 #include "AssetPack.hpp"
 #include "../effects/StarfieldEffect.hpp"
-#include <dirent.h>
+#include <filesystem>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+
+namespace fs = std::filesystem;
 
 // Key relative to assets/ (matches how tools/pack_assets.cpp keys resources
 // inside assets.rres), not a filesystem path -- AssetPack reads packed
@@ -40,34 +42,33 @@ static std::vector<std::string> getAvailableAnimations(const std::string& dir) {
     if (!manifest.is_open()) {
         // Fallback: try to read from filesystem directory
         std::string assetsPath = "assets/" + dir + "/";
-        DIR* d = opendir(assetsPath.c_str());
-        if (!d) {
-            return animations;
-        }
 
-        struct dirent* entry;
-        while ((entry = readdir(d)) != nullptr) {
-            std::string filename = entry->d_name;
-            if (filename == "." || filename == "..") continue;
+        try {
+            for (const auto& entry : fs::directory_iterator(assetsPath)) {
+                if (!entry.is_regular_file()) continue;
 
-            size_t underscorePos = filename.find('_');
-            if (underscorePos != std::string::npos) {
-                std::string prefix = filename.substr(0, underscorePos);
-                size_t suffixPos = prefix.rfind("_two");
-                if (suffixPos != std::string::npos && suffixPos == prefix.length() - 4) {
-                    prefix = prefix.substr(0, suffixPos);
-                }
-                suffixPos = prefix.rfind("_three");
-                if (suffixPos != std::string::npos && suffixPos == prefix.length() - 6) {
-                    prefix = prefix.substr(0, suffixPos);
-                }
+                const auto& filename = entry.path().filename().string();
+                size_t underscorePos = filename.find('_');
+                if (underscorePos != std::string::npos) {
+                    std::string prefix = filename.substr(0, underscorePos);
+                    size_t suffixPos = prefix.rfind("_two");
+                    if (suffixPos != std::string::npos && suffixPos == prefix.length() - 4) {
+                        prefix = prefix.substr(0, suffixPos);
+                    }
+                    suffixPos = prefix.rfind("_three");
+                    if (suffixPos != std::string::npos && suffixPos == prefix.length() - 6) {
+                        prefix = prefix.substr(0, suffixPos);
+                    }
 
-                if (std::find(animations.begin(), animations.end(), prefix) == animations.end()) {
-                    animations.push_back(prefix);
+                    if (std::find(animations.begin(), animations.end(), prefix) == animations.end()) {
+                        animations.push_back(prefix);
+                    }
                 }
             }
+        } catch (const fs::filesystem_error&) {
+            // Directory doesn't exist or can't be accessed
+            return animations;
         }
-        closedir(d);
     } else {
         // Parse manifest file to extract animation prefixes
         std::string line;
