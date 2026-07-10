@@ -1,6 +1,10 @@
 #ifndef SAVE_MANAGER_H
 #define SAVE_MANAGER_H
 
+// DISABLED: Save system shut off for game jam
+// All save/load functionality is disabled. Do not use until further notice.
+#if 0
+
 #include "GameState.h"
 #include <optional>
 #include <string>
@@ -47,5 +51,7 @@ struct SlotSummary {
     double      playtimeSeconds = 0;
     std::string label;        // e.g. pet name or beat title, for a non-blank slot
 };
+
+#endif // DISABLED
 
 #endif // SAVE_MANAGER_H

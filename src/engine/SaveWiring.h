@@ -1,6 +1,10 @@
 #ifndef SAVE_WIRING_H
 #define SAVE_WIRING_H
 
+// DISABLED: Save system shut off for game jam
+// All save/load functionality is disabled. Do not use until further notice.
+#if 0
+
 #include "EventBus.h"
 #include "SaveManager.h"
 #include "EventType.h"
@@ -57,5 +61,7 @@ private:
         }
     }
 };
+
+#endif // DISABLED
 
 #endif // SAVE_WIRING_H

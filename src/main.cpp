@@ -50,11 +50,11 @@ GotchiSim* gotchiSim = nullptr;
 // DriversController - Box C: affection/mercy driver computation
 DriversController* driversController = nullptr;
 
-// SaveManager - handles save/load/delete operations
-SaveManager saveManager;
+// SaveManager - DISABLED: Save system shut off for game jam
+// SaveManager saveManager;
 
-// SaveWiring - subscribes to checkpoint events for autosave
-SaveWiring* saveWiring = nullptr;
+// SaveWiring - DISABLED: Save system shut off for game jam
+// SaveWiring* saveWiring = nullptr;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -121,10 +121,10 @@ void UpdateDrawFrame() {
         }
         lastScene = currentScene;
 
-        // Autosave on scene transition (if active slot is set)
-        if (saveWiring) {
-            saveWiring->onSceneTransition();
-        }
+        // Autosave on scene transition - DISABLED for game jam
+        // if (saveWiring) {
+        //     saveWiring->onSceneTransition();
+        // }
     }
 
     // These standalone debug/demo scenes never use the shared dialog box at
@@ -184,6 +184,11 @@ void UpdateDrawFrame() {
     }
     if (storySequencer) {
         storySequencer->update(dt);
+        // Handle skip action - skip current story step (for testing)
+        // Key S works in any scene when story sequencer is active
+        if (IsKeyPressed(KEY_S)) {
+            storySequencer->skipCurrentStep();
+        }
     }
     if (gotchiSim) {
         gotchiSim->update(dt);
@@ -193,6 +198,11 @@ void UpdateDrawFrame() {
     }
 
     dialog->update(dt);
+
+    // Update dialog box click state for skip button
+    bool mousePressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool mouseReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+    dialog->updateClickState(mousePressed, mouseReleased);
 
     BeginTextureMode(gameTarget);
         ClearBackground(BLACK);
@@ -274,8 +284,8 @@ int main() {
         hexViewScene->setEventBus(&globalEventBus);
     }
 
-    // Initialize save directory
-    saveManager.initSaveDir();
+    // Initialize save directory - DISABLED for game jam
+    // saveManager.initSaveDir();
 
     // Wire up the merge controller
     mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);
@@ -291,9 +301,9 @@ int main() {
     // Wire up the drivers controller (Box C: affection/mercy computation)
     driversController = new DriversController(globalEventBus, globalGameState);
 
-    // Wire up SaveWiring for autosave on checkpoints
-    saveWiring = new SaveWiring(saveManager, globalEventBus);
-    saveWiring->setGameState(&globalGameState);
+    // Wire up SaveWiring for autosave on checkpoints - DISABLED for game jam
+    // saveWiring = new SaveWiring(saveManager, globalEventBus);
+    // saveWiring->setGameState(&globalGameState);
 
 #ifdef HEXA_SHOT_TOOL
     sceneManager->switchSceneImmediate(
@@ -324,11 +334,11 @@ int main() {
 #endif
     }
 
-    // Shutdown autosave (if active slot is set)
-    if (saveManager.activeSlot() >= 0) {
-        saveManager.autosave(globalGameState);
-        std::cout << "[Shutdown] Autosaved GameState to slot " << saveManager.activeSlot() << std::endl << std::flush;
-    }
+    // Shutdown autosave - DISABLED for game jam
+    // if (saveManager.activeSlot() >= 0) {
+    //     saveManager.autosave(globalGameState);
+    //     std::cout << "[Shutdown] Autosaved GameState to slot " << saveManager.activeSlot() << std::endl << std::flush;
+    // }
 
     UnloadRenderTexture(gameTarget);
     delete dialog;
@@ -336,7 +346,7 @@ int main() {
     delete storySequencer;
     delete gotchiSim;
     delete driversController;
-    delete saveWiring;
+    // delete saveWiring;  // DISABLED: Save system shut off for game jam
     delete sceneManager;
     CloseWindow();
 #endif

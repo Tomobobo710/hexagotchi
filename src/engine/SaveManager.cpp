@@ -1,3 +1,6 @@
+// DISABLED: Save system shut off for game jam
+// All save/load functionality is disabled. Do not use until further notice.
+
 #include "SaveManager.h"
 #include "GameState.h"
 #include <fstream>
@@ -12,6 +15,9 @@
 // For desktop: use a per-user save directory
 // For web: IDBFS mount point is set at runtime
 static std::string g_saveDir;
+
+// DISABLED: Save system shut off for game jam
+#if 0
 
 void SaveManager::initSaveDir() {
 #if defined(PLATFORM_WEB)
@@ -706,3 +712,4 @@ void SaveManager::autosave(const GameState& s) {
         save(active_, s);
     }
 }
+#endif // DISABLED
