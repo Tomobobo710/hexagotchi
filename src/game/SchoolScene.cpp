@@ -9,9 +9,6 @@ static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nam
 static const Color KAREN_COLOR    = CharacterRegistry::get(CharacterId::Karen).nameColor;
 static const Color JIMMY_COLOR    = CharacterRegistry::get(CharacterId::Jimmy).nameColor;
 static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
-// Placeholder silhouette-art color -- deliberately separate from the name
-// label above (see CharacterInfo::bodyColor).
-static const Color KAREN_BODY_COLOR = CharacterRegistry::get(CharacterId::Karen).bodyColor;
 
 // Matches the opaque sky color actually painted in schoolbg.png's daytime
 // sky, sampled from the art -- schoolbg.png's sky region is otherwise
@@ -43,15 +40,15 @@ void SchoolScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/schoolbg.png");
 
-    poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
-    poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
-    poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
-    poses[1][0] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Sad);
-    poses[1][1] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Mid);
-    poses[1][2] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Happy);
-    poses[2][0] = CharacterRegistry::loadPose(CharacterId::Jimmy, Emotion::Sad);
-    poses[2][1] = CharacterRegistry::loadPose(CharacterId::Jimmy, Emotion::Mid);
-    poses[2][2] = CharacterRegistry::loadPose(CharacterId::Jimmy, Emotion::Happy);
+    poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
+    poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
+    poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
+    poses[1][0] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Sad);
+    poses[1][1] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Mid);
+    poses[1][2] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Happy);
+    poses[2][0] = CharacterRegistry::loadPose(CharacterId::Jimmy, PoseEmotion::Sad);
+    poses[2][1] = CharacterRegistry::loadPose(CharacterId::Jimmy, PoseEmotion::Mid);
+    poses[2][2] = CharacterRegistry::loadPose(CharacterId::Jimmy, PoseEmotion::Happy);
 
     // Ported from the JS prototype's "The School Pickup Incident" episode
     // almost line-for-line -- Karen needling Tom for being late, Jimmy's lost
@@ -241,20 +238,7 @@ void SchoolScene::drawTom(Vector2 pos) {
     float cy = pos.y + 32.0f;
 
     Texture2D pose = poses[0][1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
-        return;
-    }
-
-    DrawEllipse((int)cx, (int)(cy + 20), 26, 30, TOM_COLOR);
-    DrawCircle((int)cx, (int)(cy - 14), 20, TOM_COLOR);
-
-    Color darkTom = {70, 90, 5, 255};
-    DrawEllipse((int)(cx - 8), (int)(cy - 14), 4, 2, darkTom);
-    DrawEllipse((int)(cx + 8), (int)(cy - 14), 4, 2, darkTom);
-    DrawLineEx({cx - 7, cy - 5}, {cx + 7, cy - 3}, 2.0f, darkTom);
-    DrawLineEx({cx - 24, cy + 8}, {cx - 32, cy + 26}, 5.0f, TOM_COLOR);
-    DrawLineEx({cx + 24, cy + 8}, {cx + 32, cy + 26}, 5.0f, TOM_COLOR);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
 }
 
 void SchoolScene::drawKaren(Vector2 pos) {
@@ -262,22 +246,7 @@ void SchoolScene::drawKaren(Vector2 pos) {
     float cy = pos.y + 36.0f;
 
     Texture2D pose = poses[1][1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
-        return;
-    }
-
-    Color darkKaren = {110, 20, 40, 255};
-    DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, KAREN_BODY_COLOR);
-    DrawRectangle((int)(cx - 16), (int)(cy - 4), 32, 20, KAREN_BODY_COLOR);
-    DrawCircle((int)cx, (int)(cy - 26), 16, KAREN_BODY_COLOR);
-
-    DrawRectangle((int)(cx - 10), (int)(cy - 28), 6, 2, darkKaren);
-    DrawRectangle((int)(cx + 4), (int)(cy - 28), 6, 2, darkKaren);
-    DrawLineEx({cx - 6, cy - 18}, {cx + 6, cy - 18}, 2.0f, darkKaren);
-    // Arms crossed, checking a watch -- impatience posture
-    DrawLineEx({cx - 16, cy + 2}, {cx + 12, cy + 12}, 6.0f, darkKaren);
-    DrawLineEx({cx + 16, cy + 2}, {cx - 12, cy + 12}, 6.0f, darkKaren);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
 }
 
 void SchoolScene::drawJimmy(Vector2 pos) {
@@ -285,24 +254,5 @@ void SchoolScene::drawJimmy(Vector2 pos) {
     float cy = pos.y + 18.0f;
 
     Texture2D pose = poses[2][1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 16.0f - pose.height), WHITE);
-        return;
-    }
-
-    // Small, energetic kid silhouette -- half Tom's height, bright and bouncy
-    Color darkJimmy = {20, 70, 100, 255};
-    DrawEllipse((int)cx, (int)(cy + 12), 14, 16, JIMMY_COLOR);
-    DrawCircle((int)cx, (int)(cy - 8), 12, JIMMY_COLOR);
-
-    // Big excited eyes
-    DrawCircle((int)(cx - 5), (int)(cy - 9), 2, darkJimmy);
-    DrawCircle((int)(cx + 5), (int)(cy - 9), 2, darkJimmy);
-    // Big gap-tooth grin (missing tooth is the whole point of this scene)
-    DrawRectangle((int)(cx - 4), (int)(cy - 2), 8, 3, darkJimmy);
-    DrawRectangle((int)(cx - 1), (int)(cy - 2), 2, 3, JIMMY_COLOR);  // the gap
-
-    // Backpack straps
-    DrawLineEx({cx - 8, cy + 2}, {cx - 8, cy + 20}, 3.0f, darkJimmy);
-    DrawLineEx({cx + 8, cy + 2}, {cx + 8, cy + 20}, 3.0f, darkJimmy);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 16.0f - pose.height), WHITE);
 }

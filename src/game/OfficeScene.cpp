@@ -37,13 +37,19 @@ void OfficeScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/officebg.png");
 
-    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
-    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
-    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
+    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
+    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
+    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
+    larryPoses[0] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Sad);
+    larryPoses[1] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Mid);
+    larryPoses[2] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Happy);
 
-    tomPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Sad);
-    tomPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Mid);
-    tomPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Happy);
+    tomPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Sad);
+    tomPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
+    tomPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Happy);
+    larryPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Larry, PortraitEmotion::Sad);
+    larryPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Larry, PortraitEmotion::Mid);
+    larryPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Larry, PortraitEmotion::Happy);
 
     portal = new PortalEffect();
     portal->init();
@@ -264,7 +270,9 @@ void OfficeScene::cleanup() {
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
+        if (larryPoses[i].id != 0) UnloadTexture(larryPoses[i]);
         if (tomPortraits[i].id != 0) UnloadTexture(tomPortraits[i]);
+        if (larryPortraits[i].id != 0) UnloadTexture(larryPortraits[i]);
     }
 
     if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
@@ -308,9 +316,10 @@ void OfficeScene::playLine(const OfficeLine& line) {
     if (line.focusActor == 0) {
         dialog->setPortraitTexture(tomPortraits[line.emotion]);
         dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
+    } else if (line.focusActor == 1) {
+        dialog->setPortraitTexture(larryPortraits[line.emotion]);
+        dialog->setPortraitGradient({80, 50, 100, 255}, {35, 20, 45, 255});
     } else {
-        // Larry has no portrait art -- clear so the placeholder silhouette
-        // doesn't linger from Tom's previous line.
         dialog->clearPortraitTexture();
     }
 
@@ -352,43 +361,13 @@ void OfficeScene::drawTom(Vector2 pos) {
     float cy = pos.y + 32.0f;
 
     Texture2D pose = tomPoses[1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
-        return;
-    }
-
-    // Balanced precariously on the yoga ball (drawn beneath him)
-    Color ballColor = {200, 80, 80, 200};
-    DrawCircle((int)cx, (int)(cy + 46), 22, ballColor);
-
-    DrawEllipse((int)cx, (int)(cy + 18), 26, 28, TOM_COLOR);
-    DrawCircle((int)cx, (int)(cy - 16), 20, TOM_COLOR);
-
-    Color darkTom = {70, 90, 5, 255};
-    DrawEllipse((int)(cx - 8), (int)(cy - 16), 4, 2, darkTom);
-    DrawEllipse((int)(cx + 8), (int)(cy - 16), 4, 2, darkTom);
-    DrawLineEx({cx - 7, cy - 7}, {cx + 7, cy - 5}, 2.0f, darkTom);
-
-    // Arms out slightly for balance
-    DrawLineEx({cx - 24, cy}, {cx - 34, cy + 10}, 5.0f, TOM_COLOR);
-    DrawLineEx({cx + 24, cy}, {cx + 34, cy + 10}, 5.0f, TOM_COLOR);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
 }
 
 void OfficeScene::drawLarry(Vector2 pos) {
     float cx = pos.x + 25.0f;
     float cy = pos.y + 38.0f;
 
-    // Sharp-suited, imposing -- taller and boxier than Tom
-    Color darkLarry = {90, 40, 110, 255};
-    DrawRectangle((int)(cx - 20), (int)(cy - 6), 40, 52, LARRY_COLOR);
-    DrawCircle((int)cx, (int)(cy - 30), 18, LARRY_COLOR);
-
-    // Stern narrow eyes
-    DrawRectangle((int)(cx - 11), (int)(cy - 32), 6, 2, darkLarry);
-    DrawRectangle((int)(cx + 5), (int)(cy - 32), 6, 2, darkLarry);
-    // Flat unimpressed mouth
-    DrawLineEx({cx - 6, cy - 22}, {cx + 6, cy - 22}, 2.0f, darkLarry);
-
-    // Tie
-    DrawTriangle({cx - 3, cy - 4}, {cx + 3, cy - 4}, {cx, cy + 10}, darkLarry);
+    Texture2D pose = larryPoses[1];
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 36.0f - pose.height), WHITE);
 }

@@ -9,10 +9,6 @@
 static const Color TOM_COLOR     = CharacterRegistry::get(CharacterId::Tom).nameColor;
 static const Color WIFE_COLOR    = CharacterRegistry::get(CharacterId::Karen).nameColor;
 static const Color POKEMON_COLOR = CharacterRegistry::get(CharacterId::Ronzer).nameColor;
-// Placeholder silhouette-art colors -- deliberately separate from the name
-// labels above (see CharacterInfo::bodyColor).
-static const Color WIFE_BODY_COLOR    = CharacterRegistry::get(CharacterId::Karen).bodyColor;
-static const Color POKEMON_BODY_COLOR = CharacterRegistry::get(CharacterId::Ronzer).bodyColor;
 
 // Ambient-only lines the Pokemon shouts unprompted, popped through the same
 // shared DialogBox as scripted scenarios. Its entire personality is its own name.
@@ -59,26 +55,26 @@ void PizzaParlorScene::init() {
 
     // Portraits: [actor][emotion], sad/mid/happy -- loaded via the shared
     // CharacterRegistry rather than hand-listing asset paths per scene.
-    portraits[0][0] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Sad);
-    portraits[0][1] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Mid);
-    portraits[0][2] = CharacterRegistry::loadPortrait(CharacterId::Tom, Emotion::Happy);
-    portraits[1][0] = CharacterRegistry::loadPortrait(CharacterId::Karen, Emotion::Sad);
-    portraits[1][1] = CharacterRegistry::loadPortrait(CharacterId::Karen, Emotion::Mid);
-    portraits[1][2] = CharacterRegistry::loadPortrait(CharacterId::Karen, Emotion::Happy);
-    portraits[2][0] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Sad);
-    portraits[2][1] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Mid);
-    portraits[2][2] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Happy);
+    portraits[0][0] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Sad);
+    portraits[0][1] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
+    portraits[0][2] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Happy);
+    portraits[1][0] = CharacterRegistry::loadPortrait(CharacterId::Karen, PortraitEmotion::Sad);
+    portraits[1][1] = CharacterRegistry::loadPortrait(CharacterId::Karen, PortraitEmotion::Mid);
+    portraits[1][2] = CharacterRegistry::loadPortrait(CharacterId::Karen, PortraitEmotion::Happy);
+    portraits[2][0] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, PortraitEmotion::Sad);
+    portraits[2][1] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, PortraitEmotion::Mid);
+    portraits[2][2] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, PortraitEmotion::Happy);
 
     // Full-body pose art, same [actor][emotion] layout as portraits above.
-    poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
-    poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
-    poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
-    poses[1][0] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Sad);
-    poses[1][1] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Mid);
-    poses[1][2] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Happy);
-    poses[2][0] = CharacterRegistry::loadPose(CharacterId::Ronzer, Emotion::Sad);
-    poses[2][1] = CharacterRegistry::loadPose(CharacterId::Ronzer, Emotion::Mid);
-    poses[2][2] = CharacterRegistry::loadPose(CharacterId::Ronzer, Emotion::Happy);
+    poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
+    poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
+    poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
+    poses[1][0] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Sad);
+    poses[1][1] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Mid);
+    poses[1][2] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Happy);
+    poses[2][0] = CharacterRegistry::loadPose(CharacterId::Ronzer, PoseEmotion::Sad);
+    poses[2][1] = CharacterRegistry::loadPose(CharacterId::Ronzer, PoseEmotion::Mid);
+    poses[2][2] = CharacterRegistry::loadPose(CharacterId::Ronzer, PoseEmotion::Happy);
 
     // --- Scenario 0: the wife needling Tom while the Pokemon heckles from the sideline ---
     scenarios.push_back({
@@ -343,28 +339,8 @@ void PizzaParlorScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
 
-    // Real pose art, drawn at scale 1 with no flip, feet planted at the
-    // same anchor the procedural silhouette below uses for its own base --
-    // falls back to that silhouette if no pose art loaded (poses[0][1]).
     Texture2D pose = poses[0][1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
-        return;
-    }
-
-    // Slouched round body -- low energy, deflated posture
-    DrawEllipse((int)cx, (int)(cy + 20), 26, 30, TOM_COLOR);
-    // Head, tilted down slightly
-    DrawCircle((int)cx, (int)(cy - 14), 20, TOM_COLOR);
-    // Droopy tired eyes
-    Color darkTom = {70, 90, 5, 255};
-    DrawEllipse((int)(cx - 8), (int)(cy - 14), 4, 2, darkTom);
-    DrawEllipse((int)(cx + 8), (int)(cy - 14), 4, 2, darkTom);
-    // Sad mouth
-    DrawLineEx({cx - 7, cy - 5}, {cx + 7, cy - 3}, 2.0f, darkTom);
-    // Limp little arms
-    DrawLineEx({cx - 24, cy + 8}, {cx - 32, cy + 26}, 5.0f, TOM_COLOR);
-    DrawLineEx({cx + 24, cy + 8}, {cx + 32, cy + 26}, 5.0f, TOM_COLOR);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
 }
 
 void PizzaParlorScene::drawWife(Vector2 pos) {
@@ -372,26 +348,7 @@ void PizzaParlorScene::drawWife(Vector2 pos) {
     float cy = pos.y + 36.0f;
 
     Texture2D pose = poses[1][1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
-        return;
-    }
-
-    // Sharp, upright silhouette -- angular shoulders, arms crossed
-    Color darkWife = {110, 20, 40, 255};
-    // Body: trapezoid via triangle-ish rectangle for sharp shoulders
-    DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, WIFE_BODY_COLOR);
-    DrawRectangle((int)(cx - 16), (int)(cy - 4), 32, 20, WIFE_BODY_COLOR);
-    // Head, held high
-    DrawCircle((int)cx, (int)(cy - 26), 16, WIFE_BODY_COLOR);
-    // Narrowed, unimpressed eyes
-    DrawRectangle((int)(cx - 10), (int)(cy - 28), 6, 2, darkWife);
-    DrawRectangle((int)(cx + 4), (int)(cy - 28), 6, 2, darkWife);
-    // Flat, unimpressed mouth
-    DrawLineEx({cx - 6, cy - 18}, {cx + 6, cy - 18}, 2.0f, darkWife);
-    // Arms crossed (two diagonal bars over the chest)
-    DrawLineEx({cx - 16, cy + 2}, {cx + 12, cy + 12}, 6.0f, darkWife);
-    DrawLineEx({cx + 16, cy + 2}, {cx - 12, cy + 12}, 6.0f, darkWife);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
 }
 
 void PizzaParlorScene::drawPokemon(Vector2 pos) {
@@ -399,26 +356,6 @@ void PizzaParlorScene::drawPokemon(Vector2 pos) {
     float cy = pos.y + 24.0f;
 
     Texture2D pose = poses[2][1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 22.0f - pose.height), WHITE);
-        return;
-    }
-
-    // Round, bouncy little creature -- pointed ears, big excited eyes
-    Color darkMon = {160, 120, 10, 255};
-    DrawCircle((int)cx, (int)cy, 18, POKEMON_BODY_COLOR);
-    // Ears
-    DrawTriangle({cx - 14, cy - 10}, {cx - 20, cy - 28}, {cx - 6, cy - 16}, POKEMON_BODY_COLOR);
-    DrawTriangle({cx + 14, cy - 10}, {cx + 20, cy - 28}, {cx + 6, cy - 16}, POKEMON_BODY_COLOR);
-    // Big round eyes
-    DrawCircle((int)(cx - 7), (int)(cy - 2), 5, darkMon);
-    DrawCircle((int)(cx + 7), (int)(cy - 2), 5, darkMon);
-    DrawCircle((int)(cx - 6), (int)(cy - 3), 2, WHITE);
-    DrawCircle((int)(cx + 8), (int)(cy - 3), 2, WHITE);
-    // Open, shouting mouth
-    DrawCircle((int)cx, (int)(cy + 8), 5, darkMon);
-    // Tiny stub feet
-    DrawEllipse((int)(cx - 8), (int)(cy + 18), 6, 4, POKEMON_BODY_COLOR);
-    DrawEllipse((int)(cx + 8), (int)(cy + 18), 6, 4, POKEMON_BODY_COLOR);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 22.0f - pose.height), WHITE);
 }
 

@@ -41,9 +41,7 @@ private:
     Texture2D background = {0};
 
     // Full-body pose art, [0]=Tom, [1]=Karen, [2]=Jimmy, each [0]=sad
-    // [1]=mid [2]=happy -- loaded via CharacterRegistry (see init()). id == 0
-    // means no pose art for that character/emotion; drawX() falls back to
-    // its procedural shape silhouette in that case.
+    // [1]=mid [2]=happy -- loaded via CharacterRegistry (see init()).
     Texture2D poses[3][3] = {};
 
     float tomWaitTimer = 0.0f;

@@ -11,8 +11,9 @@ struct TherapistLine {
     std::string speaker;
     std::string text;
     Color speakerColor;
-    int focusActor;   // 0 = Tom, 1 = Therapist, -1 = none
+    int focusActor;   // 0 = Tom, 1 = Judy, -1 = none
     bool shake;
+    int emotion = 1;  // 0 = sad, 1 = mid, 2 = happy -- portrait for whichever actor focusActor names
 };
 
 // Tom's therapist's office -- ported from the JS prototype's "The Last
@@ -33,20 +34,25 @@ public:
     bool isPlayingScenario() const override;
 
 private:
-    SceneActor* tom      = nullptr;
-    SceneActor* therapist  = nullptr;
+    SceneActor* tom  = nullptr;
+    SceneActor* judy = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     Texture2D background = {0};
 
-    // Full-body pose art for Tom, [0]=sad [1]=mid [2]=happy -- loaded via
-    // CharacterRegistry (see init()). Therapist has no pose art, so
-    // drawTherapist() stays procedural-only.
+    // Full-body pose art, [0]=sad [1]=mid [2]=happy -- loaded via
+    // CharacterRegistry (see init()).
     Texture2D tomPoses[3] = {};
+    Texture2D judyPoses[3] = {};
+
+    // Dialog-box portraits, same [0]=sad [1]=mid [2]=happy indexing --
+    // loaded via CharacterRegistry (see init()).
+    Texture2D tomPortraits[3] = {};
+    Texture2D judyPortraits[3] = {};
 
     float tomFidgetTimer = 0.0f;
-    float therapistNodTimer = 0.0f;
+    float judyNodTimer = 0.0f;
 
     std::vector<std::vector<TherapistLine>> scenarios;
     int activeScenario = -1;
@@ -58,7 +64,7 @@ private:
     void focusCameraOn(int actorIndex, bool shake);
 
     void drawTom(Vector2 pos);
-    void drawTherapist(Vector2 pos);
+    void drawJudy(Vector2 pos);
     void drawOffice();
 
     // The two windows baked into therapistbg.png are flat opaque blue

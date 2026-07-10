@@ -84,8 +84,7 @@ private:
     // loaded via CharacterRegistry::loadPose(). Only "mid" is used for now
     // (see drawTom/drawWife/drawPokemon); the other two slots are loaded
     // too so swapping which emotion's pose is drawn later is just an index
-    // change, not a re-load. id == 0 means no pose art for that character,
-    // and drawX() falls back to its procedural shapes in that case.
+    // change, not a re-load.
     Texture2D poses[3][3] = {};
 
     // --- Ambient behavior ---
@@ -110,8 +109,7 @@ private:
     void endScenario();
     void focusCameraOn(int actorIndex, bool shake);
 
-    // Draws this character's pose art (poses[actor][1] == mid) if loaded,
-    // falling back to the original hand-drawn shape silhouette otherwise.
+    // Draws this character's pose art (poses[actor][1] == mid).
     void drawTom(Vector2 pos);
     void drawWife(Vector2 pos);
     void drawPokemon(Vector2 pos);

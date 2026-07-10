@@ -22,9 +22,8 @@ struct OfficeLine {
     bool firstTime = false;
     std::string firstTimeName;
 
-    // Tom's portrait emotion (0=sad, 1=mid, 2=happy). Only meaningful when
-    // focusActor == 0 -- Larry has no portrait art, so his lines just clear
-    // the portrait instead (see playLine()).
+    // Portrait emotion (0=sad, 1=mid, 2=happy) for whichever actor
+    // focusActor names.
     int emotion = 1;
 };
 
@@ -61,15 +60,15 @@ private:
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
-    // Full-body pose art for Tom, [0]=sad [1]=mid [2]=happy -- loaded via
-    // CharacterRegistry (see init()). Larry has no pose art, so drawLarry()
-    // stays procedural-only.
+    // Full-body pose art, [0]=sad [1]=mid [2]=happy -- loaded via
+    // CharacterRegistry (see init()).
     Texture2D tomPoses[3] = {};
+    Texture2D larryPoses[3] = {};
 
-    // Tom's dialog-box portraits, same [0]=sad [1]=mid [2]=happy indexing --
-    // loaded via CharacterRegistry (see init()). Larry has no portrait art,
-    // so his lines just clear the dialog box's portrait (see playLine()).
+    // Dialog-box portraits, same [0]=sad [1]=mid [2]=happy indexing --
+    // loaded via CharacterRegistry (see init()).
     Texture2D tomPortraits[3] = {};
+    Texture2D larryPortraits[3] = {};
 
     float tomWobbleTimer = 0.0f;
 

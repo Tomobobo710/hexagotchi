@@ -23,9 +23,12 @@ void ApartmentScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/apartmentbg.png");
 
-    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
-    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
-    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
+    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
+    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
+    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
+
+    tomPortrait = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
+    phonePortrait = CharacterRegistry::loadPortrait(CharacterId::Phone, PortraitEmotion::Mid);
 
     cityWindow = new CityWindowEffect();
     addEffect(cityWindow);
@@ -114,6 +117,8 @@ void ApartmentScene::cleanup() {
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
     }
+    if (tomPortrait.id != 0) { UnloadTexture(tomPortrait); tomPortrait = {0}; }
+    if (phonePortrait.id != 0) { UnloadTexture(phonePortrait); phonePortrait = {0}; }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the scenario table -- reset so scenarios doesn't
     // accumulate duplicates and a mid-scenario exit doesn't permanently
@@ -157,6 +162,17 @@ void ApartmentScene::playLine(const ApartmentLine& line) {
     dialog->setSpeakerName(line.speaker);
     dialog->setSpeakerColor(line.speakerColor);
     dialog->setText(line.text);
+
+    if (line.speaker == "Karen (text)") {
+        dialog->setPortraitTexture(phonePortrait);
+        dialog->setPortraitGradient({160, 110, 30, 255}, {70, 45, 10, 255});
+    } else if (line.speaker == "Tom") {
+        dialog->setPortraitTexture(tomPortrait);
+        dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
+    } else {
+        dialog->clearPortraitTexture();
+    }
+
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
 }
@@ -217,23 +233,5 @@ void ApartmentScene::drawTom(Vector2 pos) {
     float cy = pos.y + 32.0f;
 
     Texture2D pose = tomPoses[1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
-        return;
-    }
-
-    // Same slouched silhouette as the pizza parlor for continuity, just
-    // drawn a little more sunken/tired here.
-    DrawEllipse((int)cx, (int)(cy + 22), 26, 28, TOM_COLOR);
-    DrawCircle((int)cx, (int)(cy - 12), 20, TOM_COLOR);
-
-    Color darkTom = {70, 90, 5, 255};
-    // Half-lidded eyes -- flatter than the pizza parlor version
-    DrawRectangle((int)(cx - 12), (int)(cy - 14), 8, 3, darkTom);
-    DrawRectangle((int)(cx + 4), (int)(cy - 14), 8, 3, darkTom);
-    // Flat, exhausted mouth
-    DrawLineEx({cx - 6, cy - 3}, {cx + 6, cy - 3}, 2.0f, darkTom);
-    // Arms hanging straight down, not even lifted
-    DrawLineEx({cx - 22, cy + 10}, {cx - 26, cy + 30}, 5.0f, TOM_COLOR);
-    DrawLineEx({cx + 22, cy + 10}, {cx + 26, cy + 30}, 5.0f, TOM_COLOR);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
 }

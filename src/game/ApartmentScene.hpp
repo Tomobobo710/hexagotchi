@@ -46,6 +46,11 @@ private:
     // CharacterRegistry (see init()).
     Texture2D tomPoses[3] = {};
 
+    // Dialog-box portraits -- Tom uses his Mid emotion throughout this scene
+    // (no per-line emotion selection here yet); Phone only has Mid art.
+    Texture2D tomPortrait = {0};
+    Texture2D phonePortrait = {0};
+
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     // --- Ambient behavior ---

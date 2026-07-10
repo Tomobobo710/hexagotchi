@@ -5,9 +5,9 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
-static const Color TOM_COLOR       = CharacterRegistry::get(CharacterId::Tom).nameColor;
-static const Color THERAPIST_COLOR = CharacterRegistry::get(CharacterId::Therapist).nameColor;
-static const Color NARRATOR_COLOR  = CharacterRegistry::get(CharacterId::Narrator).nameColor;
+static const Color TOM_COLOR      = CharacterRegistry::get(CharacterId::Tom).nameColor;
+static const Color JUDY_COLOR     = CharacterRegistry::get(CharacterId::Judy).nameColor;
+static const Color NARRATOR_COLOR = CharacterRegistry::get(CharacterId::Narrator).nameColor;
 
 TherapistOfficeScene::TherapistOfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {
@@ -19,22 +19,32 @@ void TherapistOfficeScene::init() {
     windowEffect = new TherapistWindowEffect();
     addEffect(windowEffect);
 
-    // Tom at 1/8 of the scene's width, therapist at 7/8 -- scene is 1280 wide.
+    // Tom at 1/8 of the scene's width, Judy at 7/8 -- scene is 1280 wide.
     tom = new SceneActor({160.0f, 400.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
     tom->setVisible(false);
     addActor(tom);
 
-    therapist = new SceneActor({1120.0f, 390.0f}, 48.0f, 72.0f);
-    therapist->setTag("therapist");
-    therapist->setVisible(false);
-    addActor(therapist);
+    judy = new SceneActor({1120.0f, 390.0f}, 48.0f, 72.0f);
+    judy->setTag("judy");
+    judy->setVisible(false);
+    addActor(judy);
 
     background = AssetPack::loadTexture("backgrounds/therapistbg.png");
 
-    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
-    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
-    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
+    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
+    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
+    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
+    judyPoses[0] = CharacterRegistry::loadPose(CharacterId::Judy, PoseEmotion::Sad);
+    judyPoses[1] = CharacterRegistry::loadPose(CharacterId::Judy, PoseEmotion::Mid);
+    judyPoses[2] = CharacterRegistry::loadPose(CharacterId::Judy, PoseEmotion::Happy);
+
+    tomPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Sad);
+    tomPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Mid);
+    tomPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Tom, PortraitEmotion::Happy);
+    judyPortraits[0] = CharacterRegistry::loadPortrait(CharacterId::Judy, PortraitEmotion::Sad);
+    judyPortraits[1] = CharacterRegistry::loadPortrait(CharacterId::Judy, PortraitEmotion::Mid);
+    judyPortraits[2] = CharacterRegistry::loadPortrait(CharacterId::Judy, PortraitEmotion::Happy);
 
     // Ported from the JS prototype's "The Last Session" episode almost
     // line-for-line -- the digital-pet metaphor breakdown, ending on the
@@ -43,24 +53,24 @@ void TherapistOfficeScene::init() {
     scenarios.push_back({
         { "Narrator",  "Tom's last covered therapy session.\nHe has been saving the hard stuff for today.",
           NARRATOR_COLOR, -1, false },
-        { "Therapist", "So Tom, how have you been\nprocessing the divorce?",
-          THERAPIST_COLOR, 1, false },
+        { "Judy", "So Tom, how have you been\nprocessing the divorce?",
+          JUDY_COLOR, 1, false },
         { "Tom",      "I... okay so you know how I'm\nsometimes a digital pet?",
           TOM_COLOR, 0, false },
-        { "Therapist", "We've talked about this metaphor.",
-          THERAPIST_COLOR, 1, false },
+        { "Judy", "We've talked about this metaphor.",
+          JUDY_COLOR, 1, false },
         { "Tom",      "It's not a metaphor.\nSomebody watches me.\nI have to poop in front of them.",
           TOM_COLOR, 0, false },
-        { "Therapist", "...Tom.",
-          THERAPIST_COLOR, 1, false },
+        { "Judy", "...Tom.",
+          JUDY_COLOR, 1, false },
         { "Tom",      "I have to perform happiness.\nOn demand.\nWhile they press little buttons at me.",
           TOM_COLOR, 0, false },
-        { "Therapist", "I think that IS a metaphor Tom.\nFor work maybe? For the marriage?",
-          THERAPIST_COLOR, 1, false },
+        { "Judy", "I think that IS a metaphor Tom.\nFor work maybe? For the marriage?",
+          JUDY_COLOR, 1, false },
         { "Tom",      "Last week they made me eat\nthree meals in a row.\nI was not hungry.",
           TOM_COLOR, 0, true },
-        { "Therapist", "...Your copay has increased\nto $200 starting next session.",
-          THERAPIST_COLOR, 1, true },
+        { "Judy", "...Your copay has increased\nto $200 starting next session.",
+          JUDY_COLOR, 1, true },
         { "Tom",      "Of course it has.",
           TOM_COLOR, 0, false },
     });
@@ -94,12 +104,12 @@ void TherapistOfficeScene::update(float deltaTime) {
 
     if (activeScenario < 0) {
         // Ambient: both sitting, small idle motion -- Tom fidgets slightly
-        // more than the therapist, who stays composed/still.
+        // more than Judy, who stays composed/still.
         tomFidgetTimer += deltaTime * 2.5f;
-        therapistNodTimer += deltaTime * 0.8f;
+        judyNodTimer += deltaTime * 0.8f;
 
         tom->setPosition({160.0f, 400.0f + sinf(tomFidgetTimer) * 3.0f});
-        therapist->setPosition({1120.0f, 390.0f + sinf(therapistNodTimer) * 1.5f});
+        judy->setPosition({1120.0f, 390.0f + sinf(judyNodTimer) * 1.5f});
 
         if (!getCamera()->isWideViewEnabled()) {
             getCamera()->setPosition(512.0f, 288.0f);
@@ -123,7 +133,7 @@ void TherapistOfficeScene::draw() {
     if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
     else drawOffice();
     drawTom(tom->getPosition());
-    drawTherapist(therapist->getPosition());
+    drawJudy(judy->getPosition());
     EndMode2D();
 
     // y=40, not 16 -- avoids overlapping other on-screen debug text at the
@@ -147,6 +157,9 @@ void TherapistOfficeScene::cleanup() {
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
+        if (judyPoses[i].id != 0) UnloadTexture(judyPoses[i]);
+        if (tomPortraits[i].id != 0) UnloadTexture(tomPortraits[i]);
+        if (judyPortraits[i].id != 0) UnloadTexture(judyPortraits[i]);
     }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the scenario table -- reset so scenarios doesn't
@@ -191,6 +204,17 @@ void TherapistOfficeScene::playLine(const TherapistLine& line) {
     dialog->setSpeakerName(line.speaker);
     dialog->setSpeakerColor(line.speakerColor);
     dialog->setText(line.text);
+
+    if (line.focusActor == 0) {
+        dialog->setPortraitTexture(tomPortraits[line.emotion]);
+        dialog->setPortraitGradient({40, 160, 60, 255}, {15, 60, 25, 255});
+    } else if (line.focusActor == 1) {
+        dialog->setPortraitTexture(judyPortraits[line.emotion]);
+        dialog->setPortraitGradient({20, 140, 120, 255}, {8, 60, 50, 255});
+    } else {
+        dialog->clearPortraitTexture();
+    }
+
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
 }
@@ -205,7 +229,7 @@ void TherapistOfficeScene::endScenario() {
 void TherapistOfficeScene::focusCameraOn(int actorIndex, bool shake) {
     SceneActor* target = nullptr;
     if (actorIndex == 0) target = tom;
-    else if (actorIndex == 1) target = therapist;
+    else if (actorIndex == 1) target = judy;
 
     if (target) {
         Vector2 pos = target->getCenter();
@@ -220,7 +244,7 @@ void TherapistOfficeScene::focusCameraOn(int actorIndex, bool shake) {
 
 // --- Set dressing ---------------------------------------------------------
 void TherapistOfficeScene::drawOffice() {
-    // Bookshelf behind the therapist
+    // Bookshelf behind Judy
     Color shelfWood = {90, 65, 45, 255};
     DrawRectangle(700, 100, 220, 260, shelfWood);
     Color shelfDark = {60, 42, 30, 255};
@@ -257,40 +281,13 @@ void TherapistOfficeScene::drawTom(Vector2 pos) {
     float cy = pos.y + 32.0f;
 
     Texture2D pose = tomPoses[1];
-    if (pose.id != 0) {
-        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
-        return;
-    }
-
-    // Same slouched silhouette, seated -- lower/wider than standing poses
-    DrawEllipse((int)cx, (int)(cy + 24), 28, 26, TOM_COLOR);
-    DrawCircle((int)cx, (int)(cy - 10), 20, TOM_COLOR);
-
-    Color darkTom = {70, 90, 5, 255};
-    DrawEllipse((int)(cx - 8), (int)(cy - 12), 4, 2, darkTom);
-    DrawEllipse((int)(cx + 8), (int)(cy - 12), 4, 2, darkTom);
-    DrawLineEx({cx - 6, cy - 2}, {cx + 6, cy}, 2.0f, darkTom);
-    // Hands folded in lap
-    DrawEllipse((int)cx, (int)(cy + 20), 10, 6, darkTom);
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
 }
 
-void TherapistOfficeScene::drawTherapist(Vector2 pos) {
+void TherapistOfficeScene::drawJudy(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 36.0f;
 
-    // Composed, upright seated posture -- notepad on lap
-    Color darkTherapist = {12, 100, 85, 255};
-    DrawRectangle((int)(cx - 18), (int)(cy - 4), 36, 44, THERAPIST_COLOR);
-    DrawCircle((int)cx, (int)(cy - 26), 16, THERAPIST_COLOR);
-
-    // Calm, neutral expression
-    DrawRectangle((int)(cx - 9), (int)(cy - 28), 5, 2, darkTherapist);
-    DrawRectangle((int)(cx + 4), (int)(cy - 28), 5, 2, darkTherapist);
-    DrawLineEx({cx - 5, cy - 19}, {cx + 5, cy - 19}, 2.0f, darkTherapist);
-
-    // Notepad on lap
-    Color notepad = {235, 230, 210, 255};
-    DrawRectangle((int)(cx - 12), (int)(cy + 24), 24, 18, notepad);
-    DrawLine((int)(cx - 8), (int)(cy + 29), (int)(cx + 8), (int)(cy + 29), darkTherapist);
-    DrawLine((int)(cx - 8), (int)(cy + 34), (int)(cx + 4), (int)(cy + 34), darkTherapist);
+    Texture2D pose = judyPoses[1];
+    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
 }
