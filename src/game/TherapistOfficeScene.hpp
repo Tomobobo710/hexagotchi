@@ -40,6 +40,11 @@ private:
 
     Texture2D background = {0};
 
+    // Full-body pose art for Tom, [0]=sad [1]=mid [2]=happy -- loaded via
+    // CharacterRegistry (see init()). Therapist has no pose art, so
+    // drawTherapist() stays procedural-only.
+    Texture2D tomPoses[3] = {};
+
     float tomFidgetTimer = 0.0f;
     float therapistNodTimer = 0.0f;
 

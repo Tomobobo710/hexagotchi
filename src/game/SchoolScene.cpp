@@ -43,6 +43,16 @@ void SchoolScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/schoolbg.png");
 
+    poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
+    poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
+    poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
+    poses[1][0] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Sad);
+    poses[1][1] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Mid);
+    poses[1][2] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Happy);
+    poses[2][0] = CharacterRegistry::loadPose(CharacterId::Jimmy, Emotion::Sad);
+    poses[2][1] = CharacterRegistry::loadPose(CharacterId::Jimmy, Emotion::Mid);
+    poses[2][2] = CharacterRegistry::loadPose(CharacterId::Jimmy, Emotion::Happy);
+
     // Ported from the JS prototype's "The School Pickup Incident" episode
     // almost line-for-line -- Karen needling Tom for being late, Jimmy's lost
     // tooth, the tooth fairy inflation joke, ending on Tom quietly giving up
@@ -116,6 +126,11 @@ void SchoolScene::draw() {
 void SchoolScene::cleanup() {
     Scene::cleanup();
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
+    for (int actor = 0; actor < 3; actor++) {
+        for (int emotion = 0; emotion < 3; emotion++) {
+            if (poses[actor][emotion].id != 0) UnloadTexture(poses[actor][emotion]);
+        }
+    }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the scenario table -- reset so scenarios doesn't
     // accumulate duplicates and a mid-scenario exit doesn't permanently
@@ -225,6 +240,12 @@ void SchoolScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
 
+    Texture2D pose = poses[0][1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
+        return;
+    }
+
     DrawEllipse((int)cx, (int)(cy + 20), 26, 30, TOM_COLOR);
     DrawCircle((int)cx, (int)(cy - 14), 20, TOM_COLOR);
 
@@ -239,6 +260,12 @@ void SchoolScene::drawTom(Vector2 pos) {
 void SchoolScene::drawKaren(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 36.0f;
+
+    Texture2D pose = poses[1][1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
+        return;
+    }
 
     Color darkKaren = {110, 20, 40, 255};
     DrawTriangle({cx - 22, cy + 40}, {cx + 22, cy + 40}, {cx, cy - 4}, KAREN_BODY_COLOR);
@@ -256,6 +283,12 @@ void SchoolScene::drawKaren(Vector2 pos) {
 void SchoolScene::drawJimmy(Vector2 pos) {
     float cx = pos.x + 14.0f;
     float cy = pos.y + 18.0f;
+
+    Texture2D pose = poses[2][1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 16.0f - pose.height), WHITE);
+        return;
+    }
 
     // Small, energetic kid silhouette -- half Tom's height, bright and bouncy
     Color darkJimmy = {20, 70, 100, 255};

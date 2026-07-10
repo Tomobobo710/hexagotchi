@@ -72,6 +72,14 @@ private:
     // (see init()), which owns the actual asset paths/colors per character.
     Texture2D portraits[3][3] = {};
 
+    // Full-body pose art, same [actor][emotion] indexing as portraits --
+    // loaded via CharacterRegistry::loadPose(). Only "mid" is used for now
+    // (see drawTom/drawWife/drawPokemon); the other two slots are loaded
+    // too so swapping which emotion's pose is drawn later is just an index
+    // change, not a re-load. id == 0 means no pose art for that character,
+    // and drawX() falls back to its procedural shapes in that case.
+    Texture2D poses[3][3] = {};
+
     // --- Ambient behavior ---
     float ambientTimer = 0.0f;
     float nextQuipTime = 0.0f;
@@ -94,7 +102,8 @@ private:
     void endScenario();
     void focusCameraOn(int actorIndex, bool shake);
 
-    // Per-character silhouette drawing (shapes only -- no art yet)
+    // Draws this character's pose art (poses[actor][1] == mid) if loaded,
+    // falling back to the original hand-drawn shape silhouette otherwise.
     void drawTom(Vector2 pos);
     void drawWife(Vector2 pos);
     void drawPokemon(Vector2 pos);

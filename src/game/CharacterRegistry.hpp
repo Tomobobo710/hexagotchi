@@ -48,6 +48,13 @@ struct CharacterInfo {
     // callers should fall back to Mid, or to no portrait at all if Mid is
     // also empty (e.g. Narrator/Boss/Therapist, which have no portrait art).
     std::string portraitPath[3];
+
+    // Full-body pose asset keys, same convention/fallback rules as
+    // portraitPath. Separate art from portraits (poses/ vs portraits/) --
+    // characters without pose art (Therapist, Boss, Narrator, Phone) are
+    // left default-empty and scenes fall back to their procedural silhouette
+    // drawing for those.
+    std::string posePath[3];
 };
 
 namespace CharacterRegistry {
@@ -61,6 +68,11 @@ namespace CharacterRegistry {
     // neither is registered. Caller owns the result and must UnloadTexture()
     // it, same convention as every other AssetPack-backed texture load.
     Texture2D loadPortrait(CharacterId id, Emotion emotion);
+
+    // Same convention as loadPortrait() but for full-body pose art. Returns
+    // a null Texture2D (id == 0) for characters with no pose art at all --
+    // callers should fall back to their own procedural drawing in that case.
+    Texture2D loadPose(CharacterId id, Emotion emotion);
 }
 
 #endif // CHARACTER_REGISTRY_HPP

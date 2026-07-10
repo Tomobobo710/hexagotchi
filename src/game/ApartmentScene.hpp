@@ -42,6 +42,10 @@ private:
     Texture2D background = {0};
     CityWindowEffect* cityWindow = nullptr;
 
+    // Full-body pose art for Tom, [0]=sad [1]=mid [2]=happy -- loaded via
+    // CharacterRegistry (see init()).
+    Texture2D tomPoses[3] = {};
+
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     // --- Ambient behavior ---

@@ -69,6 +69,17 @@ void PizzaParlorScene::init() {
     portraits[2][1] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Mid);
     portraits[2][2] = CharacterRegistry::loadPortrait(CharacterId::Ronzer, Emotion::Happy);
 
+    // Full-body pose art, same [actor][emotion] layout as portraits above.
+    poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
+    poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
+    poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
+    poses[1][0] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Sad);
+    poses[1][1] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Mid);
+    poses[1][2] = CharacterRegistry::loadPose(CharacterId::Karen, Emotion::Happy);
+    poses[2][0] = CharacterRegistry::loadPose(CharacterId::Ronzer, Emotion::Sad);
+    poses[2][1] = CharacterRegistry::loadPose(CharacterId::Ronzer, Emotion::Mid);
+    poses[2][2] = CharacterRegistry::loadPose(CharacterId::Ronzer, Emotion::Happy);
+
     // --- Scenario 0: the wife needling Tom while the Pokemon heckles from the sideline ---
     scenarios.push_back({
         { "Tom",    "Oh -- hey. I didn't know you two ate here too.",
@@ -227,6 +238,11 @@ void PizzaParlorScene::cleanup() {
     if (portraits[2][0].id != 0) UnloadTexture(portraits[2][0]);
     if (portraits[2][1].id != 0) UnloadTexture(portraits[2][1]);
     if (portraits[2][2].id != 0) UnloadTexture(portraits[2][2]);
+    for (int actor = 0; actor < 3; actor++) {
+        for (int emotion = 0; emotion < 3; emotion++) {
+            if (poses[actor][emotion].id != 0) UnloadTexture(poses[actor][emotion]);
+        }
+    }
 
     // init() re-runs on every re-entry to this scene (SceneManager re-inits
     // scenes on switch) and unconditionally push_back()s the scenario table
@@ -327,6 +343,15 @@ void PizzaParlorScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
 
+    // Real pose art, drawn at scale 1 with no flip, feet planted at the
+    // same anchor the procedural silhouette below uses for its own base --
+    // falls back to that silhouette if no pose art loaded (poses[0][1]).
+    Texture2D pose = poses[0][1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
+        return;
+    }
+
     // Slouched round body -- low energy, deflated posture
     DrawEllipse((int)cx, (int)(cy + 20), 26, 30, TOM_COLOR);
     // Head, tilted down slightly
@@ -345,6 +370,12 @@ void PizzaParlorScene::drawTom(Vector2 pos) {
 void PizzaParlorScene::drawWife(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 36.0f;
+
+    Texture2D pose = poses[1][1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
+        return;
+    }
 
     // Sharp, upright silhouette -- angular shoulders, arms crossed
     Color darkWife = {110, 20, 40, 255};
@@ -366,6 +397,12 @@ void PizzaParlorScene::drawWife(Vector2 pos) {
 void PizzaParlorScene::drawPokemon(Vector2 pos) {
     float cx = pos.x + 20.0f;
     float cy = pos.y + 24.0f;
+
+    Texture2D pose = poses[2][1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 22.0f - pose.height), WHITE);
+        return;
+    }
 
     // Round, bouncy little creature -- pointed ears, big excited eyes
     Color darkMon = {160, 120, 10, 255};

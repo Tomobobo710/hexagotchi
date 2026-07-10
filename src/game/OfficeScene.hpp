@@ -48,6 +48,11 @@ private:
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
+    // Full-body pose art for Tom, [0]=sad [1]=mid [2]=happy -- loaded via
+    // CharacterRegistry (see init()). Boss has no pose art, so drawBoss()
+    // stays procedural-only.
+    Texture2D tomPoses[3] = {};
+
     float tomWobbleTimer = 0.0f;
 
     std::vector<std::vector<OfficeLine>> scenarios;

@@ -37,6 +37,10 @@ void OfficeScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/officebg.png");
 
+    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
+    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
+    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
+
     portal = new PortalEffect();
     portal->init();
     portal->setDebugCamDist(PORTAL_CAM_DIST);
@@ -254,6 +258,9 @@ void OfficeScene::cleanup() {
     endElapsed = -1.0f;
 
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
+    for (int i = 0; i < 3; i++) {
+        if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
+    }
 
     if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
 }
@@ -328,6 +335,12 @@ void OfficeScene::drawOffice() {
 void OfficeScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
+
+    Texture2D pose = tomPoses[1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
+        return;
+    }
 
     // Balanced precariously on the yoga ball (drawn beneath him)
     Color ballColor = {200, 80, 80, 200};

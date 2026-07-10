@@ -32,6 +32,10 @@ void TherapistOfficeScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/therapistbg.png");
 
+    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Sad);
+    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Mid);
+    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, Emotion::Happy);
+
     // Ported from the JS prototype's "The Last Session" episode almost
     // line-for-line -- the digital-pet metaphor breakdown, ending on the
     // copay hike. NARRATOR lines have no speaking actor, matching how the
@@ -141,6 +145,9 @@ void TherapistOfficeScene::cleanup() {
     Scene::cleanup();
     windowEffect = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
+    for (int i = 0; i < 3; i++) {
+        if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
+    }
     // init() re-runs on every re-entry to this scene and unconditionally
     // push_back()s the scenario table -- reset so scenarios doesn't
     // accumulate duplicates and a mid-scenario exit doesn't permanently
@@ -248,6 +255,12 @@ void TherapistOfficeScene::drawOffice() {
 void TherapistOfficeScene::drawTom(Vector2 pos) {
     float cx = pos.x + 24.0f;
     float cy = pos.y + 32.0f;
+
+    Texture2D pose = tomPoses[1];
+    if (pose.id != 0) {
+        DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
+        return;
+    }
 
     // Same slouched silhouette, seated -- lower/wider than standing poses
     DrawEllipse((int)cx, (int)(cy + 24), 28, 26, TOM_COLOR);

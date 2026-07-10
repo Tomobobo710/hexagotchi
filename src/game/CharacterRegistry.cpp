@@ -11,6 +11,7 @@ namespace {
 const CharacterInfo kTom = {
     {139, 172, 15, 255}, {139, 172, 15, 255},
     {"portraits/tom/gotchiportraitsad.png", "portraits/tom/gotchiportraitmid.png", "portraits/tom/gotchiportraithappy.png"},
+    {"poses/tom/tomposesad.png", "poses/tom/tomposemid.png", "poses/tom/tomposehappy.png"},
 };
 
 // Karen: name label yellow. Body-art color kept at its original pink/red --
@@ -18,6 +19,8 @@ const CharacterInfo kTom = {
 const CharacterInfo kKaren = {
     {230, 200, 40, 255}, {200, 60, 90, 255},
     {"portraits/karen/karensad.png", "portraits/karen/karenmid.png", "portraits/karen/karenhappy.png"},
+    // No sad pose art -- loadPose() falls back to Mid for Emotion::Sad.
+    {"", "poses/karen/karenposemid.png", "poses/karen/karenposehappy.png"},
 };
 
 // Ronzer: name label red. Body-art color kept at its original yellow -- the
@@ -25,19 +28,21 @@ const CharacterInfo kKaren = {
 const CharacterInfo kRonzer = {
     {200, 60, 60, 255}, {250, 200, 40, 255},
     {"portraits/ronzer/ronzersad.png", "portraits/ronzer/ronzermid.png", "portraits/ronzer/ronzerhappy.png"},
+    {"", "poses/ronzer/ronzerposemid.png", "poses/ronzer/ronzerposehappy.png"},
 };
 
 const CharacterInfo kJimmy = {
     {41, 128, 185, 255}, {41, 128, 185, 255},   // matches JS JIMMY color scheme (blue kid)
     {"portraits/jimmy/jimmysad.png", "portraits/jimmy/jimmymid.png", "portraits/jimmy/jimmyhappy.png"},
+    {"poses/jimmy/jimmyposesad.png", "poses/jimmy/jimmyposemid.png", "poses/jimmy/jimmyposehappy.png"},
 };
 
 // No portrait art yet -- portraitPath[] left default-empty (see
 // CharacterInfo's comment on empty meaning "no art for this emotion").
-const CharacterInfo kTherapist = {{22, 160, 133, 255}, {22, 160, 133, 255}, {"", "", ""}};
-const CharacterInfo kBoss      = {{142, 68, 173, 255}, {142, 68, 173, 255}, {"", "", ""}};
-const CharacterInfo kNarrator  = {{150, 150, 170, 255}, {150, 150, 170, 255}, {"", "", ""}};
-const CharacterInfo kPhone     = {{230, 160, 60, 255}, {230, 160, 60, 255}, {"", "", ""}};
+const CharacterInfo kTherapist = {{22, 160, 133, 255}, {22, 160, 133, 255}, {"", "", ""}, {"", "", ""}};
+const CharacterInfo kBoss      = {{142, 68, 173, 255}, {142, 68, 173, 255}, {"", "", ""}, {"", "", ""}};
+const CharacterInfo kNarrator  = {{150, 150, 170, 255}, {150, 150, 170, 255}, {"", "", ""}, {"", "", ""}};
+const CharacterInfo kPhone     = {{230, 160, 60, 255}, {230, 160, 60, 255}, {"", "", ""}, {"", "", ""}};
 
 } // namespace
 
@@ -61,6 +66,17 @@ Texture2D CharacterRegistry::loadPortrait(CharacterId id, Emotion emotion) {
     if (!path.empty()) return AssetPack::loadTexture(path);
 
     const std::string& midPath = info.portraitPath[(int)Emotion::Mid];
+    if (!midPath.empty()) return AssetPack::loadTexture(midPath);
+
+    return Texture2D{0};
+}
+
+Texture2D CharacterRegistry::loadPose(CharacterId id, Emotion emotion) {
+    const CharacterInfo& info = get(id);
+    const std::string& path = info.posePath[(int)emotion];
+    if (!path.empty()) return AssetPack::loadTexture(path);
+
+    const std::string& midPath = info.posePath[(int)Emotion::Mid];
     if (!midPath.empty()) return AssetPack::loadTexture(midPath);
 
     return Texture2D{0};
