@@ -164,8 +164,11 @@ private:
     std::vector<Texture2D> animHurt_;      // available animation
     std::vector<Texture2D> animWalk_;      // available animation
     std::vector<Texture2D> animDie_;       // death animation
-    std::vector<Texture2D> animDieTwo_;    // death animation variant 2
-    std::vector<Texture2D> animDieThree_;  // death animation variant 3
+    std::vector<Texture2D> animDieTwo_;    // death animation variant 2 (fallover)
+    std::vector<Texture2D> animDieThree_;  // death animation variant 3 (downdie)
+    std::vector<Texture2D> animBlink_;     // blink animation (from idle_two)
+    std::vector<Texture2D> animFlash_;     // flash animation (from hurt_two)
+    std::vector<Texture2D> animStepping_;  // stepping animation (from walk_three)
     std::vector<Texture2D> animRun_;       // running animation
     std::vector<Texture2D> animArmswap_;   // armswap animation
     std::vector<Texture2D> animEyetwitch_; // eyetwitch animation

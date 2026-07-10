@@ -56,6 +56,9 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
     animDie_.clear();
     animDieTwo_.clear();
     animDieThree_.clear();
+    animBlink_.clear();
+    animFlash_.clear();
+    animStepping_.clear();
     animRun_.clear();
     animArmswap_.clear();
     animEyetwitch_.clear();
@@ -645,7 +648,7 @@ void Gotchi::setAction(const std::string& action) {
             setAnimationFrames(animDieThree_, 0.2f, false);
             play();
         }
-    } else if (action == "die_two") {
+    } else if (action == "fallover") {
         clearAnimation();
         if (!animDieTwo_.empty()) {
             setAnimationFrames(animDieTwo_, 0.2f, false);
@@ -654,7 +657,7 @@ void Gotchi::setAction(const std::string& action) {
             setAnimationFrames(animDie_, 0.2f, false);
             play();
         }
-    } else if (action == "die_three") {
+    } else if (action == "downdie") {
         clearAnimation();
         if (!animDieThree_.empty()) {
             setAnimationFrames(animDieThree_, 0.2f, false);
@@ -734,13 +737,36 @@ void Gotchi::setAction(const std::string& action) {
             play();
         }
     } else if (action == "blink") {
-        // Map blink to eyetwitch or idle animation
+        // Map blink to blink animation (from idle_two)
         clearAnimation();
-        if (!animEyetwitch_.empty()) {
+        if (!animBlink_.empty()) {
+            setAnimationFrames(animBlink_, 0.2f, true);
+            play();
+        } else if (!animEyetwitch_.empty()) {
             setAnimationFrames(animEyetwitch_, 0.1f, false);
             play();
         } else if (!animIdle_.empty()) {
             setAnimationFrames(animIdle_, 0.2f, true);
+            play();
+        }
+    } else if (action == "flash") {
+        // Map flash to flash animation (from hurt_two)
+        clearAnimation();
+        if (!animFlash_.empty()) {
+            setAnimationFrames(animFlash_, 0.25f, true);
+            play();
+        } else if (!animHurt_.empty()) {
+            setAnimationFrames(animHurt_, 0.25f, true);
+            play();
+        }
+    } else if (action == "stepping") {
+        // Map stepping to stepping animation (from walk_three)
+        clearAnimation();
+        if (!animStepping_.empty()) {
+            setAnimationFrames(animStepping_, 0.15f, true);
+            play();
+        } else if (!animWalk_.empty()) {
+            setAnimationFrames(animWalk_, 0.15f, true);
             play();
         }
     } else if (action == "bounce") {
@@ -785,6 +811,9 @@ bool Gotchi::loadAnimationFrames(const std::string& basePath) {
     animDie_.clear();
     animDieTwo_.clear();
     animDieThree_.clear();
+    animBlink_.clear();
+    animFlash_.clear();
+    animStepping_.clear();
     animRun_.clear();
     animArmswap_.clear();
     animEyetwitch_.clear();
@@ -810,8 +839,11 @@ bool Gotchi::loadAnimationFrames(const std::string& basePath) {
     animHurt_ = AssetPack::loadFrames(basePath, "hurt");
     animWalk_ = AssetPack::loadFrames(basePath, "walk");
     animDie_ = AssetPack::loadFrames(basePath, "die");
-    animDieTwo_ = AssetPack::loadFrames(basePath, "die_two");
-    animDieThree_ = AssetPack::loadFrames(basePath, "die_three");
+    animDieTwo_ = AssetPack::loadFrames(basePath, "fallover");
+    animDieThree_ = AssetPack::loadFrames(basePath, "downdie");
+    animBlink_ = AssetPack::loadFrames(basePath, "blink");
+    animFlash_ = AssetPack::loadFrames(basePath, "flash");
+    animStepping_ = AssetPack::loadFrames(basePath, "stepping");
     animRun_ = AssetPack::loadFrames(basePath, "run");
     animArmswap_ = AssetPack::loadFrames(basePath, "armswap");
     animEyetwitch_ = AssetPack::loadFrames(basePath, "eyetwitch");
@@ -841,6 +873,9 @@ void Gotchi::unloadAnimations() {
     animDie_.clear();
     animDieTwo_.clear();
     animDieThree_.clear();
+    animBlink_.clear();
+    animFlash_.clear();
+    animStepping_.clear();
     animRun_.clear();
     animArmswap_.clear();
     animEyetwitch_.clear();

@@ -364,6 +364,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/ToyAnimationScene.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/CityWindowEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/SunEffect.cpp
@@ -374,6 +375,8 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/LitShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/GrimeShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/UnlitShader.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/TomagotchiToyMesh.cpp
         ${CMAKE_SOURCE_DIR}/src/game/MergeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/DriversController.cpp
