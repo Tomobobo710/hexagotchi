@@ -148,6 +148,9 @@ portraits/karen/karensad.png
 portraits/larry/larryhappy.png
 portraits/larry/larrymid.png
 portraits/larry/larrysad.png
+portraits/loraine/lorainehappy.png
+portraits/loraine/lorainemid.png
+portraits/loraine/lorainesad.png
 portraits/mark/markmid.png
 portraits/phone/phonemid.png
 portraits/ronzer/ronzerhappy.png
@@ -176,6 +179,10 @@ poses/larry/larryposehappy.png
 poses/larry/larryposemid.png
 poses/larry/larryposesad.png
 poses/larry/larryposescared.png
+poses/loraine/loraineposehappy.png
+poses/loraine/loraineposemid.png
+poses/loraine/loraineposesad.png
+poses/loraine/loraineposescared.png
 poses/mark/markpose.png
 poses/ronzer/ronzerposehappy.png
 poses/ronzer/ronzerposemad.png
