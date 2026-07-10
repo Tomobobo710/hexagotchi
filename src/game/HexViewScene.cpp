@@ -74,15 +74,14 @@ void HexViewScene::init() {
     gotchi->setEventBus(eventBus_);  // Set event bus for CareAction emission
     addActor(gotchi);
 
-    // Camera setup with smooth panning
-    getCamera()->setBoundary(0, -200, 4800.0f, 900.0f);
+    // Camera setup with smooth panning - follow the gotchi
+    // Adjusted boundary to properly contain the 32x18 hex world
+    getCamera()->setBoundary(0, -400, 4200.0f, 1450.0f);
     getCamera()->setLookaheadEnabled(false);
-
-    // Position camera at world center (Y is at vertical center of valid band)
-    float startX = (0.0f + 4800.0f) * 0.5f;
-    float startY = (-200.0f + 900.0f) * 0.5f;
-    getCamera()->setPosition(startX, startY);
-    getCamera()->setZoom(0.8f);
+    getCamera()->followActor(gotchi);
+    // Position camera directly over the gotchi
+    getCamera()->setPosition(gotchi->getPosition());
+    getCamera()->setZoom(2.0f);
 
     // Initialize the hotbar (screen-space UI)
     hotbar_ = std::make_unique<Hotbar>();
