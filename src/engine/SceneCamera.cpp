@@ -242,7 +242,10 @@ void SceneCamera::pulse(float intensity, float duration) {
 
 Camera2D SceneCamera::getRaylibCamera() const {
     Camera2D camera = {};
-    camera.target   = position;
+    // Snap camera position to whole pixels to prevent shimmering effect
+    // when zooming or scrolling. This ensures pixel-perfect rendering
+    // by aligning the camera target to the pixel grid.
+    camera.target   = { roundf(position.x), roundf(position.y) };
     camera.offset   = { GAME_W / 2.0f, GAME_H / 2.0f };
     camera.rotation = rotation;
     camera.zoom     = zoom * (1.0f + pulseIntensity);
