@@ -38,7 +38,9 @@ if(RBUILD_DESKTOP)
         "src/game/GotchiStatsScene.cpp"
         "src/game/GotchiSim.cpp"
         "src/game/HexBoard.cpp"
+        "src/game/HexItemOverlay.cpp"
         "src/game/HexViewScene.cpp"
+        "src/game/Hotbar.cpp"
         "src/game/InputTestScene.cpp"
         "src/game/MergeController.cpp"
         "src/game/MergeScene.cpp"
@@ -347,7 +349,9 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/GotchiScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStats.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexBoard.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/HexItemOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexViewScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/Hotbar.cpp
         ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/MergeController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp

@@ -11,6 +11,9 @@
 #include <vector>
 
 class PauseMenuOverlay;
+class Hotbar;
+class HexItemOverlay;
+class EventBus;
 
 class HexViewScene : public Scene {
 public:
@@ -20,6 +23,9 @@ public:
     void init() override;
     void draw() override;
     void update(float deltaTime) override;
+
+    // Set the event bus for emitting CareAction events
+    void setEventBus(EventBus* bus) { eventBus_ = bus; }
 
 private:
     // Pause functionality
@@ -52,6 +58,15 @@ private:
     bool  hasClickMarker_ = false;
     HexCoords clickMarkerHex_{0, 0};
     Vector2   clickMarkerWorld_{0, 0};
+
+    // Hotbar UI (screen-space palette of items)
+    std::unique_ptr<Hotbar> hotbar_;
+
+    // Item overlays on hexes
+    std::vector<std::unique_ptr<HexItemOverlay>> itemOverlays_;
+
+    // Event bus for emitting CareAction events
+    EventBus* eventBus_ = nullptr;
 
     // Back button
     std::unique_ptr<Button> backButton_;
