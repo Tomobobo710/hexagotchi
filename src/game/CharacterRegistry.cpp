@@ -52,7 +52,7 @@ const CharacterInfo kJudy = {
 const CharacterInfo kLarry = {
     "Larry",
     {170, 170, 170, 255}, {142, 68, 173, 255},
-    {80, 50, 100, 255}, {35, 20, 45, 255},
+    {110, 110, 110, 255}, {10, 10, 10, 255},   // portrait gradient: grey -> black
     {"portraits/larry/larrysad.png", "portraits/larry/larrymid.png", "portraits/larry/larryhappy.png"},
     {"poses/larry/larryposesad.png", "poses/larry/larryposemid.png", "poses/larry/larryposehappy.png", "poses/larry/larryposescared.png"},
 };
@@ -64,6 +64,18 @@ const CharacterInfo kLoraine = {
     {235, 140, 30, 255}, {110, 60, 10, 255},
     {"portraits/loraine/lorainesad.png", "portraits/loraine/lorainemid.png", "portraits/loraine/lorainehappy.png"},
     {"poses/loraine/loraineposesad.png", "poses/loraine/loraineposemid.png", "poses/loraine/loraineposehappy.png", "poses/loraine/loraineposescared.png"},
+};
+
+// Mark: Tom's apartment maintenance guy. Pink identity. Only one pose
+// (markpose.png, no emotion suffix) and one portrait (markmid.png) exist --
+// both mapped to Mid; loadPose/loadPortrait fall back to Mid for the rest.
+// He's a deadpan straight man, so a single neutral expression fits.
+const CharacterInfo kMark = {
+    "Mark",
+    {235, 90, 160, 255}, {235, 90, 160, 255},
+    {235, 90, 160, 255}, {110, 40, 75, 255},
+    {"", "portraits/mark/markmid.png", ""},
+    {"", "poses/mark/markpose.png", "", ""},
 };
 
 const CharacterInfo kNarrator = {
@@ -94,6 +106,7 @@ const CharacterInfo& CharacterRegistry::get(CharacterId id) {
         case CharacterId::Judy:      return kJudy;
         case CharacterId::Larry:     return kLarry;
         case CharacterId::Loraine:   return kLoraine;
+        case CharacterId::Mark:      return kMark;
         case CharacterId::Narrator:  return kNarrator;
         case CharacterId::Phone:     return kPhone;
     }

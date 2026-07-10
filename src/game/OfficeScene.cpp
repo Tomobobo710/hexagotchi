@@ -33,15 +33,11 @@ void OfficeScene::init() {
 
     background = AssetPack::loadTexture("backgrounds/officebg.png");
 
-    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
-    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
-    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
-    larryPoses[0] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Sad);
-    larryPoses[1] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Mid);
-    larryPoses[2] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Happy);
-    lorainePoses[0] = CharacterRegistry::loadPose(CharacterId::Loraine, PoseEmotion::Sad);
-    lorainePoses[1] = CharacterRegistry::loadPose(CharacterId::Loraine, PoseEmotion::Mid);
-    lorainePoses[2] = CharacterRegistry::loadPose(CharacterId::Loraine, PoseEmotion::Happy);
+    for (int e = 0; e < 4; e++) {
+        tomPoses[e]     = CharacterRegistry::loadPose(CharacterId::Tom,     (PoseEmotion)e);
+        larryPoses[e]   = CharacterRegistry::loadPose(CharacterId::Larry,   (PoseEmotion)e);
+        lorainePoses[e] = CharacterRegistry::loadPose(CharacterId::Loraine, (PoseEmotion)e);
+    }
 
     portal = new PortalEffect();
     portal->init();
@@ -77,26 +73,31 @@ void OfficeScene::init() {
     // default; cutCamera=true is reserved for dramatic beats.
     scenarios.push_back({
         { CharacterId::Tom, "Ugh, that always makes me nauseous.",
-          0, false, false, PortraitEmotion::Sad, "Tom Gatchi" },
+          0, false, false, PortraitEmotion::Sad, "Tom Gatchi",
+          {}, {}, PoseEmotion::Sad },
 
         // Larry's greeting: fire BOTH walks the instant this line starts, so
-        // they stroll into position while he's talking. Larry ends at (658)
-        // rather than (708) so he visibly walks right up to Tom (451).
+        // they stroll into position while he's talking.
         { CharacterId::Larry, "Tom A. Gotchi!\nJust the man I was looking for!",
-          1, false, false, PortraitEmotion::Happy, "Larry (Tom's boss)",
+          1, false, false, PortraitEmotion::Mid, "Larry (Tom's boss)",
           /*movesAtStart*/ {
               ActorMove{0, {{417.0f, 441.0f}}, 140.0f},
               ActorMove{1, {{669.0f, 441.0f}}, 220.0f},
-          } },
+          }, {}, PoseEmotion::Sad, PoseEmotion::Mid },
 
         { CharacterId::Larry, "How was the merge?\nDid you remember the three E's?",
-          1, false },
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
         { CharacterId::Tom, "Engagement. Engagement.\nEngagement.",
-          0, false },
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        // Larry lights up here -- pose flips Mid -> Happy for the rest of A.
         { CharacterId::Larry, "Exactly! Did the kid engage?",
-          1, false },
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Tom, "I don't know.\nI can't perform right now.\nSo much in my head.",
-          0, false },
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
 
         // Larry bellows for his secretary; fire her walk-in the instant he
         // starts yelling so she strides up from the bottom to Tom's left
@@ -105,9 +106,87 @@ void OfficeScene::init() {
           1, false, false, PortraitEmotion::Happy, "",
           /*movesAtStart*/ {
               ActorMove{2, {{340.0f, 441.0f}}, 240.0f},
-          } },
+          }, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Loraine, "Yes sir?",
-          2, false, false, PortraitEmotion::Mid, "Loraine (the secretary)" },
+          2, false, false, PortraitEmotion::Mid, "Loraine (the secretary)",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+
+        // --- Larry asks for Tom's merge metrics; Loraine reads the stats ----
+        { CharacterId::Larry, "Loraine, pull up the numbers\non Tom's latest merge.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, "[PLAYER STAT MESSAGE]",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+
+        // --- Comedy beat: lands on Tom coming in 15 minutes earlier ---------
+        { CharacterId::Larry, "Mm. The numbers don't lie, Tom.\nAnd the numbers are... a choice.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "I'll do better next time. I just need to get a good night's sleep.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Larry, "And that's the beauty of accountability!\nWe grow together.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Larry, "Loraine, put Tom down for the\nEarly Bird Optimization Initiative.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "The what?",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Loraine, "It means you come in fifteen minutes\nearlier. Every day.",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "Fifteen minutes earlier.\nForever?",
+          0, true, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Larry, "That's the spirit!\nWelcome to the winning team, Tom.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "...I need to sit down.\nWe don't even have chairs here.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+    });
+
+    // --- Scenario 1 (Scenario B): Tom's two minutes late -------------------
+    // A quick back-and-forth: Tom slinks in apologetic, Larry hammers him and
+    // shoves him back out to "make the kid engage." Ends with Tom heading
+    // back to merge out. Larry oblivious-Happy throughout, Tom sad/scared.
+    scenarios.push_back({
+        // Place both at their talking spots the instant the scenario opens.
+        { CharacterId::Tom, "Sorry! Sorry. I'm so sorry.\nI'm two minutes late, I know.",
+          0, false, false, PortraitEmotion::Sad, "",
+          /*movesAtStart*/ {
+              ActorMove{0, {{417.0f, 441.0f}}, 600.0f},
+              ActorMove{1, {{669.0f, 441.0f}}, 600.0f},
+          }, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Larry, "Two minutes, Tom.\nDo you know what two minutes IS?",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "...A hundred and twenty seconds?",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Larry, "It's a MINDSET, Tom.\nIt's a hundred and twenty seconds of\nnot being a team player.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "The train was --",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Larry, "The winners don't take the train, Tom.\nThe winners ARE the train.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "That doesn't mean anything.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Larry, "Now get out there and make that\nkid ENGAGE. Engagement, Tom!",
+          1, true, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy },
+        { CharacterId::Tom, "...Right. Engaging.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Narrator, "Tom goes back out there.",
+          -1, false },
     });
 }
 
@@ -274,7 +353,7 @@ void OfficeScene::cleanup() {
     endElapsed = -1.0f;
 
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
         if (larryPoses[i].id != 0) UnloadTexture(larryPoses[i]);
         if (lorainePoses[i].id != 0) UnloadTexture(lorainePoses[i]);
@@ -324,6 +403,12 @@ void OfficeScene::playLine(const OfficeLine& line) {
     dialog->setText(line.text);
     dialog->show();
     focusCameraOn(line.focusActor, line.shake, line.cutCamera);
+
+    // Pose emotions persist between lines -- each line carries the full set,
+    // so a line just restates whatever should currently be showing.
+    tomPoseEmotion = line.tomPoseEmotion;
+    larryPoseEmotion = line.larryPoseEmotion;
+    lorainePoseEmotion = line.lorainePoseEmotion;
 
     SceneActor* actorsByIndex[3] = {tom, larry, loraine};
     triggerActorMoves(line.movesAtStart, actorsByIndex, 3);
@@ -400,13 +485,13 @@ static void drawPose(Texture2D pose, Vector2 pos, bool flipX) {
 }
 
 void OfficeScene::drawTom(Vector2 pos) {
-    drawPose(tomPoses[0], pos, /*flipX*/ true);   // sad -- just merged in, feels sick; faces right
+    drawPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true);   // faces right
 }
 
 void OfficeScene::drawLarry(Vector2 pos) {
-    drawPose(larryPoses[1], pos, /*flipX*/ false);  // faces left
+    drawPose(larryPoses[(int)larryPoseEmotion], pos, /*flipX*/ false);  // faces left
 }
 
 void OfficeScene::drawLoraine(Vector2 pos) {
-    drawPose(lorainePoses[1], pos, /*flipX*/ true);  // to Tom's left, faces right toward him
+    drawPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ true);  // to Tom's left, faces right toward him
 }
