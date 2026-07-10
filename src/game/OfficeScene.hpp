@@ -11,8 +11,15 @@
 struct OfficeLine {
     CharacterId speaker;
     std::string text;
-    int focusActor;   // 0 = Tom, 1 = Larry, -1 = none
+    int focusActor;   // 0 = Tom, 1 = Larry, 2 = Loraine, -1 = none
     bool shake;
+
+    // Camera style for this line's focus shot. false (default) = smooth
+    // followPosition ease, like PizzaParlorScene -- the normal look. true =
+    // instant setPosition cut, reserved for dramatic beats (the direct-cut
+    // feel Scenario C used everywhere). See focusCameraOn().
+    bool cutCamera = false;
+
     PortraitEmotion emotion = PortraitEmotion::Mid;
 
     // Marks this line as the character's introduction -- playLine() passes
@@ -54,11 +61,17 @@ public:
     // here is already fully black. Same pattern as PizzaParlorScene.
     static constexpr float END_FADE_DURATION = 1.5f;
 
+    // Poses draw at 3/4 of native texture size (never 1.0) -- per-scene knob,
+    // shared by drawTom/drawLarry via drawPose(). Matches the scale field the
+    // scene editor exports, so what's placed there is what renders here.
+    static constexpr float POSE_SCALE = 0.5f;
+
 private:
     Texture2D background = {0};
 
     SceneActor* tom = nullptr;
     SceneActor* larry  = nullptr;
+    SceneActor* loraine = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
@@ -68,12 +81,19 @@ private:
     // caches those itself.
     Texture2D tomPoses[3] = {};
     Texture2D larryPoses[3] = {};
+    Texture2D lorainePoses[3] = {};
 
     float tomWobbleTimer = 0.0f;
 
     std::vector<std::vector<OfficeLine>> scenarios;
     int activeScenario = -1;
     int lineIndex = 0;
+
+    // Which actor the camera is currently tracking (0=Tom, 1=Larry, -1=none).
+    // Set by focusCameraOn() when a line starts; update() re-follows this
+    // actor's LIVE position every frame so the camera keeps up while they
+    // moveTo()-walk, instead of easing once to where they were at line start.
+    int currentFocusActor = -1;
 
     // Counts UP from 0 once endScenario() fires, 0..END_FADE_DURATION.
     // Negative (-1) means no fade-out is in progress.
@@ -82,10 +102,12 @@ private:
     void advanceLine();
     void playLine(const OfficeLine& line);
     void endScenario();
-    void focusCameraOn(int actorIndex, bool shake);
+    void focusCameraOn(int actorIndex, bool shake, bool cut = false);
+    bool cameraTargetFor(int actorIndex, Vector2& out) const;
 
     void drawTom(Vector2 pos);
     void drawLarry(Vector2 pos);
+    void drawLoraine(Vector2 pos);
     void drawOffice();
 
     // The merge-machine/teleporter, drawn in front of the background art but

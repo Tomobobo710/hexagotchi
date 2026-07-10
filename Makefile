@@ -17,11 +17,17 @@ WEB_OUT     = build/web
 OBJ         = $(SRCS:src/%.cpp=$(DESKTOP_OUT)/obj/%.o)
 
 # Desktop
-all: $(DESKTOP_OUT)/game.exe
+all: $(DESKTOP_OUT)/game.exe $(DESKTOP_OUT)/assets.rres
 
 # Link the compiled object files into the executable.
 $(DESKTOP_OUT)/game.exe: $(OBJ)
 	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
+
+# game.exe reads assets.rres via a relative path, so it must sit next to the
+# exe. Depends on build/assets.rres, so editing art repacks then recopies here.
+$(DESKTOP_OUT)/assets.rres: build/assets.rres
+	mkdir -p $(DESKTOP_OUT)
+	cp build/assets.rres $(DESKTOP_OUT)/assets.rres
 
 # Compile each source to an object file. -MMD -MP makes g++ emit a .d file
 # next to each .o listing every header that source #includes, so editing a
@@ -69,7 +75,12 @@ $(SCENE_EDITOR_BIN): tools/scene_editor.cpp
 	mkdir -p $(SCENE_EDITOR_OUT)
 	$(CXX) -std=c++11 -I raylib/src -I rres/src tools/scene_editor.cpp -o $(SCENE_EDITOR_BIN) $(LDFLAGS)
 
-build/assets.rres: tools/pack_assets.sh tools/pack_assets.cpp
+# Repack whenever the packer OR any file under assets/ changes, so all the
+# build.bat targets (which go through make) pick up new/edited art without a
+# manual pack step. ASSET_FILES is every file under assets/ -- make treats each
+# as a prerequisite, so adding a PNG makes this rule out of date.
+ASSET_FILES = $(shell find assets -type f)
+build/assets.rres: tools/pack_assets.sh tools/pack_assets.cpp $(ASSET_FILES)
 	tools/pack_assets.sh assets build/assets.rres
 
 $(SCENE_EDITOR_OUT)/assets.rres: build/assets.rres

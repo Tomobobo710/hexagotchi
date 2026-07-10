@@ -418,6 +418,11 @@ int main(int argc, char** argv) {
     cam.target = {WORLD_W / 2.0f, WORLD_H / 2.0f};
 
     int selectedAssetManifestIndex = -1;
+    // Manifest index of the background shown as a non-interactive backdrop in
+    // the canvas (a placement reference only -- never a PlacedActor, never
+    // click-selectable, never exported). -1 = none. Toggled by the checkbox
+    // drawn to the right of each backgrounds/ row in the left panel.
+    int activeBackdropIndex = -1;
     int selectedActorIndex = -1;
     int sidebarScroll = 0;
     bool draggingActor = false;
@@ -470,7 +475,19 @@ int main(int argc, char** argv) {
                 if (row >= 0 && row < (int)visibleRows.size()) {
                     TreeNode* node = visibleRows[row].node;
                     if (node->manifestIndex >= 0) {
-                        selectedAssetManifestIndex = node->manifestIndex;
+                        // Checkbox hit-test on background rows (geometry must
+                        // match the box drawn in the row-render loop below):
+                        // toggle this bg as the canvas backdrop instead of
+                        // selecting it for placement.
+                        bool isBg = manifest[node->manifestIndex].rfind("backgrounds/", 0) == 0;
+                        bool onCheckbox = isBg
+                            && mouseScreen.x >= LEFT_SIDEBAR_W - 64 && mouseScreen.x <= LEFT_SIDEBAR_W - 32;
+                        if (onCheckbox) {
+                            activeBackdropIndex =
+                                (activeBackdropIndex == node->manifestIndex) ? -1 : node->manifestIndex;
+                        } else {
+                            selectedAssetManifestIndex = node->manifestIndex;
+                        }
                     } else {
                         node->expanded = !node->expanded;
                     }
@@ -562,6 +579,14 @@ int main(int argc, char** argv) {
         ClearBackground(Color{30, 30, 34, 255});
 
         BeginMode2D(cam);
+        // Background backdrop (placement reference only) -- drawn first, at
+        // native size top-left at (0,0), behind everything else. Not a
+        // PlacedActor: never selectable, never exported.
+        if (activeBackdropIndex >= 0 && activeBackdropIndex < (int)manifest.size()
+            && assetThumbs[activeBackdropIndex].id != 0) {
+            DrawTexture(assetThumbs[activeBackdropIndex], 0, 0, WHITE);
+        }
+
         // World bounds outline
         DrawRectangleLinesEx({0, 0, WORLD_W, WORLD_H}, 2.0f / cam.zoom, Color{100, 100, 140, 255});
 
@@ -661,6 +686,18 @@ int main(int argc, char** argv) {
                     DrawTexturePro(assetThumbs[node->manifestIndex], src, dest, {0, 0}, 0.0f, WHITE);
                 }
                 DrawText(node->name.c_str(), 100 + indent, y + 34, 24, RAYWHITE);
+
+                // Checkbox on background rows: toggles this bg as the canvas
+                // backdrop. Drawn to the right of the entry. Hit-tested in the
+                // sidebar click handler above (BACKDROP_CHECKBOX geometry must
+                // match there).
+                if (manifest[node->manifestIndex].rfind("backgrounds/", 0) == 0) {
+                    Rectangle box = {(float)(LEFT_SIDEBAR_W - 64), (float)y + 27, 32, 32};
+                    DrawRectangleLinesEx(box, 2.0f, Color{160, 160, 200, 255});
+                    if (node->manifestIndex == activeBackdropIndex) {
+                        DrawRectangle((int)box.x + 6, (int)box.y + 6, 20, 20, Color{120, 220, 120, 255});
+                    }
+                }
             }
         }
         EndScissorMode();

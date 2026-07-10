@@ -39,6 +39,9 @@ void OfficeScene::init() {
     larryPoses[0] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Sad);
     larryPoses[1] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Mid);
     larryPoses[2] = CharacterRegistry::loadPose(CharacterId::Larry, PoseEmotion::Happy);
+    lorainePoses[0] = CharacterRegistry::loadPose(CharacterId::Loraine, PoseEmotion::Sad);
+    lorainePoses[1] = CharacterRegistry::loadPose(CharacterId::Loraine, PoseEmotion::Mid);
+    lorainePoses[2] = CharacterRegistry::loadPose(CharacterId::Loraine, PoseEmotion::Happy);
 
     portal = new PortalEffect();
     portal->init();
@@ -48,64 +51,63 @@ void OfficeScene::init() {
     // PORTAL_WORLD_2D and the live 2D camera (exact projection sync, not an
     // initial placement) -- see the comment there.
 
-    tom = new SceneActor({420.0f, 400.0f}, 48.0f, 64.0f);
+    // Tom is standing at open (far-left, up high) where the scene editor
+    // placed him; the scenario zooms in on him here, then walks him to
+    // (451, 480). Larry starts off the bottom-right edge and walks up to Tom.
+    tom = new SceneActor({113.0f, 349.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
     tom->setVisible(false);
     addActor(tom);
 
-    larry = new SceneActor({650.0f, 380.0f}, 50.0f, 76.0f);
+    larry = new SceneActor({1050.0f, 818.0f}, 50.0f, 76.0f);
     larry->setTag("larry");
     larry->setVisible(false);
     addActor(larry);
 
-    // --- Scenario 0: "Performance Review", ported almost line-for-line ---
-    scenarios.push_back({
-        { CharacterId::Narrator, "Tom arrives at Datatek Solutions.\n9:14 AM. His shift started at 9:00.",
-          -1, false },
-        { CharacterId::Larry, "Tom. My office.\nBring the Hendricks file.",
-          1, false },
-        { CharacterId::Tom, "...What's the Hendricks file.",
-          0, false },
-        { CharacterId::Larry, "The one I emailed you about.\nFive times.\nAlso on the physical memo.",
-          1, false },
-        { CharacterId::Tom, "I don't have a desk.\nYou took my desk.",
-          0, true },
-        { CharacterId::Larry, "We hot-desk now Tom.\nIt's a flex workspace environment.",
-          1, false },
-        { CharacterId::Tom, "I sit on a yoga ball.\nI am 34 years old.",
-          0, false },
-        { CharacterId::Narrator, "The review goes poorly.\nTom does not receive the 3% raise.\nHe receives a 'verbal commendation'.",
-          -1, false },
-        { CharacterId::Tom, "A verbal commendation.\nI have $11 in my account.\nA verbal commendation.",
-          0, true },
-    });
+    // Loraine (Larry's secretary) waits off the bottom edge until Larry calls
+    // her in, then walks up to the left of Tom (Tom lands at x=417).
+    loraine = new SceneActor({300.0f, 818.0f}, 50.0f, 76.0f);
+    loraine->setTag("loraine");
+    loraine->setVisible(false);
+    addActor(loraine);
 
-    // --- Scenario 1 (Scenario C): "The Promotion (Sort Of)", ported almost line-for-line ---
+    // --- Scenario 0 (Scenario A): the first merge into Tom's world ---------
+    // Player merges in, Tom's already standing there feeling sick from it,
+    // Larry strides up to greet him. Camera is smooth (followPosition) by
+    // default; cutCamera=true is reserved for dramatic beats.
     scenarios.push_back({
-        { CharacterId::Narrator, "Tom's boss calls him in.\nThis time it's different.",
-          -1, false },
-        { CharacterId::Larry, "Tom we're expanding your role.\nCongratulations.",
-          1, false, PortraitEmotion::Mid, "Larry (Tom's boss)" },
-        { CharacterId::Tom, "...A raise?",
-          0, false, PortraitEmotion::Mid, "Tom Gotchi" },
-        { CharacterId::Larry, "More responsibility!\nYou'll now manage the Henderson account\nAND the Brickford account.",
+        { CharacterId::Tom, "Ugh, that always makes me nauseous.",
+          0, false, false, PortraitEmotion::Sad, "Tom Gatchi" },
+
+        // Larry's greeting: fire BOTH walks the instant this line starts, so
+        // they stroll into position while he's talking. Larry ends at (658)
+        // rather than (708) so he visibly walks right up to Tom (451).
+        { CharacterId::Larry, "Tom A. Gotchi!\nJust the man I was looking for!",
+          1, false, false, PortraitEmotion::Happy, "Larry (Tom's boss)",
+          /*movesAtStart*/ {
+              ActorMove{0, {{417.0f, 441.0f}}, 140.0f},
+              ActorMove{1, {{669.0f, 441.0f}}, 220.0f},
+          } },
+
+        { CharacterId::Larry, "How was the merge?\nDid you remember the three E's?",
           1, false },
-        { CharacterId::Tom, "Okay and the raise --",
+        { CharacterId::Tom, "Engagement. Engagement.\nEngagement.",
           0, false },
-        { CharacterId::Larry, "We're calling it a 'growth opportunity'.",
+        { CharacterId::Larry, "Exactly! Did the kid engage?",
           1, false },
-        { CharacterId::Tom, "So no raise.",
+        { CharacterId::Tom, "I don't know.\nI can't perform right now.\nSo much in my head.",
           0, false },
-        { CharacterId::Larry, "We're also moving your start time to 8:30.",
-          1, false },
-        { CharacterId::Tom, "Earlier?!",
-          0, true },
-        { CharacterId::Larry, "It's the flex workspace, Tom.\nThe ball yoga spot is first come, first served now.",
-          1, false },
-        { CharacterId::Tom, "I... cannot process this\nright now.",
-          0, false },
-        { CharacterId::Narrator, "Tom processes it on his commute home.\nHe misses his exit.\nTwice.",
-          -1, false },
+
+        // Larry bellows for his secretary; fire her walk-in the instant he
+        // starts yelling so she strides up from the bottom to Tom's left
+        // (x=340, left of Tom at 417) while he's still shouting.
+        { CharacterId::Larry, "LORAAAINE!!!!",
+          1, false, false, PortraitEmotion::Happy, "",
+          /*movesAtStart*/ {
+              ActorMove{2, {{340.0f, 441.0f}}, 240.0f},
+          } },
+        { CharacterId::Loraine, "Yes sir?",
+          2, false, false, PortraitEmotion::Mid, "Loraine (the secretary)" },
     });
 }
 
@@ -142,14 +144,24 @@ void OfficeScene::update(float deltaTime) {
     }
 
     if (activeScenario < 0) {
-        // Ambient: Tom balancing/wobbling on the yoga ball, Larry absent
-        // (only appears during the scripted scenarios, called into "his office").
+        // Ambient (pre-scenario / after it ends): Tom stands at his open spot
+        // where the scenario begins, with a gentle idle bob. Not the yoga-ball
+        // wobble anymore -- Scenario A opens on Tom already standing here and
+        // then walks him in, so pinning him elsewhere would teleport him on
+        // the first move. Camera is left alone; the scenario's first line
+        // zooms in on him itself.
         tomWobbleTimer += deltaTime * 3.0f;
-        tom->setPosition({420.0f, 400.0f + sinf(tomWobbleTimer) * 6.0f});
+        tom->setPosition({113.0f, 349.0f + sinf(tomWobbleTimer) * 4.0f});
+    }
 
-        if (!getCamera()->isWideViewEnabled()) {
-            getCamera()->setPosition(460.0f, 320.0f);
-            getCamera()->setZoom(1.0f);
+    // Keep the camera locked on the speaking actor's LIVE position every
+    // frame, so it tracks them smoothly as they moveTo()-walk into place
+    // rather than easing once to where they stood when the line started.
+    // Skipped in wide view (debug) so the numpad-0 override isn't fought.
+    if (activeScenario >= 0 && currentFocusActor >= 0 && !getCamera()->isWideViewEnabled()) {
+        Vector2 t;
+        if (cameraTargetFor(currentFocusActor, t)) {
+            getCamera()->followPosition(t, 8.0f);
         }
     }
 
@@ -219,6 +231,10 @@ void OfficeScene::draw() {
     BeginMode2D(cam);
     drawTom(tom->getPosition());
     if (activeScenario >= 0) drawLarry(larry->getPosition());
+    // Loraine starts off the bottom edge (y=818, below the 720 screen) and is
+    // only walked in on the "LORAAAINE!!!!" beat, so drawing her whenever the
+    // scenario is live is fine -- she's simply off-screen until she strides up.
+    if (activeScenario >= 0) drawLoraine(loraine->getPosition());
     EndMode2D();
 
     if (getEntrySceneName() == "scene_select") {
@@ -254,12 +270,14 @@ void OfficeScene::cleanup() {
     scenarios.clear();
     activeScenario = -1;
     lineIndex = 0;
+    currentFocusActor = -1;
     endElapsed = -1.0f;
 
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     for (int i = 0; i < 3; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
         if (larryPoses[i].id != 0) UnloadTexture(larryPoses[i]);
+        if (lorainePoses[i].id != 0) UnloadTexture(lorainePoses[i]);
     }
 
     if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
@@ -287,8 +305,8 @@ void OfficeScene::advanceLine() {
     if (activeScenario < 0) return;
 
     auto& seq = scenarios[activeScenario];
-    SceneActor* actorsByIndex[2] = {tom, larry};
-    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 2);
+    SceneActor* actorsByIndex[3] = {tom, larry, loraine};
+    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 3);
 
     lineIndex++;
     if (lineIndex >= (int)seq.size()) {
@@ -305,29 +323,57 @@ void OfficeScene::playLine(const OfficeLine& line) {
     dialog->setCharacter(line.speaker, line.emotion, line.firstTimeName);
     dialog->setText(line.text);
     dialog->show();
-    focusCameraOn(line.focusActor, line.shake);
+    focusCameraOn(line.focusActor, line.shake, line.cutCamera);
 
-    SceneActor* actorsByIndex[2] = {tom, larry};
-    triggerActorMoves(line.movesAtStart, actorsByIndex, 2);
+    SceneActor* actorsByIndex[3] = {tom, larry, loraine};
+    triggerActorMoves(line.movesAtStart, actorsByIndex, 3);
 }
 
 void OfficeScene::endScenario() {
     activeScenario = -1;
     lineIndex = 0;
+    currentFocusActor = -1;
     endElapsed = 0.0f;
     dialog->hide();
     getCamera()->zoomTo(1.0f, 0.6f);
 }
 
-void OfficeScene::focusCameraOn(int actorIndex, bool shake) {
+// The point the camera aims at for a given actor, from its LIVE position.
+// Actor position is now the pose's top-left (editor convention), so offset
+// into the visible body rather than using getCenter() (which is based on the
+// small 48x64 placeholder box, not the drawn pose). Returns false if there's
+// no such actor (e.g. Narrator, actorIndex -1) so the caller leaves the
+// camera where it is.
+bool OfficeScene::cameraTargetFor(int actorIndex, Vector2& out) const {
     SceneActor* target = nullptr;
     if (actorIndex == 0) target = tom;
     else if (actorIndex == 1) target = larry;
+    else if (actorIndex == 2) target = loraine;
+    if (!target) return false;
 
-    if (target) {
-        Vector2 pos = target->getCenter();
-        getCamera()->setPosition(pos.x, pos.y - 40.0f);
-        getCamera()->zoomTo(1.4f, 0.5f);
+    Vector2 p = target->getPosition();
+    // Aim near the TOP of the drawn pose (head height), so when the camera
+    // centers here the body fills the frame downward and stays in the upper
+    // area -- above the dialog box along the bottom edge -- instead of the
+    // feet landing at screen-center and the figure hiding behind the box.
+    // Pose is 192px tall drawn (256 native x 0.75). At tight zoom the whole
+    // body won't fit; aim at the upper torso so the head/face and torso sit
+    // in the visible area above the dialog box.
+    out = { p.x + 64.0f, p.y + 80.0f };
+    return true;
+}
+
+void OfficeScene::focusCameraOn(int actorIndex, bool shake, bool cut) {
+    currentFocusActor = actorIndex;  // update() keeps following this every frame
+
+    Vector2 t;
+    if (cameraTargetFor(actorIndex, t)) {
+        // Smooth ease (PizzaParlorScene's normal look) unless the line asks
+        // for a hard cut for a dramatic beat. Either way update()'s per-frame
+        // follow takes over from here to track the actor as they walk.
+        if (cut) getCamera()->setPosition(t.x, t.y);
+        else getCamera()->followPosition(t, 8.0f);
+        getCamera()->zoomTo(4.0f, 0.5f);
     }
 
     if (shake) {
@@ -340,18 +386,27 @@ void OfficeScene::drawOffice() {
     if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
 }
 
-void OfficeScene::drawTom(Vector2 pos) {
-    float cx = pos.x + 24.0f;
-    float cy = pos.y + 32.0f;
+// Draw a pose EXACTLY the way tools/scene_editor.cpp draws it: texture
+// top-left pinned at the actor's position, native size scaled by POSE_SCALE,
+// origin {0,0}. This is the shared convention that keeps the editor and the
+// game aligned -- an actor's (x,y) from the editor JSON drops straight into
+// its SceneActor construction with no anchor translation. flipX mirrors
+// horizontally (negative source width), same as the editor's flipX toggle.
+static void drawPose(Texture2D pose, Vector2 pos, bool flipX) {
+    if (pose.id == 0) return;
+    Rectangle src = { 0.0f, 0.0f, (flipX ? -1.0f : 1.0f) * (float)pose.width, (float)pose.height };
+    Rectangle dest = { pos.x, pos.y, pose.width * OfficeScene::POSE_SCALE, pose.height * OfficeScene::POSE_SCALE };
+    DrawTexturePro(pose, src, dest, {0.0f, 0.0f}, 0.0f, WHITE);
+}
 
-    Texture2D pose = tomPoses[1];
-    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
+void OfficeScene::drawTom(Vector2 pos) {
+    drawPose(tomPoses[0], pos, /*flipX*/ true);   // sad -- just merged in, feels sick; faces right
 }
 
 void OfficeScene::drawLarry(Vector2 pos) {
-    float cx = pos.x + 25.0f;
-    float cy = pos.y + 38.0f;
+    drawPose(larryPoses[1], pos, /*flipX*/ false);  // faces left
+}
 
-    Texture2D pose = larryPoses[1];
-    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 36.0f - pose.height), WHITE);
+void OfficeScene::drawLoraine(Vector2 pos) {
+    drawPose(lorainePoses[1], pos, /*flipX*/ true);  // to Tom's left, faces right toward him
 }

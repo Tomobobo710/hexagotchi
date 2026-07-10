@@ -56,6 +56,16 @@ const CharacterInfo kLarry = {
     {"portraits/larry/larrysad.png", "portraits/larry/larrymid.png", "portraits/larry/larryhappy.png"},
     {"poses/larry/larryposesad.png", "poses/larry/larryposemid.png", "poses/larry/larryposehappy.png", "poses/larry/larryposescared.png"},
 };
+// Loraine: Larry's secretary. Name label (and portrait gradient) orange --
+// her whole dialog-box identity is orange.
+const CharacterInfo kLoraine = {
+    "Loraine",
+    {235, 140, 30, 255}, {235, 140, 30, 255},
+    {235, 140, 30, 255}, {110, 60, 10, 255},
+    {"portraits/loraine/lorainesad.png", "portraits/loraine/lorainemid.png", "portraits/loraine/lorainehappy.png"},
+    {"poses/loraine/loraineposesad.png", "poses/loraine/loraineposemid.png", "poses/loraine/loraineposehappy.png", "poses/loraine/loraineposescared.png"},
+};
+
 const CharacterInfo kNarrator = {
     "Narrator",
     {150, 150, 170, 255}, {150, 150, 170, 255},
@@ -83,6 +93,7 @@ const CharacterInfo& CharacterRegistry::get(CharacterId id) {
         case CharacterId::Jimmy:     return kJimmy;
         case CharacterId::Judy:      return kJudy;
         case CharacterId::Larry:     return kLarry;
+        case CharacterId::Loraine:   return kLoraine;
         case CharacterId::Narrator:  return kNarrator;
         case CharacterId::Phone:     return kPhone;
     }
