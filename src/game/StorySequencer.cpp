@@ -105,12 +105,12 @@ void StorySequencer::startSequence() {
     startMergeTransition(Phase::MergeIn);
 }
 
-// visualMode is which MergeScene::Mode actually plays -- MergeScene's own
-// MERGE_IN/MERGE_OUT names read backwards from the player's perspective
-// (confirmed by eye), so this is the ONLY place that mapping lives. `phase`
-// is this sequencer's own position-in-sequence state (start vs end) and
-// must stay independent of which visual mode gets played, or update()'s
-// MergeIn-vs-MergeOut branch (start first step vs finish sequence) breaks.
+// `phase` is this sequencer's own position-in-sequence state (MergeIn =
+// entering Tom's world / start of sequence, MergeOut = leaving / end) and
+// drives update()'s "start first step vs finish sequence" branch. visualMode
+// is which MergeScene::Mode animation plays; this is the ONLY place that
+// mapping lives. Keep the two independent -- deriving one from the other
+// would break that branch.
 void StorySequencer::startMergeTransition(Phase phase) {
     phase_ = phase;
     MergeScene::Mode visualMode = (phase == Phase::MergeIn) ? MergeScene::Mode::MERGE_OUT : MergeScene::Mode::MERGE_IN;

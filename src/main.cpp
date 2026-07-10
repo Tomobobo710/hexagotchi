@@ -15,6 +15,7 @@
 #include "game/SchoolScene.hpp"
 #include "game/Model3DTestScene.hpp"
 #include "game/MergeScene.hpp"
+#include "game/ToyAnimationScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/TitleScene.hpp"
 #include "game/GotchiStatsScene.hpp"
@@ -257,6 +258,7 @@ int main() {
     sceneManager->registerScene("school", new SchoolScene(dialog));
     sceneManager->registerScene("model3d_test", new Model3DTestScene());
     sceneManager->registerScene("merge", new MergeScene());
+    sceneManager->registerScene("toy_animation", new ToyAnimationScene());
     sceneManager->registerScene("title", new TitleScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     GotchiStatsScene* gotchiStatsScene = new GotchiStatsScene();

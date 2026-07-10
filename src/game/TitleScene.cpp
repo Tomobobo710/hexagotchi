@@ -3,6 +3,7 @@
 #include "GameConstants.hpp"
 #include "SceneManager.hpp"
 #include "GotchiScene.hpp"
+#include "ToyAnimationScene.hpp"
 #include "GameState.h"
 #include <functional>
 #include <fstream>
@@ -92,9 +93,13 @@ void TitleScene::onNewGame() {
     // Update globalGameState so the new game actually starts
     globalGameState = state;
 
-    // Transition to gotchi scene
+    // Transition through the toy intro animation on the way to the gotchi
+    // scene -- same "switch, then configure before init() actually runs"
+    // pattern StorySequencer::startMergeTransition uses for MergeScene.
     if (sceneManager) {
-        sceneManager->switchScene("gotchi");
+        sceneManager->switchScene("toy_animation");
+        ToyAnimationScene* toyAnim = static_cast<ToyAnimationScene*>(sceneManager->getScene("toy_animation"));
+        if (toyAnim) toyAnim->startIntro("gotchi");
     }
 }
 
@@ -120,9 +125,12 @@ void TitleScene::onLoadFromSlot(int slot) {
         // Update globalGameState so the loaded game actually starts
         globalGameState = state;
 
-        // Transition to gotchi scene
+        // Transition through the toy intro animation on the way to the
+        // gotchi scene -- see onNewGame() for the pattern.
         if (sceneManager) {
-            sceneManager->switchScene("gotchi");
+            sceneManager->switchScene("toy_animation");
+            ToyAnimationScene* toyAnim = static_cast<ToyAnimationScene*>(sceneManager->getScene("toy_animation"));
+            if (toyAnim) toyAnim->startIntro("gotchi");
         }
     } else {
         std::cerr << "[TitleScene] No save found in slot " << slot << std::endl;

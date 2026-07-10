@@ -33,6 +33,7 @@ void SceneSelectScene::init() {
     addSceneButton("SCHOOL PICKUP", "school", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 4);
     addSceneButton("3D MODEL TEST", "model3d_test", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 5);
     addSceneButton("MERGE TRANSITION", "merge", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 6);
+    addSceneButton("TOY ANIMATION", "toy_animation", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 7);
 
     // Future world-scenes get one more addSceneButton() call here.
     // (Numpad 0 in any world scene toggles a wide view showing the whole
