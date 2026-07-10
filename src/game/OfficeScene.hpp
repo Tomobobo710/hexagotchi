@@ -34,6 +34,16 @@ struct OfficeLine {
     // movement at all.
     std::vector<ActorMove> movesAtStart;
     std::vector<ActorMove> movesAtEnd;
+
+    // Per-actor POSE emotion for the on-screen figures during this line.
+    // Separate from the portrait `emotion` above (portrait = dialog-box
+    // headshot; these = full-body poses). Each persists until a later line
+    // changes it, so set only the ones that CHANGE on a line. Indexed like
+    // focusActor: [0]=Tom, [1]=Larry, [2]=Loraine. Last fields so existing
+    // brace-init lines are unaffected. Default Mid.
+    PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion larryPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion lorainePoseEmotion = PoseEmotion::Mid;
 };
 
 // Datatek Solutions -- ported from the JS prototype's "Performance Review"
@@ -75,13 +85,21 @@ private:
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
-    // Full-body pose art, [0]=sad [1]=mid [2]=happy -- loaded via
-    // CharacterRegistry (see init()). Dialog-box portraits are no longer
-    // loaded/owned here at all -- DialogBox::setCharacter() loads and
-    // caches those itself.
-    Texture2D tomPoses[3] = {};
-    Texture2D larryPoses[3] = {};
-    Texture2D lorainePoses[3] = {};
+    // Full-body pose art, indexed by PoseEmotion: [0]=sad [1]=mid [2]=happy
+    // [3]=scared -- loaded via CharacterRegistry (see init()). Dialog-box
+    // portraits are no longer loaded/owned here at all -- DialogBox::
+    // setCharacter() loads and caches those itself.
+    Texture2D tomPoses[4] = {};
+    Texture2D larryPoses[4] = {};
+    Texture2D lorainePoses[4] = {};
+
+    // Which pose emotion each on-screen actor is currently drawn with. Set
+    // per-line in playLine() from OfficeLine's *PoseEmotion fields, persists
+    // between lines. drawTom/drawLarry/drawLoraine index their pose array
+    // with this.
+    PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion larryPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion lorainePoseEmotion = PoseEmotion::Mid;
 
     float tomWobbleTimer = 0.0f;
 

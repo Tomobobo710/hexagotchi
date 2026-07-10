@@ -12,70 +12,133 @@ ApartmentScene::ApartmentScene(DialogBox* sharedDialog)
 void ApartmentScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
-    tom = new SceneActor({470.0f, 380.0f}, 48.0f, 64.0f);
+    background = AssetPack::loadTexture("backgrounds/apartmentbg.png");
+
+    for (int e = 0; e < 4; e++) {
+        tomPoses[e]  = CharacterRegistry::loadPose(CharacterId::Tom,  (PoseEmotion)e);
+        markPoses[e] = CharacterRegistry::loadPose(CharacterId::Mark, (PoseEmotion)e);
+    }
+
+    cityWindow = new CityWindowEffect();
+    cityWindow->setDebugPitch(-15.0f);   // city-through-window 3D camera pitch
+    addEffect(cityWindow);
+
+    // Positions from the scene editor's layout.json: Tom on the left facing
+    // right (flipped), Mark at the door on the right facing left. Both static
+    // -- this is a doorway confrontation, no walking.
+    tom = new SceneActor({315.0f, 288.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
     tom->setVisible(false);
     addActor(tom);
 
-    background = AssetPack::loadTexture("backgrounds/apartmentbg.png");
+    mark = new SceneActor({698.0f, 218.0f}, 50.0f, 76.0f);
+    mark->setTag("mark");
+    mark->setVisible(false);
+    addActor(mark);
 
-    tomPoses[0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
-    tomPoses[1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
-    tomPoses[2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
-
-    cityWindow = new CityWindowEffect();
-    addEffect(cityWindow);
-
-    // Ported from the JS prototype's "Monday Morning" intro episode --
-    // same beats (alarm, mirror, Karen's text, broken coffee machine),
-    // adapted into our speaker/text/focus/shake line format. Karen's text
-    // plays through a "KAREN (TEXT)" speaker, matching the original's PHONE
-    // insert convention.
+    // --- Scenario 0: "The Heating Situation" ------------------------------
+    // Tom's heat has been out for weeks; Mark the maintenance guy is at the
+    // door, deadpan and useless. It slides from the busted heat into the
+    // busted toilet, then into Tom being behind on rent -- Mark stays sunny,
+    // Tom sinks. Tom is pathetic, Mark is cheerfully unhelpful.
     scenarios.push_back({
-        { CharacterId::Tom, "Ugh. 6:47 AM. Already late.",
-          0, false },
-        { CharacterId::Tom, "The alarm has been going off for 40 minutes.\nI just... couldn't.",
-          0, false },
-        { CharacterId::Narrator, "Tom shuffles to the bathroom.\nHe stares at himself in the mirror for 90 seconds.",
+        { CharacterId::Narrator, "It is 48 degrees inside Tom's apartment.\nThis is December.",
           -1, false },
-        { CharacterId::Tom, "I am a digital being.\nI do not have pores.\nWhy do I look like this.",
-          0, false },
-        { CharacterId::Phone, "'You were supposed to have the kids\nlast weekend. TOM.'",
-          0, true },
-        { CharacterId::Tom, "I KNOW Karen.\nI HAD THE KIDS.\nBimmy ate my only good spatula.",
-          0, false },
-        { CharacterId::Narrator, "Tom makes coffee.\nThe machine is broken.\nHe stares at it.",
+        { CharacterId::Tom, "Mark. I've called you six times.\nThe heat's been out for THREE WEEKS.",
+          0, false, false, PortraitEmotion::Sad, "Tom Gatchi",
+          {}, {}, PoseEmotion::Sad },
+        { CharacterId::Mark, "Yeah, so, the part's on order.\nNot really much I can do.",
+          1, false, false, PortraitEmotion::Mid, "Mark (the maintenance guy)",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "I can SEE MY BREATH.\nIn my BEDROOM.",
+          0, true, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "Have you tried layering up?",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "I sleep in three sweaters, Mark.\nTHREE SWEATERS.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "See, that's resourceful.\nThat's problem solving.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+
+        // Slide into the toilet.
+        { CharacterId::Tom, "The toilet won't flush either.\nIt just... makes a noise now.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "Oh yeah, the noise. That's normal.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "It is NOT normal, Mark.\nIt sounds like it's in pain.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "Honestly? Landlord can't authorize\nany of this till the account's current.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+
+        // The rent turn.
+        { CharacterId::Tom, "Right. The rent. I'll have it soon.\nI'm getting money together.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "You're two weeks late.\nOn your second month.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "That's... a technicality.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "It's two technicalities, Tom.\nBack to back.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "I am paying $1,400 a month.\nFOR AN ICE CUBE.",
+          0, true, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
+        { CharacterId::Mark, "Fourteen hundred's a great rate\nfor the neighborhood, though.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
+        { CharacterId::Mark, "Anyway. Get the account current,\nI'll put a ticket in on the heat.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Narrator, "Mark says he'll look into it.\nTom knows Mark will not look into it.",
           -1, false },
-        { CharacterId::Tom, "I need to go back out there soon.\nAct happy. Be a good pet.\n...I just need one minute.",
-          0, false },
+        { CharacterId::Tom, "...Can you at least close the door?\nYou're letting the cold in.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
     });
 }
 
 void ApartmentScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
+    if (endElapsed >= 0.0f) {
+        endElapsed += deltaTime;
+        if (endElapsed > END_FADE_DURATION) endElapsed = END_FADE_DURATION;
+    }
+
     if (getEntrySceneName() == "scene_select") updateSceneDebugCamera(cityWindow, getCamera(), deltaTime);
 
     if (cityWindow && cityWindow->consumeTrainShakeRequest()) {
-        // Duration computed by the effect itself from the actual visible
-        // window/lead-in/trail-out timing, not a fixed guess -- see
-        // CityWindowEffect::getShakeDuration().
         getCamera()->shake(6.0f, cityWindow->getShakeDuration());
     }
 
     if (activeScenario < 0) {
-        // Ambient: slow slumped sway, nothing else in the room moving --
-        // this is meant to feel emptier and quieter than the pizza parlor.
+        // Ambient: Tom slumped at his editor spot with a slow sway, Mark
+        // absent (only appears during the scripted scenario).
         tomSlumpTimer += deltaTime * 1.2f;
-        tom->setPosition({470.0f, 380.0f + sinf(tomSlumpTimer) * 3.0f});
+        tom->setPosition({315.0f, 288.0f + sinf(tomSlumpTimer) * 3.0f});
 
-        // setPosition()/setZoom() hard-reset the camera every single frame --
-        // skip the re-pin while a shake (from the train passing) is mid-
-        // flight, or while wide view is active, so those don't get stomped
-        // back out before ever being visible (same reason as isShaking()).
         if (!getCamera()->isShaking() && !getCamera()->isWideViewEnabled()) {
             getCamera()->setPosition(512.0f, 360.0f);
             getCamera()->setZoom(1.0f);
+        }
+    }
+
+    // Keep the camera on the live speaker every frame (matches OfficeScene).
+    if (activeScenario >= 0 && currentFocusActor >= 0
+        && !getCamera()->isShaking() && !getCamera()->isWideViewEnabled()) {
+        Vector2 t;
+        if (cameraTargetFor(currentFocusActor, t)) {
+            getCamera()->followPosition(t, 8.0f);
         }
     }
 
@@ -98,25 +161,32 @@ void ApartmentScene::draw() {
         drawApartment();
     }
     drawTom(tom->getPosition());
+    if (activeScenario >= 0) drawMark(mark->getPosition());
     EndMode2D();
 
     if (getEntrySceneName() == "scene_select") drawSceneDebugCameraReadout(cityWindow, 16, 16);
+
+    if (endElapsed >= 0.0f) {
+        float t = endElapsed / END_FADE_DURATION;
+        if (t > 1.0f) t = 1.0f;
+        unsigned char alpha = (unsigned char)(t * 255.0f);
+        DrawRectangle(0, 0, (int)getWidth(), (int)getHeight(), Color{0, 0, 0, alpha});
+    }
 }
 
 void ApartmentScene::cleanup() {
     Scene::cleanup();
     cityWindow = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
+        if (markPoses[i].id != 0) UnloadTexture(markPoses[i]);
     }
-    // init() re-runs on every re-entry to this scene and unconditionally
-    // push_back()s the scenario table -- reset so scenarios doesn't
-    // accumulate duplicates and a mid-scenario exit doesn't permanently
-    // block triggerScenario().
     scenarios.clear();
     activeScenario = -1;
     lineIndex = 0;
+    currentFocusActor = -1;
+    endElapsed = -1.0f;
 }
 
 void ApartmentScene::triggerScenario(int index) {
@@ -134,15 +204,15 @@ void ApartmentScene::triggerStoryEvent(int scenarioIndex) {
 }
 
 bool ApartmentScene::isPlayingScenario() const {
-    return activeScenario >= 0;
+    return activeScenario >= 0 || (endElapsed >= 0.0f && endElapsed < END_FADE_DURATION);
 }
 
 void ApartmentScene::advanceLine() {
     if (activeScenario < 0) return;
 
     auto& seq = scenarios[activeScenario];
-    SceneActor* actorsByIndex[1] = {tom};
-    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 1);
+    SceneActor* actorsByIndex[2] = {tom, mark};
+    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 2);
 
     lineIndex++;
     if (lineIndex >= (int)seq.size()) {
@@ -153,27 +223,35 @@ void ApartmentScene::advanceLine() {
 }
 
 void ApartmentScene::playLine(const ApartmentLine& line) {
-    dialog->setCharacter(line.speaker, line.emotion);
+    dialog->setCharacter(line.speaker, line.emotion, line.firstTimeName);
     dialog->setText(line.text);
     dialog->show();
-    focusCameraOn(line.focusActor, line.shake);
+    focusCameraOn(line.focusActor, line.shake, line.cutCamera);
 
-    SceneActor* actorsByIndex[1] = {tom};
-    triggerActorMoves(line.movesAtStart, actorsByIndex, 1);
+    tomPoseEmotion = line.tomPoseEmotion;
+    markPoseEmotion = line.markPoseEmotion;
+
+    SceneActor* actorsByIndex[2] = {tom, mark};
+    triggerActorMoves(line.movesAtStart, actorsByIndex, 2);
 }
 
 void ApartmentScene::endScenario() {
     activeScenario = -1;
     lineIndex = 0;
+    currentFocusActor = -1;
+    endElapsed = 0.0f;
     dialog->hide();
     getCamera()->zoomTo(1.0f, 0.6f);
 }
 
-void ApartmentScene::focusCameraOn(int actorIndex, bool shake) {
-    if (actorIndex == 0) {
-        Vector2 pos = tom->getCenter();
-        getCamera()->setPosition(pos.x, pos.y - 30.0f);
-        getCamera()->zoomTo(1.3f, 0.5f);
+void ApartmentScene::focusCameraOn(int actorIndex, bool shake, bool cut) {
+    currentFocusActor = actorIndex;
+
+    Vector2 t;
+    if (cameraTargetFor(actorIndex, t)) {
+        if (cut) getCamera()->setPosition(t.x, t.y);
+        else getCamera()->followPosition(t, 8.0f);
+        getCamera()->zoomTo(2.0f, 0.5f);
     }
 
     if (shake) {
@@ -181,42 +259,49 @@ void ApartmentScene::focusCameraOn(int actorIndex, bool shake) {
     }
 }
 
+// See OfficeScene::cameraTargetFor -- same recipe: aim into the visible body
+// from the pose's top-left, poses are 0.5x native (256 -> 128px tall).
+bool ApartmentScene::cameraTargetFor(int actorIndex, Vector2& out) const {
+    SceneActor* target = nullptr;
+    if (actorIndex == 0) target = tom;
+    else if (actorIndex == 1) target = mark;
+    if (!target) return false;
+
+    Vector2 p = target->getPosition();
+    // Offsets are large because poses draw at ~1.0-1.3x here (256px native ->
+    // ~256-330px tall). Aim right and low into the body so the camera frames
+    // the torso/feet, not the head, and doesn't shove them to the edge.
+    out = { p.x + 160.0f, p.y + 240.0f };
+    return true;
+}
+
 // --- Set dressing ---------------------------------------------------------
+// Per-actor scale (from the scene editor's layout.json) rather than one
+// scene-wide POSE_SCALE -- Tom and Mark are placed at different scales here.
+static void drawApartmentPose(Texture2D pose, Vector2 pos, bool flipX, float scale) {
+    if (pose.id == 0) return;
+    Rectangle src = { 0.0f, 0.0f, (flipX ? -1.0f : 1.0f) * (float)pose.width, (float)pose.height };
+    Rectangle dest = { pos.x, pos.y, pose.width * scale, pose.height * scale };
+    DrawTexturePro(pose, src, dest, {0.0f, 0.0f}, 0.0f, WHITE);
+}
+
+void ApartmentScene::drawTom(Vector2 pos) {
+    drawApartmentPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true, 1.0f);   // faces right toward Mark
+}
+
+void ApartmentScene::drawMark(Vector2 pos) {
+    drawApartmentPose(markPoses[(int)markPoseEmotion], pos, /*flipX*/ false, 1.3f);  // at the door, faces left
+}
+
 void ApartmentScene::drawApartment() {
-    // Bed
+    // Fallback vector set-dressing, only used if apartmentbg.png is missing.
     Color bedFrame = {90, 70, 50, 255};
     Color bedSheet = {70, 90, 110, 255};
     DrawRectangle(80, 340, 220, 120, bedFrame);
     DrawRectangle(90, 330, 200, 40, bedSheet);
 
-    // Window with dim early-morning light
     Color windowFrame = {60, 50, 60, 255};
     Color windowSky = {40, 55, 80, 255};
     DrawRectangle(720, 100, 180, 160, windowFrame);
     DrawRectangle(730, 110, 160, 140, windowSky);
-    DrawLine(810, 110, 810, 250, windowFrame);
-    DrawLine(730, 180, 890, 180, windowFrame);
-
-    // Kitchen counter with the broken coffee machine
-    Color counter = {80, 60, 70, 255};
-    DrawRectangle(600, 420, 260, 100, counter);
-    Color machine = {50, 50, 55, 255};
-    DrawRectangle(640, 380, 50, 45, machine);
-    DrawRectangle(650, 372, 10, 10, {30, 30, 30, 255});
-    // Small dead/off indicator light
-    DrawCircle(645, 385, 3, {90, 20, 20, 255});
-
-    // Bathroom mirror on the far wall
-    Color mirrorFrame = {70, 60, 80, 255};
-    Color mirrorGlass = {50, 55, 65, 255};
-    DrawRectangle(400, 60, 90, 130, mirrorFrame);
-    DrawRectangle(408, 68, 74, 114, mirrorGlass);
-}
-
-void ApartmentScene::drawTom(Vector2 pos) {
-    float cx = pos.x + 24.0f;
-    float cy = pos.y + 32.0f;
-
-    Texture2D pose = tomPoses[1];
-    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
 }

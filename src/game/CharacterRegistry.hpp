@@ -20,6 +20,7 @@ enum class CharacterId {
     Judy,
     Larry,
     Loraine,        // Larry's secretary
+    Mark,           // Tom's apartment maintenance guy
     Narrator,
     Phone,          // "Karen (text)" phone-insert lines in ApartmentScene
 };
