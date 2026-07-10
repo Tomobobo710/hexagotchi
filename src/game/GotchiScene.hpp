@@ -7,6 +7,7 @@
 #include "EventType.h"
 #include "EventBus.h"
 #include "GameState.h"
+#include "MergeController.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -31,6 +32,9 @@ public:
     // Set the shared GameState reference (for vitals)
     void setGameState(GameState* state) { gameState_ = state; }
 
+    // Set the merge controller reference for button label updates
+    void setMergeController(MergeController* mc) { mergeController_ = mc; }
+
 private:
     Gotchi* gotchi = nullptr;
     GameState* gameState_ = nullptr;  // Shared vitals from GameState
@@ -47,6 +51,9 @@ private:
     // Action accumulation for Box C drivers (warmth/hygiene)
     float affectionAccumulator_ = 0.0f;
     float hygieneAccumulator_ = 0.0f;
+
+    // Merge controller reference for button label updates
+    MergeController* mergeController_ = nullptr;
 
     // Button cooldown system
     std::map<std::string, float> buttonCooldowns_;
