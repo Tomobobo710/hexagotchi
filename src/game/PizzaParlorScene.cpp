@@ -154,7 +154,7 @@ void PizzaParlorScene::update(float deltaTime) {
         if (!getCamera()->isWideViewEnabled()) {
             // Slow establishing drift across the whole set
             float t = (float)GetTime() * 0.05f;
-            getCamera()->setPosition(512.0f + sinf(t) * 60.0f, 288.0f);
+            getCamera()->setPosition(512.0f + sinf(t) * 60.0f, 360.0f);
             getCamera()->setZoom(1.0f);
         }
     }

@@ -126,8 +126,19 @@ void SceneCamera::panEnd() {
     panning = false;
 }
 
-void SceneCamera::setPosition(float x, float y) { position = {x, y}; targetPosition = {x, y}; }
-void SceneCamera::setPosition(Vector2 pos)       { position = pos; targetPosition = pos; }
+void SceneCamera::setPosition(float x, float y) {
+    position = {x, y};
+    // Clamp immediately, not just once per frame in update(). setPosition()
+    // can be called AFTER update() has already run for this frame (e.g. a
+    // scene's ambient re-pin runs after Scene::update()), and draw() reads
+    // position directly -- so an unclamped set here would render
+    // out-of-bounds for a full frame and, if re-set every frame, forever.
+    // Clamping at the setter makes it impossible to hold an off-boundary
+    // position regardless of call order or a bad hand-typed value.
+    if (boundaryEnabled) clampToBoundary();
+    targetPosition = position;
+}
+void SceneCamera::setPosition(Vector2 pos) { setPosition(pos.x, pos.y); }
 Vector2 SceneCamera::getPosition() const         { return position; }
 
 void SceneCamera::setZoom(float z) {

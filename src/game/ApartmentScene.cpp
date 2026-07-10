@@ -74,7 +74,7 @@ void ApartmentScene::update(float deltaTime) {
         // flight, or while wide view is active, so those don't get stomped
         // back out before ever being visible (same reason as isShaking()).
         if (!getCamera()->isShaking() && !getCamera()->isWideViewEnabled()) {
-            getCamera()->setPosition(512.0f, 288.0f);
+            getCamera()->setPosition(512.0f, 360.0f);
             getCamera()->setZoom(1.0f);
         }
     }

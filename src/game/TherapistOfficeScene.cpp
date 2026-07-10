@@ -101,7 +101,7 @@ void TherapistOfficeScene::update(float deltaTime) {
         judy->setPosition({1120.0f, 390.0f + sinf(judyNodTimer) * 1.5f});
 
         if (!getCamera()->isWideViewEnabled()) {
-            getCamera()->setPosition(512.0f, 288.0f);
+            getCamera()->setPosition(512.0f, 360.0f);
             getCamera()->setZoom(1.0f);
         }
     }
