@@ -60,7 +60,10 @@ void ApartmentScene::update(float deltaTime) {
         // Duration computed by the effect itself from the actual visible
         // window/lead-in/trail-out timing, not a fixed guess -- see
         // CityWindowEffect::getShakeDuration().
-        getCamera()->shake(6.0f, cityWindow->getShakeDuration());
+        float dur = cityWindow->getShakeDuration();
+        Vector2 p = getCamera()->getPosition();
+        TraceLog(LOG_INFO, "[TRAINDBG] shake() called dur=%.3f pos=(%.2f,%.2f) zoom=%.3f", dur, p.x, p.y, getCamera()->getZoom());
+        getCamera()->shake(6.0f, dur);
     }
 
     if (activeScenario < 0) {
@@ -76,6 +79,24 @@ void ApartmentScene::update(float deltaTime) {
         if (!getCamera()->isShaking() && !getCamera()->isWideViewEnabled()) {
             getCamera()->setPosition(512.0f, 288.0f);
             getCamera()->setZoom(1.0f);
+        }
+    }
+
+    {
+        static int dbgFrame = 0;
+        static bool wasShaking = false;
+        dbgFrame++;
+        bool nowShaking = getCamera()->isShaking();
+        if (nowShaking != wasShaking) {
+            Vector2 p = getCamera()->getPosition();
+            TraceLog(LOG_INFO, "[TRAINDBG] isShaking transitioned %s->%s pos=(%.2f,%.2f) zoom=%.3f",
+                wasShaking ? "true" : "false", nowShaking ? "true" : "false", p.x, p.y, getCamera()->getZoom());
+            wasShaking = nowShaking;
+        }
+        if (dbgFrame % 10 == 0) {
+            Vector2 p = getCamera()->getPosition();
+            TraceLog(LOG_INFO, "[TRAINDBG] frame=%d pos=(%.2f,%.2f) zoom=%.3f shaking=%d",
+                dbgFrame, p.x, p.y, getCamera()->getZoom(), nowShaking ? 1 : 0);
         }
     }
 
@@ -140,8 +161,11 @@ bool ApartmentScene::isPlayingScenario() const {
 void ApartmentScene::advanceLine() {
     if (activeScenario < 0) return;
 
-    lineIndex++;
     auto& seq = scenarios[activeScenario];
+    SceneActor* actorsByIndex[1] = {tom};
+    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 1);
+
+    lineIndex++;
     if (lineIndex >= (int)seq.size()) {
         endScenario();
         return;
@@ -154,6 +178,9 @@ void ApartmentScene::playLine(const ApartmentLine& line) {
     dialog->setText(line.text);
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
+
+    SceneActor* actorsByIndex[1] = {tom};
+    triggerActorMoves(line.movesAtStart, actorsByIndex, 1);
 }
 
 void ApartmentScene::endScenario() {

@@ -14,6 +14,12 @@ struct TherapistLine {
     int focusActor;   // 0 = Tom, 1 = Judy, -1 = none
     bool shake;
     PortraitEmotion emotion = PortraitEmotion::Mid;
+
+    // Scripted actor walks (see ActorMove in Scene.hpp) fired the instant
+    // this line starts/ends. Empty by default -- most lines have no
+    // movement at all.
+    std::vector<ActorMove> movesAtStart;
+    std::vector<ActorMove> movesAtEnd;
 };
 
 // Tom's therapist's office -- ported from the JS prototype's "The Last

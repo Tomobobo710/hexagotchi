@@ -27,6 +27,12 @@ struct PizzaLine {
     // character's actual first line -- there's no automatic
     // first-appearance tracking.
     std::string firstTimeName;
+
+    // Scripted actor walks (see ActorMove in Scene.hpp) fired the instant
+    // this line starts/ends. Empty by default -- most lines have no
+    // movement at all.
+    std::vector<ActorMove> movesAtStart;
+    std::vector<ActorMove> movesAtEnd;
 };
 
 // Recurring "check in on the gotchi's world" hangout location. Most visits

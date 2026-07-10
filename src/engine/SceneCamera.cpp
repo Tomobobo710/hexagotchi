@@ -307,13 +307,21 @@ void SceneCamera::clampToBoundary() {
     float hw = (GAME_W / zoom) * 0.5f + BOUNDARY_SAFETY_INSET_X;
     float hh = (GAME_H / zoom) * 0.5f + BOUNDARY_SAFETY_INSET_Y;
 
+    // When the inset-padded half-extent is wider/taller than the boundary
+    // itself, loX/loY > hiX/hiY -- there's no valid in-bounds range to clamp
+    // into. Forcing position to the boundary midpoint here used to fight
+    // whatever the scene/shake had just set it to (e.g. ApartmentScene's
+    // train-shake re-pin skip -- see its update()), producing a real,
+    // visible snap to the midpoint every frame this branch fired. Leaving
+    // position untouched instead makes this a no-op on that axis, which is
+    // safe: this only triggers when the scene's own boundary/zoom combo
+    // can't be validly clamped anyway, so there's no "correct" forced value
+    // to substitute.
     float loX = boundaryMinX + hw, hiX = boundaryMaxX - hw;
     if (loX <= hiX) { if (position.x < loX) position.x = loX; if (position.x > hiX) position.x = hiX; }
-    else           { position.x = (boundaryMinX + boundaryMaxX) * 0.5f; }
 
     float loY = boundaryMinY + hh, hiY = boundaryMaxY - hh;
     if (loY <= hiY) { if (position.y < loY) position.y = loY; if (position.y > hiY) position.y = hiY; }
-    else           { position.y = (boundaryMinY + boundaryMaxY) * 0.5f; }
 }
 
 float SceneCamera::lerp(float a, float b, float t) const {

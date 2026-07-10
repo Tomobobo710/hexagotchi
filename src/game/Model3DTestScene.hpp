@@ -25,7 +25,7 @@ private:
     // exactly as PortalEffect draws it -- spinning ring, shimmering
     // membrane shader and all -- so a full combined check doesn't require
     // flying the actual OfficeScene.
-    enum class ModelKind { JET, PORTAL_RING, PORTAL_BASE, PORTAL_COMBINED, CAR, TRUCK };
+    enum class ModelKind { JET, PORTAL_RING, PORTAL_BASE, PORTAL_COMBINED, CAR, TRUCK, TOMAGOTCHI_TOY };
     ModelKind modelKind = ModelKind::JET;
 
     Shader shader;
@@ -35,6 +35,14 @@ private:
     Model portalBaseModel;
     Model carModel;
     Model truckModel;
+    Model tomagotchiToyModel;
+
+    // The toy is flat-colored per triangle from a Blender materials paint
+    // job -- LitShader's ambient term washes dark colors out to gray (see
+    // UnlitShader.hpp). Z toggles which shader it's drawn with (default
+    // unlit) so lit-vs-unlit can be compared directly instead of guessing.
+    Shader unlitShader;
+    bool tomagotchiToyUseUnlit = true;
     Texture2D whiteTex = {0};
 
     // Membrane needs its own shader (unlit, animated) -- see PortalEffect,

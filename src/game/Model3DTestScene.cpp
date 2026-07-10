@@ -6,7 +6,9 @@
 #include "PortalEffect.hpp"
 #include "PortalShader.hpp"
 #include "VehicleMesh.hpp"
+#include "TomagotchiToyMesh.hpp"
 #include "LitShader.hpp"
+#include "UnlitShader.hpp"
 #include "raymath.h"
 #include <cmath>
 
@@ -54,6 +56,14 @@ void Model3DTestScene::init() {
     truckModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = whiteTex;
     truckModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
 
+    unlitShader = LoadUnlitShader();
+
+    Mesh tomagotchiToyMesh = BuildTomagotchiToyMesh();
+    tomagotchiToyModel = LoadModelFromMesh(tomagotchiToyMesh);
+    tomagotchiToyModel.materials[0].shader = unlitShader;
+    tomagotchiToyModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = whiteTex;
+    tomagotchiToyModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+
     // Same "from behind-above, down-and-away at 45" light direction used in
     // SchoolSkyEffect, so this preview matches how it'll actually look there.
     light = CreateLight0(LIGHT_DIRECTIONAL, {0.0f, 4.0f, 6.0f}, {0.0f, -4.0f, -6.0f}, WHITE, shader);
@@ -75,8 +85,13 @@ void Model3DTestScene::update(float deltaTime) {
 
     if (IsKeyPressed(KEY_TAB)) {
         int next = (int)modelKind + 1;
-        if (next > (int)ModelKind::TRUCK) next = (int)ModelKind::JET;
+        if (next > (int)ModelKind::TOMAGOTCHI_TOY) next = (int)ModelKind::JET;
         modelKind = (ModelKind)next;
+    }
+
+    if (modelKind == ModelKind::TOMAGOTCHI_TOY && IsKeyPressed(KEY_Z)) {
+        tomagotchiToyUseUnlit = !tomagotchiToyUseUnlit;
+        tomagotchiToyModel.materials[0].shader = tomagotchiToyUseUnlit ? unlitShader : shader;
     }
 
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
@@ -131,10 +146,15 @@ void Model3DTestScene::draw() {
         case ModelKind::PORTAL_COMBINED: label = "3D MODEL TEST: PORTAL (COMBINED, SPINNING)"; break;
         case ModelKind::CAR:             label = "3D MODEL TEST: CAR"; break;
         case ModelKind::TRUCK:           label = "3D MODEL TEST: TRUCK"; break;
+        case ModelKind::TOMAGOTCHI_TOY:  label = "3D MODEL TEST: TOMAGOTCHI TOY"; break;
         default: break;
     }
     DrawText(label, 20, 20, 28, RAYWHITE);
     DrawText("Drag: orbit   Wheel: zoom   TAB: switch model", 20, 54, 18, Color{200, 200, 210, 255});
+    if (modelKind == ModelKind::TOMAGOTCHI_TOY) {
+        const char* shaderLabel = tomagotchiToyUseUnlit ? "Z: shader (UNLIT)" : "Z: shader (LIT)";
+        DrawText(shaderLabel, 20, 78, 18, Color{200, 200, 210, 255});
+    }
     DrawText("7: Scene Select", 20, GAME_H - 30, 18, Color{200, 200, 210, 255});
 }
 
@@ -157,6 +177,10 @@ void Model3DTestScene::drawActiveModel() {
     }
     if (modelKind == ModelKind::TRUCK) {
         DrawModelEx(truckModel, {0, 0, 0}, {0, 1, 0}, 0.0f, {1, 1, 1}, WHITE);
+        return;
+    }
+    if (modelKind == ModelKind::TOMAGOTCHI_TOY) {
+        DrawModelEx(tomagotchiToyModel, {0, 0, 0}, {0, 1, 0}, 0.0f, {1, 1, 1}, WHITE);
         return;
     }
 
@@ -187,7 +211,9 @@ void Model3DTestScene::cleanup() {
     UnloadModel(portalMembraneModel);
     UnloadModel(carModel);
     UnloadModel(truckModel);
+    UnloadModel(tomagotchiToyModel);
     UnloadTexture(whiteTex);
     UnloadShader(shader);
     UnloadShader(portalShader);
+    UnloadShader(unlitShader);
 }

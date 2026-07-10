@@ -178,8 +178,11 @@ bool TherapistOfficeScene::isPlayingScenario() const {
 void TherapistOfficeScene::advanceLine() {
     if (activeScenario < 0) return;
 
-    lineIndex++;
     auto& seq = scenarios[activeScenario];
+    SceneActor* actorsByIndex[2] = {tom, judy};
+    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 2);
+
+    lineIndex++;
     if (lineIndex >= (int)seq.size()) {
         endScenario();
         return;
@@ -192,6 +195,9 @@ void TherapistOfficeScene::playLine(const TherapistLine& line) {
     dialog->setText(line.text);
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
+
+    SceneActor* actorsByIndex[2] = {tom, judy};
+    triggerActorMoves(line.movesAtStart, actorsByIndex, 2);
 }
 
 void TherapistOfficeScene::endScenario() {

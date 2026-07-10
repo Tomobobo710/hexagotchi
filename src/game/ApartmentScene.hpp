@@ -18,6 +18,12 @@ struct ApartmentLine {
     int focusActor;   // index into this scene's actor slots, or -1 for none
     bool shake;
     PortraitEmotion emotion = PortraitEmotion::Mid;
+
+    // Scripted actor walks (see ActorMove in Scene.hpp) fired the instant
+    // this line starts/ends. Empty by default -- most lines have no
+    // movement at all.
+    std::vector<ActorMove> movesAtStart;
+    std::vector<ActorMove> movesAtEnd;
 };
 
 // Tom alone in his apartment -- the other recurring "check in on the

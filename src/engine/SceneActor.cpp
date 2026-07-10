@@ -3,6 +3,7 @@
 SceneActor::SceneActor(Vector2 pos, float w, float h)
     : position(pos), velocity({0, 0}), scale({1.0f, 1.0f}), rotation(0.0f),
       width(w), height(h), friction(ACTOR_DEFAULT_FRICTION), gravityEnabled(false),
+      waypointIndex(-1), waypointSpeed(0.0f),
       texture({0}), color(WHITE),
       frameWidth(0), frameHeight(0), frameCount(1), frameDuration(0.1f),
       animLoop(true), currentFrame(0), frameTimer(0.0f), animPlaying(true),
@@ -24,6 +25,31 @@ void SceneActor::update(float deltaTime) {
     // Apply velocity
     position.x += velocity.x * deltaTime;
     position.y += velocity.y * deltaTime;
+
+    // Advance waypoint movement (see moveTo()) -- independent of the
+    // velocity/friction/gravity physics above, since scripted scenario
+    // movement should walk exactly where it's told, not drift or decelerate.
+    if (waypointIndex >= 0 && waypointIndex < (int)waypoints.size()) {
+        Vector2 target = waypoints[waypointIndex];
+        Vector2 delta = {target.x - position.x, target.y - position.y};
+        float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+
+        if (dist <= ACTOR_WAYPOINT_ARRIVAL_DIST) {
+            position = target;
+            waypointIndex++;
+            if (waypointIndex >= (int)waypoints.size()) {
+                waypointIndex = -1;  // Reached the last waypoint -- done.
+            }
+        } else {
+            float step = waypointSpeed * deltaTime;
+            if (step >= dist) {
+                position = target;
+            } else {
+                position.x += delta.x / dist * step;
+                position.y += delta.y / dist * step;
+            }
+        }
+    }
 
     // Advance sprite-sheet animation
     if (animating && animPlaying && frameCount > 1) {
@@ -97,6 +123,20 @@ Vector2 SceneActor::getPosition() const {
 void SceneActor::move(Vector2 delta) {
     position.x += delta.x;
     position.y += delta.y;
+}
+
+void SceneActor::moveTo(const std::vector<Vector2>& newWaypoints, float speed) {
+    waypoints = newWaypoints;
+    waypointSpeed = speed;
+    waypointIndex = waypoints.empty() ? -1 : 0;
+}
+
+bool SceneActor::isMoving() const {
+    return waypointIndex >= 0;
+}
+
+void SceneActor::stopMoving() {
+    waypointIndex = -1;
 }
 
 void SceneActor::setRotation(float angle) {

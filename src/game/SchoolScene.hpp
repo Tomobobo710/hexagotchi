@@ -13,6 +13,12 @@ struct SchoolLine {
     int focusActor;   // 0 = Tom, 1 = Karen, 2 = Jimmy, -1 = none
     bool shake;
     PortraitEmotion emotion = PortraitEmotion::Mid;
+
+    // Scripted actor walks (see ActorMove in Scene.hpp) fired the instant
+    // this line starts/ends. Empty by default -- most lines have no
+    // movement at all.
+    std::vector<ActorMove> movesAtStart;
+    std::vector<ActorMove> movesAtEnd;
 };
 
 // Jimmy's school pickup -- ported from the JS prototype's "The School Pickup

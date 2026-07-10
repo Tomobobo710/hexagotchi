@@ -238,6 +238,14 @@ void Scene::sortActorsByLayer() {
         });
 }
 
+void Scene::triggerActorMoves(const std::vector<ActorMove>& moves, SceneActor* const* actorsByIndex, int actorCount) {
+    for (const ActorMove& move : moves) {
+        if (move.actorIndex < 0 || move.actorIndex >= actorCount) continue;
+        SceneActor* actor = actorsByIndex[move.actorIndex];
+        if (actor) actor->moveTo(move.waypoints, move.speed);
+    }
+}
+
 // Default implementation of togglePause - just sets paused state
 void Scene::togglePause() {
     paused = !paused;

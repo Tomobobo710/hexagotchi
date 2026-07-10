@@ -15,6 +15,12 @@ const int ACTOR_LAYER_MIDGROUND = 1;
 const int ACTOR_LAYER_FOREGROUND = 2;
 const int ACTOR_LAYER_UI = 3;
 
+// How close (world units) position must get to a waypoint before moveTo()
+// advances to the next one -- small enough to look like the actor actually
+// reached the spot, large enough that a single frame's movement at typical
+// scenario walk speeds doesn't overshoot and oscillate.
+const float ACTOR_WAYPOINT_ARRIVAL_DIST = 2.0f;
+
 // Clickable overlay tint colors (drawn as a tint rect over the actor's bounds)
 const Color ACTOR_HOVER_TINT = {255, 255, 255, 60};
 const Color ACTOR_PRESSED_TINT = {0, 0, 0, 70};
@@ -33,7 +39,19 @@ public:
     void setPosition(Vector2 pos);
     Vector2 getPosition() const;
     void move(Vector2 delta);
-    
+
+    // Waypoint movement: walks position in a straight line through each
+    // point in `waypoints`, in order, at `speed` (world units/second),
+    // advancing to the next point once within ACTOR_WAYPOINT_ARRIVAL_DIST of
+    // the current one. update() advances this every frame. Calling moveTo()
+    // again (e.g. from a later scenario line) replaces any in-progress move.
+    // Not connected to velocity/friction/gravity -- this is a separate,
+    // simpler position-only mover for scripted scenario movement, not
+    // physics-driven motion.
+    void moveTo(const std::vector<Vector2>& waypoints, float speed);
+    bool isMoving() const;
+    void stopMoving();  // Cancels any in-progress moveTo(), leaving position where it is.
+
     void setRotation(float angle);
     float getRotation() const;
     
@@ -133,6 +151,11 @@ protected:
     // Physics
     float friction;
     bool gravityEnabled;
+
+    // Waypoint movement (see moveTo())
+    std::vector<Vector2> waypoints;
+    int waypointIndex;      // Index into waypoints of the point currently being sought, or -1 if idle.
+    float waypointSpeed;
     
     // Rendering
     Texture2D texture;

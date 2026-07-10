@@ -8,6 +8,13 @@
 // Claude) to hand-translate into real TomSceneActor construction calls in
 // the actual scene .cpp -- the game never reads this file.
 //
+// Waypoints: select an actor, click "Add Waypoint" then click the canvas to
+// drop a point (up to MAX_WAYPOINTS), repeat to build a path, delete any
+// point with its row's "x" button. These export into each actor's
+// "waypoints" array and get hand-translated the same way, into
+// ActorMove{actorIndex, waypoints, speed} entries on a scenario line (see
+// ActorMove in src/engine/Scene.hpp).
+//
 // Build: scene-editor.bat (wraps `make scene-editor`). Output lands in
 // build/scene_editor/scene_editor.exe, alongside its own assets.rres copy --
 // run it directly from there, or via Explorer.
@@ -65,6 +72,13 @@ static Texture2D LoadPackedTexture(const std::string& key) {
 
 // --- Placed actor ------------------------------------------------------------
 
+// A waypoint path this actor can be scripted to walk during a scenario line
+// (see ActorMove in src/engine/Scene.hpp, and SceneActor::moveTo()). Purely a
+// design aid here too -- these get hand-copied into a scene's scenario table
+// as ActorMove{actorIndex, waypoints, speed} entries, same as the actor's own
+// position/scale get hand-copied into a SceneActor construction call.
+static const int MAX_WAYPOINTS = 5;
+
 struct PlacedActor {
     std::string tag;
     std::string assetKey;
@@ -73,6 +87,7 @@ struct PlacedActor {
     int layer = 1;
     bool flipX = false;  // mirror the texture horizontally when drawn
     Texture2D texture = {0};
+    std::vector<Vector2> waypoints;  // world-space points, up to MAX_WAYPOINTS
 };
 
 // --- Minimal JSON export/import (flat array of flat objects only -- no
@@ -101,6 +116,12 @@ static void ExportLayout(const std::string& path, const std::vector<PlacedActor>
           << ", \"scale\": " << a.scale
           << ", \"layer\": " << a.layer
           << ", \"flipX\": " << (a.flipX ? "true" : "false")
+          << ", \"waypoints\": [";
+        for (size_t w = 0; w < a.waypoints.size(); w++) {
+            f << "{\"x\": " << a.waypoints[w].x << ", \"y\": " << a.waypoints[w].y << "}";
+            if (w + 1 < a.waypoints.size()) f << ", ";
+        }
+        f << "]"
           << " }";
         if (i + 1 < actors.size()) f << ",";
         f << "\n";
@@ -124,7 +145,19 @@ static bool ImportLayout(const std::string& path, std::vector<PlacedActor>& outA
     while (true) {
         size_t objStart = text.find('{', pos);
         if (objStart == std::string::npos) break;
-        size_t objEnd = text.find('}', objStart);
+
+        // Balance braces to find this actor object's real closing brace --
+        // needed now that waypoints nests its own {x,y} objects inside, so
+        // the first '}' after objStart is no longer necessarily the actor's.
+        int depth = 0;
+        size_t objEnd = std::string::npos;
+        for (size_t i = objStart; i < text.size(); i++) {
+            if (text[i] == '{') depth++;
+            else if (text[i] == '}') {
+                depth--;
+                if (depth == 0) { objEnd = i; break; }
+            }
+        }
         if (objEnd == std::string::npos) break;
         std::string obj = text.substr(objStart, objEnd - objStart);
         pos = objEnd + 1;
@@ -165,6 +198,35 @@ static bool ImportLayout(const std::string& path, std::vector<PlacedActor>& outA
         if (a.scale == 0.0f) a.scale = 1.0f;
         a.layer = (int)extractNumber("layer");
         a.flipX = extractBool("flipX");
+
+        // waypoints: [{"x": .., "y": ..}, ...] -- find the "waypoints" key's
+        // bracket span within this object, then pull each {x,y} pair inside it.
+        {
+            size_t wpKey = obj.find("\"waypoints\"");
+            if (wpKey != std::string::npos) {
+                size_t arrStart = obj.find('[', wpKey);
+                size_t arrEnd = obj.find(']', arrStart);
+                if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+                    size_t p = arrStart;
+                    while (true) {
+                        size_t wObjStart = obj.find('{', p);
+                        if (wObjStart == std::string::npos || wObjStart > arrEnd) break;
+                        size_t wObjEnd = obj.find('}', wObjStart);
+                        if (wObjEnd == std::string::npos || wObjEnd > arrEnd) break;
+                        std::string wObj = obj.substr(wObjStart, wObjEnd - wObjStart);
+
+                        size_t xk = wObj.find("\"x\"");
+                        size_t yk = wObj.find("\"y\"");
+                        Vector2 wp = {0, 0};
+                        if (xk != std::string::npos) wp.x = (float)atof(wObj.c_str() + wObj.find(':', xk) + 1);
+                        if (yk != std::string::npos) wp.y = (float)atof(wObj.c_str() + wObj.find(':', yk) + 1);
+                        a.waypoints.push_back(wp);
+
+                        p = wObjEnd + 1;
+                    }
+                }
+            }
+        }
 
         if (!a.assetKey.empty()) outActors.push_back(a);
     }
@@ -362,6 +424,12 @@ int main(int argc, char** argv) {
     Vector2 dragOffset = {0, 0};
     int nextTagId = 1;
 
+    // When true, the next canvas click adds a waypoint to the selected
+    // actor instead of placing/selecting/dragging an actor -- toggled by
+    // the "Add Waypoint" button in the property panel, cleared after one
+    // placement (same one-shot feel as picking an asset to place).
+    bool placingWaypoint = false;
+
     StepperState stepperState;
 
     // Click-to-type state for the property panel: -1 = nothing focused,
@@ -428,8 +496,18 @@ int main(int argc, char** argv) {
 
             Vector2 mouseWorld = GetScreenToWorld2D(mouseScreen, cam);
 
+            // --- Place a waypoint on the selected actor ---
+            if (placingWaypoint && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                if (selectedActorIndex >= 0 && selectedActorIndex < (int)actors.size()) {
+                    PlacedActor& a = actors[selectedActorIndex];
+                    if ((int)a.waypoints.size() < MAX_WAYPOINTS) {
+                        a.waypoints.push_back(mouseWorld);
+                    }
+                }
+                placingWaypoint = false; // one placement per click, same as asset placement
+            }
             // --- Place a new actor from the selected asset ---
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && selectedAssetManifestIndex >= 0) {
+            else if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && selectedAssetManifestIndex >= 0) {
                 PlacedActor a;
                 a.assetKey = manifest[selectedAssetManifestIndex];
                 a.texture = assetThumbs[selectedAssetManifestIndex];
@@ -505,6 +583,55 @@ int main(int argc, char** argv) {
                 DrawRectangleLinesEx(dest, 2.0f / cam.zoom, YELLOW);
             }
         }
+
+        // --- Waypoint path for the selected actor: a half-transparent ghost
+        // of the actor's own sprite at each waypoint (so you can see exactly
+        // where they'll end up, same size/orientation as the real actor),
+        // connected by lines in order, with a full-opacity index number (0-4,
+        // matching ActorMove's 0-based waypoint order) stamped over each
+        // ghost so they're distinguishable when the path overlaps itself.
+        if (selectedActorIndex >= 0 && selectedActorIndex < (int)actors.size()) {
+            const PlacedActor& sel = actors[selectedActorIndex];
+            float selW = sel.texture.width * sel.scale;
+            float selH = sel.texture.height * sel.scale;
+            Vector2 prev = {sel.position.x + selW / 2.0f, sel.position.y + selH / 2.0f};
+
+            for (size_t w = 0; w < sel.waypoints.size(); w++) {
+                Vector2 wp = sel.waypoints[w];
+                DrawLineEx(prev, wp, 2.0f / cam.zoom, Color{255, 220, 80, 200});
+
+                // Ghost sprite, centered on the waypoint -- same top-left
+                // convention as the real actor (position is top-left), so
+                // the ghost's top-left sits at wp - size/2 to center it.
+                if (sel.texture.id != 0) {
+                    Rectangle src = {0, 0, sel.flipX ? -(float)sel.texture.width : (float)sel.texture.width, (float)sel.texture.height};
+                    Rectangle dest = {wp.x - selW / 2.0f, wp.y - selH / 2.0f, selW, selH};
+                    DrawTexturePro(sel.texture, src, dest, {0, 0}, 0.0f, Color{255, 255, 255, 128});
+                    DrawRectangleLinesEx(dest, 2.0f / cam.zoom, Color{255, 220, 80, 160});
+                }
+
+                // Index badge -- full opacity, drawn above the ghost so it's
+                // always readable regardless of the ghost's translucency.
+                const char* label = TextFormat("%d", (int)w);
+                int fontSize = (int)(28.0f / cam.zoom);
+                int labelW = MeasureText(label, fontSize);
+                float badgeR = 18.0f / cam.zoom;
+                Vector2 badgeCenter = {wp.x, wp.y - selH / 2.0f - badgeR - 4.0f / cam.zoom};
+                DrawCircleV(badgeCenter, badgeR, Color{60, 50, 10, 255});
+                DrawCircleV(badgeCenter, badgeR - (3.0f / cam.zoom), Color{255, 220, 80, 255});
+                DrawText(label, (int)(badgeCenter.x - labelW / 2.0f), (int)(badgeCenter.y - fontSize / 2.0f), fontSize, Color{40, 30, 0, 255});
+
+                prev = wp;
+            }
+        }
+
+        // While placing a waypoint, show a crosshair at the mouse so it's
+        // obvious a click will place a point right now.
+        if (placingWaypoint && overCanvas) {
+            Vector2 mw = GetScreenToWorld2D(mouseScreen, cam);
+            DrawLineEx({mw.x - 16, mw.y}, {mw.x + 16, mw.y}, 2.0f / cam.zoom, Color{255, 220, 80, 255});
+            DrawLineEx({mw.x, mw.y - 16}, {mw.x, mw.y + 16}, 2.0f / cam.zoom, Color{255, 220, 80, 255});
+        }
         EndMode2D();
 
         // --- Left sidebar: folder-collapsed asset tree ---
@@ -557,6 +684,7 @@ int main(int argc, char** argv) {
             if (selectedActorIndex != lastSelectedActorForTyping) {
                 lastSelectedActorForTyping = selectedActorIndex;
                 typingField = -1;
+                placingWaypoint = false;
             }
 
             int fieldW = RIGHT_SIDEBAR_W - 48;
@@ -640,9 +768,64 @@ int main(int argc, char** argv) {
             if (overDelete && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 actors.erase(actors.begin() + selectedActorIndex);
                 selectedActorIndex = -1;
+                placingWaypoint = false;
+            }
+
+            // --- Waypoints section: up to MAX_WAYPOINTS points this actor
+            // can walk through during a scenario line (see ActorMove in
+            // src/engine/Scene.hpp). "Add Waypoint" arms one-shot placement
+            // mode (click the canvas to drop the point, same feel as
+            // picking an asset to place); each existing point gets its own
+            // numbered row with a delete ("x") button, matching the "Delete
+            // Actor" button's styling below it.
+            if (selectedActorIndex >= 0 && selectedActorIndex < (int)actors.size()) {
+                int wpY = (int)(firstFieldY + 4 * rowH + 180);
+                int wpCount = (int)a.waypoints.size();
+
+                DrawText(TextFormat("WAYPOINTS (%d/%d)", wpCount, MAX_WAYPOINTS), canvasX1 + 24, wpY, 28, RAYWHITE);
+                wpY += 44;
+
+                Rectangle addBtn = {(float)(canvasX1 + 24), (float)wpY, (float)fieldW, 60.0f};
+                bool canAdd = wpCount < MAX_WAYPOINTS;
+                bool overAdd = canAdd && CheckCollisionPointRec(mouseScreen, addBtn);
+                Color addColor = !canAdd ? Color{50, 50, 55, 255}
+                                : placingWaypoint ? Color{90, 140, 60, 255}
+                                : overAdd ? Color{70, 110, 90, 255} : Color{45, 65, 55, 255};
+                DrawRectangleRec(addBtn, addColor);
+                DrawRectangleLinesEx(addBtn, 2.0f, Color{80, 130, 100, 255});
+                const char* addLabel = placingWaypoint ? "Click canvas to place..." : "Add Waypoint";
+                int addTextW = MeasureText(addLabel, 26);
+                DrawText(addLabel, (int)(addBtn.x + addBtn.width / 2 - addTextW / 2), (int)(addBtn.y + 17), 26, RAYWHITE);
+                if (canAdd && overAdd && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    placingWaypoint = !placingWaypoint;
+                }
+                wpY += 76;
+
+                int deleteWaypointAt = -1;
+                for (int w = 0; w < wpCount; w++) {
+                    Rectangle rowRect = {(float)(canvasX1 + 24), (float)wpY, (float)(fieldW - 64), 56.0f};
+                    Rectangle delRect = {(float)(canvasX1 + 24 + fieldW - 56), (float)wpY, 56.0f, 56.0f};
+                    DrawRectangleRec(rowRect, Color{40, 40, 46, 255});
+                    DrawRectangleLinesEx(rowRect, 2.0f, Color{70, 70, 85, 255});
+                    DrawText(TextFormat("%d: (%.0f, %.0f)", w, a.waypoints[w].x, a.waypoints[w].y),
+                             (int)(rowRect.x + 16), (int)(rowRect.y + 15), 24, RAYWHITE);
+
+                    bool overDel = CheckCollisionPointRec(mouseScreen, delRect);
+                    DrawRectangleRec(delRect, overDel ? Color{140, 50, 50, 255} : Color{80, 40, 40, 255});
+                    DrawRectangleLinesEx(delRect, 2.0f, Color{160, 80, 80, 255});
+                    int xW = MeasureText("x", 26);
+                    DrawText("x", (int)(delRect.x + delRect.width / 2 - xW / 2), (int)(delRect.y + 14), 26, RAYWHITE);
+                    if (overDel && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) deleteWaypointAt = w;
+
+                    wpY += 64;
+                }
+                if (deleteWaypointAt >= 0) {
+                    a.waypoints.erase(a.waypoints.begin() + deleteWaypointAt);
+                }
             }
         } else {
             DrawText("No actor selected", canvasX1 + 24, 90, 26, GRAY);
+            placingWaypoint = false;
         }
 
         EndDrawing();

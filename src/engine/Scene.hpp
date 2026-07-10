@@ -15,6 +15,23 @@ const Color SCENE_DEFAULT_BG = RAYWHITE;
 const float SCENE_DEFAULT_WIDTH = 1920.0f;
 const float SCENE_DEFAULT_HEIGHT = 1080.0f;
 
+// One actor's scripted walk for a single scenario line, authored via the
+// scene editor's waypoint tool (see tools/scene_editor.cpp) and hand-copied
+// into a scene's scenario table as `movesAtStart`/`movesAtEnd` on a line
+// struct (e.g. PizzaLine, OfficeLine). `actorIndex` matches the same
+// per-scene actor-index convention `focusActor` already uses (0 = first
+// named actor, 1 = second, etc). playLine() fires movesAtStart right after
+// setting up dialog/camera for a line; advanceLine() fires movesAtEnd for
+// the line that's finishing, before moving to the next one. Movement runs
+// in the background via SceneActor::moveTo() -- it does NOT block dialog
+// advancement, so a walk that needs to visibly finish before the next line
+// should be triggered a line early.
+struct ActorMove {
+    int actorIndex;
+    std::vector<Vector2> waypoints;
+    float speed;
+};
+
 class Scene {
 public:
     // Constructor and destructor
@@ -106,6 +123,13 @@ protected:
     // Helper methods
     void processRemovals();
     void sortActorsByLayer();
+
+    // Fires each ActorMove's moveTo() against actorsByIndex[move.actorIndex]
+    // (bounds-checked; out-of-range or null entries are silently skipped).
+    // Scenes call this from playLine()/advanceLine() with their own local
+    // actor-index array (the same one focusCameraOn() already uses) to
+    // dispatch a line's movesAtStart/movesAtEnd.
+    void triggerActorMoves(const std::vector<ActorMove>& moves, SceneActor* const* actorsByIndex, int actorCount);
 };
 
 #endif // SCENE_HPP

@@ -153,8 +153,11 @@ bool SchoolScene::isPlayingScenario() const {
 void SchoolScene::advanceLine() {
     if (activeScenario < 0) return;
 
-    lineIndex++;
     auto& seq = scenarios[activeScenario];
+    SceneActor* actorsByIndex[3] = {tom, karen, jimmy};
+    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 3);
+
+    lineIndex++;
     if (lineIndex >= (int)seq.size()) {
         endScenario();
         return;
@@ -167,6 +170,9 @@ void SchoolScene::playLine(const SchoolLine& line) {
     dialog->setText(line.text);
     dialog->show();
     focusCameraOn(line.focusActor, line.shake);
+
+    SceneActor* actorsByIndex[3] = {tom, karen, jimmy};
+    triggerActorMoves(line.movesAtStart, actorsByIndex, 3);
 }
 
 void SchoolScene::endScenario() {
