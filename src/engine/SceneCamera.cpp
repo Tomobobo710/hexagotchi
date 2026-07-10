@@ -258,13 +258,18 @@ void SceneCamera::updateFollow(float deltaTime) {
         return;
     }
 
+    // Threshold for position comparison - ignore tiny differences to prevent
+    // camera from constantly micro-adjusting due to floating-point precision
+    const float POSITION_THRESHOLD = 0.01f;
+
     if (followTarget) {
         Vector2 targetPos = followTarget->getPosition();
         targetPos.x += lookaheadOffset.x;
         targetPos.y += lookaheadOffset.y;
         position.x = lerp(position.x, targetPos.x, followSpeed * deltaTime);
         position.y = lerp(position.y, targetPos.y, followSpeed * deltaTime);
-    } else if (targetPosition.x != position.x || targetPosition.y != position.y) {
+    } else if (std::fabs(targetPosition.x - position.x) > POSITION_THRESHOLD ||
+               std::fabs(targetPosition.y - position.y) > POSITION_THRESHOLD) {
         // Smoothly follow a position (not an actor)
         position.x = lerp(position.x, targetPosition.x, followSpeed * deltaTime);
         position.y = lerp(position.y, targetPosition.y, followSpeed * deltaTime);

@@ -66,7 +66,7 @@ public:
     void wander(float deltaTime);
 
     // Wander control - public for scene initialization
-    void setWanderEnabled(bool e) { wanderEnabled_ = e; }
+    void setWanderEnabled(bool e);
 
     // Path-based movement
     HexCoords getCurrentHex() const;

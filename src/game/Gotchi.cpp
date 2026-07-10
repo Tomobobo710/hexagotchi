@@ -915,6 +915,14 @@ void Gotchi::setPath(const std::vector<HexCoords>& path) {
     setAction("walk");
 }
 
+void Gotchi::setWanderEnabled(bool enabled) {
+    wanderEnabled_ = enabled;
+    // Reset velocity when disabling wander to prevent residual movement
+    if (!enabled) {
+        velocity = {0.0f, 0.0f};
+    }
+}
+
 void Gotchi::setDebugMode(bool debug) {
     debugMode_ = debug;
 }
