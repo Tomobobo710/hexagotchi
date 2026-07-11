@@ -32,7 +32,7 @@ TutorialController::TutorialController(GameState& state)
         { "Try Feed -- it fills me up when I'm hungry.", "Feed", "gotchi" },
         { "Try Pet -- it makes me happy.", "Pet", "gotchi" },
         { "Try Wash -- keeps me clean.", "Wash", "gotchi" },
-        { "Explore, you've already seen. It'll take us to HexLand's HexMap!", "", "gotchi" },
+        { "HexMap, you've already seen. It'll take us exploring on HexLand's HexMap!", "", "gotchi" },
         { "That button.. hmm.. I'm not sure what that one does.", "", "gotchi" },
         { "Ok I'll unlock all the buttons now!", "", "gotchi" },
         { "Hmm, one of them isn't working.", "", "gotchi" },
@@ -58,6 +58,7 @@ void TutorialController::showCurrentStep() {
     dialog_.setText(steps_[stepIndex_].text);
     dialog_.show();
     currentActionDone_ = steps_[stepIndex_].actionId.empty();
+    dialog_.setSuppressPrompt(!currentActionDone_);
 }
 
 const std::string& TutorialController::currentScene() const {
@@ -71,6 +72,7 @@ void TutorialController::reportAction(const std::string& actionId) {
     if (stepIndex_ < 0 || stepIndex_ >= (int)steps_.size()) return;
     if (steps_[stepIndex_].actionId == actionId) {
         currentActionDone_ = true;
+        dialog_.setSuppressPrompt(false);
     }
 }
 
@@ -125,3 +127,4 @@ void TutorialController::draw() {
     if (!active_) return;
     dialog_.draw();
 }
+

@@ -44,7 +44,18 @@ public:
 
     void setPosition(Vector2 pos);
 
+    // Hides the "Press SPACE to continue..." prompt even once the line has
+    // finished revealing -- used by TutorialController while a step is
+    // waiting on a required action (e.g. "press Feed") so the player isn't
+    // told to press space when doing so won't actually advance anything.
+    void setSuppressPrompt(bool suppress) { suppressPrompt_ = suppress; }
+
 private:
+    // Shared by wrapText() (measuring) and draw() (rendering) so they can
+    // never drift out of sync with each other.
+    static constexpr int FONT_SIZE = 30;  // 1.5x the original 20
+    static constexpr int PADDING = 16;
+
     Vector2 position_;
     float width_, height_;
 
@@ -59,6 +70,7 @@ private:
     float fadeAlpha_ = 0.0f;
     float fadeTimer_ = 0.0f;
     float fadeSpeed_ = 0.25f;
+    bool suppressPrompt_ = false;
 
     void updateFade(float deltaTime);
     void updateCharReveal(float deltaTime);

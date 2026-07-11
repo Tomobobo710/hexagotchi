@@ -502,7 +502,7 @@ void GotchiScene::addButtons() {
 
     std::string mergeLabel = mergeController_ ? mergeController_->mergeButtonLabel() : "Merge";
 
-    std::vector<std::string> row1 = {"EXPLORE", "Wash", "Groom", "Feed"};
+    std::vector<std::string> row1 = {"HexMap", "Wash", "Groom", "Feed"};
     std::vector<std::string> row2 = {"Pet", "Water", "Sleep", mergeLabel};
 
     for (size_t i = 0; i < row1.size(); i++) {
@@ -537,7 +537,7 @@ void GotchiScene::addButton(const std::string& label, float x, float y, bool isM
             onMergeButtonClicked();
         });
         mergeButton_ = btn;
-    } else if (label == "EXPLORE") {
+    } else if (label == "HexMap") {
         btn->setOnClick([this]() {
             onExploreButtonClicked();
         });

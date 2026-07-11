@@ -80,8 +80,8 @@ void GotchiDialogBox::wrapText() {
 
     if (fullText_.empty()) return;
 
-    int fontSize = 20;
-    int padding = 16;
+    int fontSize = FONT_SIZE;
+    int padding = PADDING;
     float maxWidth = width_ - padding * 2.0f;
 
     std::istringstream stream(fullText_);
@@ -135,9 +135,9 @@ void GotchiDialogBox::draw() {
     // Text, revealed character-by-character, wrapped to the bubble's width so
     // it never draws outside the bubble bounds.
     Color textColor = { 40, 30, 20, alpha };
-    int fontSize = 20;
-    int padding = 16;
-    float lineHeight = fontSize + 6.0f;
+    int fontSize = FONT_SIZE;
+    int padding = PADDING;
+    float lineHeight = fontSize + 2.0f;
 
     int charCount = 0;
     for (size_t i = 0; i < wrappedLines_.size(); i++) {
@@ -156,16 +156,18 @@ void GotchiDialogBox::draw() {
         }
     }
 
-    // "Press SPACE" prompt, only once the line has fully revealed.
-    if (isFinished()) {
+    // "Press SPACE" prompt, only once the line has fully revealed and
+    // nothing else (e.g. a required tutorial action) is still blocking the
+    // advance.
+    if (isFinished() && !suppressPrompt_) {
         float blinkTime = (float)GetTime();
         if ((int)(blinkTime * 2) % 2 == 0) {
-            const char* prompt = "SPACE";
+            const char* prompt = "Press SPACE to continue...";
             int promptSize = 14;
             Color promptColor = { 120, 100, 70, alpha };
             DrawText(prompt,
                       (int)(position_.x + width_ - padding - MeasureText(prompt, promptSize)),
-                      (int)(position_.y + height_ - padding - promptSize),
+                      (int)(position_.y + height_ - padding - promptSize + 10.0f),
                       promptSize, promptColor);
         }
     }
