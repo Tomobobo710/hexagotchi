@@ -19,81 +19,37 @@ void GotchiMood::setCurrentMood(GotchiMoodType mood) {
 }
 
 void GotchiMood::updateMood(float deltaTime, const GotchiStats& stats) {
-    // Calculate mood score based on stats
-    // Higher score = more dominant mood
+    // Simple rule: if every care stat is at/above 75% "good", mood is Happy.
+    // Otherwise mood follows whichever stat has the biggest unmet need (the
+    // lowest "goodness" score) -- no scoring/weighting, no overlays, just
+    // "what's worst right now wins."
+    const float HAPPY_THRESHOLD = 0.75f;
 
-    // Hunger impacts: MOOD_04_HUNGRY, MOOD_03_BORED
-    float hungerScore = stats.getNormalizedStat(SecondaryStat::FOOD_LEVEL) * 30.0f;
+    // Normalize every care stat to 0=bad, 1=good. FOOD_LEVEL/HYDRATION are
+    // "debt" stats (higher = worse), so invert them; CLEANLINESS/HAPPINESS
+    // are already high=good. Sleep is deliberately excluded -- mood never
+    // factors it in.
+    float hungerGood    = 1.0f - stats.getNormalizedStat(SecondaryStat::FOOD_LEVEL);
+    float thirstGood     = 1.0f - stats.getNormalizedStat(SecondaryStat::HYDRATION);
+    float hygieneGood     = stats.getNormalizedStat(SecondaryStat::CLEANLINESS);
+    float happinessGood   = stats.getNormalizedStat(EmotionalStat::HAPPINESS);
 
-    // Thirst impacts: MOOD_05_THIRSTY
-    float thirstScore = stats.getNormalizedStat(SecondaryStat::HYDRATION) * 25.0f;
-
-    // Sleep impacts: MOOD_06_SLEEPY
-    float sleepScore = stats.getNormalizedStat(SecondaryStat::SLEEP_DEBT) * 30.0f;
-
-    // Energy impacts: MOOD_01_EXCITED (high), MOOD_06_SLEEPY (low)
-    float energy = stats.getNormalizedStat(SecondaryStat::ENERGY);
-    float energyScore = (energy > 0.7f) ? (energy - 0.7f) * 30.0f : 0.0f;
-    float lowEnergyScore = (1.0f - energy) * 20.0f;
-
-    // Hygiene impacts: MOOD_07_SICK, MOOD_03_BORED
-    float hygiene = stats.getNormalizedStat(SecondaryStat::CLEANLINESS);
-    float hygieneScore = (1.0f - hygiene) * 20.0f;
-
-    // Happiness impacts: MOOD_00_HAPPY, MOOD_10_JOYFUL, MOOD_08_SAD
-    float happiness = stats.getNormalizedStat(EmotionalStat::HAPPINESS);
-    float happyScore = happiness * 40.0f;
-    float sadScore = (1.0f - happiness) * 25.0f;
-
-    // Excitement/pleasure: MOOD_01_EXCITED, MOOD_31_PLAYFUL
-    float excitement = stats.getNormalizedStat(EmotionalStat::EXCITEMENT);
-    float excitedScore = excitement * 30.0f;
-
-    // Boredom: MOOD_03_BORED
-    float boredom = 1.0f - stats.getNormalizedStat(EmotionalStat::SATISFACTION);
-    float boredomScore = boredom * 30.0f;
-
-    // Social needs: MOOD_29_AFFECTIONATE, MOOD_25_LOVED
-    float social = stats.getNormalizedStat(SocialStat::FRIENDS);
-    float lonelyScore = (1.0f - social) * 15.0f;
-
-    // Health impacts: MOOD_07_SICK
-    float health = stats.getNormalizedStat(SecondaryStat::FITALITY);
-    float sickScore = (1.0f - health) * 35.0f;
-
-    // Find dominant mood
-    float bestScore = 0.0f;
-    GotchiMoodType bestMood = GotchiMoodType::MOOD_00_HAPPY;
-
-    // Primary moods (priority 1)
-    struct MoodScore { GotchiMoodType mood; float score; };
-    MoodScore moodScores[] = {
-        {GotchiMoodType::MOOD_00_HAPPY, happyScore},
-        {GotchiMoodType::MOOD_01_EXCITED, excitedScore},
-        {GotchiMoodType::MOOD_02_SATISFIED, stats.getNormalizedStat(EmotionalStat::SATISFACTION) * 35.0f},
-        {GotchiMoodType::MOOD_03_BORED, boredomScore},
-        {GotchiMoodType::MOOD_04_HUNGRY, hungerScore},
-        {GotchiMoodType::MOOD_05_THIRSTY, thirstScore},
-        {GotchiMoodType::MOOD_06_SLEEPY, std::max(sleepScore, lowEnergyScore)},
-        {GotchiMoodType::MOOD_07_SICK, sickScore},
-        {GotchiMoodType::MOOD_08_SAD, sadScore},
-        {GotchiMoodType::MOOD_09_ANGRY, std::max(hungerScore * 0.5f, sickScore * 0.5f)},
+    struct NeedScore { GotchiMoodType mood; float good; };
+    NeedScore needs[] = {
+        {GotchiMoodType::MOOD_04_HUNGRY, hungerGood},
+        {GotchiMoodType::MOOD_05_THIRSTY, thirstGood},
+        {GotchiMoodType::MOOD_07_SICK, hygieneGood},
+        {GotchiMoodType::MOOD_08_SAD, happinessGood},
     };
 
-    for (const auto& ms : moodScores) {
-        if (ms.score > bestScore) {
-            bestScore = ms.score;
-            bestMood = ms.mood;
-        }
+    bool allHappy = true;
+    NeedScore* worst = &needs[0];
+    for (auto& n : needs) {
+        if (n.good < HAPPY_THRESHOLD) allHappy = false;
+        if (n.good < worst->good) worst = &n;
     }
 
-    // Apply dominant mood
-    if (bestScore > 10.0f) {
-        currentMood = bestMood;
-    } else {
-        // Default to satisfied if no strong needs
-        currentMood = GotchiMoodType::MOOD_02_SATISFIED;
-    }
+    currentMood = allHappy ? GotchiMoodType::MOOD_00_HAPPY : worst->mood;
 }
 
 std::string GotchiMood::getMoodName() const {
@@ -253,42 +209,18 @@ MoodProperties GotchiMood::getMoodProperties(GotchiMoodType mood) const {
     }
 }
 
-void GotchiMood::addMoodOverlay(GotchiMoodType mood, float duration) {
-    // Add a temporary mood overlay
-    activeOverlays.push_back({mood, duration});
-}
+// Mood overlays are gone -- mood is purely a function of current stats now
+// (see updateMood()). These are kept as no-op stubs since care-action call
+// sites across Gotchi.cpp/GotchiScene.cpp still call them; removing the
+// methods entirely would mean touching every one of those call sites for no
+// behavioral gain.
+void GotchiMood::addMoodOverlay(GotchiMoodType /*mood*/, float /*duration*/) {}
+void GotchiMood::clearMoodOverlays() {}
+void GotchiMood::processMoodOverlays(float /*deltaTime*/) {}
 
-void GotchiMood::clearMoodOverlays() {
-    activeOverlays.clear();
-}
-
-void GotchiMood::processMoodOverlays(float deltaTime) {
-    // Decay overlay durations
-    for (auto& overlay : activeOverlays) {
-        overlay.second -= deltaTime;
-    }
-
-    // Remove expired overlays
-    activeOverlays.erase(
-        std::remove_if(activeOverlays.begin(), activeOverlays.end(),
-            [](const std::pair<GotchiMoodType, float>& o) { return o.second <= 0; }),
-        activeOverlays.end()
-    );
-
-    // If overlays exist, temporarily boost their mood
-    if (!activeOverlays.empty()) {
-        // Find most recent overlay
-        auto& topOverlay = activeOverlays.back();
-        if (topOverlay.second > 0) {
-            overlayTimer = topOverlay.second;
-        }
-    }
-}
-
-// Full update - called every tick (combines updateMood and processMoodOverlays)
+// Full update - called every tick
 void GotchiMood::update(float deltaTime, const GotchiStats& stats) {
     updateMood(deltaTime, stats);
-    processMoodOverlays(deltaTime);
 }
 
 void GotchiMood::setDebugMoodIndex(int index) {
