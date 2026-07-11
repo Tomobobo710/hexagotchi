@@ -37,18 +37,26 @@ void Hotbar::init(float screenWidth, float screenHeight) {
 }
 
 void Hotbar::updateSlotLayout() {
-    // Calculate hotbar dimensions
-    const float SLOT_SIZE = 64.0f;
-    const float SLOT_SPACING = 12.0f;
-    const float HOTBAR_HEIGHT = SLOT_SIZE + 20.0f;
+    // Calculate hotbar dimensions. Slot labels draw INSIDE the slot's lower
+    // edge rather than below it -- at 720px game height the old
+    // below-slot label baseline landed a few px past the bottom of the
+    // screen entirely.
+    const float SLOT_SIZE = 60.0f;
+    const float SLOT_SPACING = 14.0f;
+    const float BAND_MARGIN = 14.0f;  // padding around slots inside the band
+    const float BOTTOM_MARGIN = 14.0f; // gap from the very bottom of the screen
 
-    // Position: centered at bottom of screen
     float totalWidth = numSlots_ * (SLOT_SIZE + SLOT_SPACING) - SLOT_SPACING;
     float startX = (screenWidth_ - totalWidth) / 2.0f;
-    float startY = screenHeight_ - HOTBAR_HEIGHT + 10.0f;
 
-    hotbarBounds_ = {startX - 10.0f, startY - 10.0f,
-                     totalWidth + 20.0f, HOTBAR_HEIGHT};
+    hotbarBounds_ = {
+        startX - BAND_MARGIN,
+        screenHeight_ - BOTTOM_MARGIN - SLOT_SIZE - BAND_MARGIN * 2.0f,
+        totalWidth + BAND_MARGIN * 2.0f,
+        SLOT_SIZE + BAND_MARGIN * 2.0f
+    };
+
+    float startY = hotbarBounds_.y + BAND_MARGIN;
 
     // Position each slot
     for (int i = 0; i < numSlots_; i++) {
@@ -133,35 +141,42 @@ bool Hotbar::update(float deltaTime, SceneCamera* camera) {
 }
 
 void Hotbar::draw() const {
-    // Draw hotbar background band
-    DrawRectangleRec(hotbarBounds_, Color{40, 40, 60, 200});
-    DrawRectangleLinesEx(hotbarBounds_, 2.0f, Color{150, 150, 200, 200});
+    // Draw hotbar background band -- rounded pill, matching the rest of the
+    // scene's HUD styling.
+    DrawRectangleRounded(hotbarBounds_, 0.25f, 8, Color{25, 25, 40, 210});
+    DrawRectangleRoundedLinesEx(hotbarBounds_, 0.25f, 8, 2.0f, Color{130, 130, 190, 220});
 
     // Draw slots
     for (int i = 0; i < numSlots_; i++) {
         const Slot& slot = slots_[i];
 
         // Slot background
-        DrawRectangleRec(slot.bounds, Color{60, 60, 90, 230});
-        DrawRectangleLinesEx(slot.bounds, 2.0f, Color{120, 120, 160, 255});
+        DrawRectangleRounded(slot.bounds, 0.2f, 6, Color{55, 55, 85, 235});
+        DrawRectangleRoundedLinesEx(slot.bounds, 0.2f, 6, 2.0f, Color{130, 130, 180, 255});
 
-        // Slot icon (placeholder circle)
+        // Slot icon (placeholder circle), nudged up to leave room for the
+        // label strip along the slot's bottom edge instead of below it.
         Vector2 center = {
             slot.bounds.x + slot.bounds.width / 2.0f,
-            slot.bounds.y + slot.bounds.height / 2.0f
+            slot.bounds.y + slot.bounds.height * 0.40f
         };
-        float radius = slot.bounds.width * 0.35f;
+        float radius = slot.bounds.width * 0.26f;
 
         DrawCircleV(center, radius, slot.color);
+        DrawCircleLines(static_cast<int>(center.x), static_cast<int>(center.y),
+                         radius, Color{255, 255, 255, 90});
 
-        // Slot label below icon
-        int fontSize = 10;
+        // Slot label as a small strip along the slot's bottom edge, fully
+        // inside the slot bounds -- guarantees it never runs off-screen
+        // regardless of game height.
+        int fontSize = 11;
         const char* label = slot.label.c_str();
         float textWidth = MeasureText(label, fontSize);
+        float labelY = slot.bounds.y + slot.bounds.height - fontSize - 4.0f;
         DrawText(label,
                  static_cast<int>(center.x - textWidth / 2.0f),
-                 static_cast<int>(slot.bounds.y + slot.bounds.height + 4.0f),
-                 fontSize, Color{200, 200, 200, 255});
+                 static_cast<int>(labelY),
+                 fontSize, Color{225, 225, 240, 255});
     }
 
     // Draw dragged icon if dragging

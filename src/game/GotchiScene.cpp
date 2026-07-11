@@ -515,9 +515,6 @@ void GotchiScene::addButtons() {
         addButton(row2[i], x, row2Y, (i == 3));
     }
 
-    // Add "Detailed Vitals" button at the top of the screen instead of the
-    // bottom -- the bottom is now fully packed with the 2x8-button layout.
-    addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, 20.0f);
 }
 
 void GotchiScene::addButton(const std::string& label, float x, float y, bool isMergeButton) {
@@ -782,12 +779,21 @@ void GotchiScene::draw() {
     // ==============================
     // TOP-RIGHT: Current Mood + Needs Attention
     // ==============================
-    int rx = 460;
-    int ry = 40;
-    int rightPanelWidth = GAME_W - rx - 16;
+    // Panel is anchored to the right screen edge with a fixed margin and
+    // sized to its actual content (title/mood/needs-lines), rather than a
+    // fixed left x-position -- the old rx=460 left a big unused gap between
+    // the panel and the screen edge, and the pill width used the wrap
+    // target width instead of the widest line actually drawn.
+    const int panelMargin = 16;
+    const int panelPadding = 14;
+    const int titleFontSize = 14;
+    const int moodFontSize = 24;
+    const int needsFontSize = 16;
+    const int needsLineHeight = needsFontSize + 5;
+    const int maxPanelContentWidth = 280;  // wrap budget for needs-attention text
 
-    // Needs Attention text -- wrapped to fit the panel width, computed up
-    // front so we know the whole panel's height before drawing its pill.
+    // Needs Attention text -- wrapped to fit the wrap budget, computed up
+    // front so we know the whole panel's size before drawing its pill.
     std::vector<std::string> needs;
     float happiness = gotchi->getStats().getNormalizedStat(EmotionalStat::HAPPINESS);
     if (hunger > 0.7f) needs.push_back("Hungry");
@@ -796,11 +802,9 @@ void GotchiScene::draw() {
     if (health < 0.3f) needs.push_back("Sick");
     if (happiness < 0.3f) needs.push_back("Sad");
 
-    int needsFontSize = 14;
-    int needsLineHeight = needsFontSize + 4;
     std::vector<std::string> needsLines;
     if (!needs.empty()) {
-        std::string needsText = "[NEEDS ATTENTION] ";
+        std::string needsText = "NEEDS ATTENTION: ";
         for (size_t i = 0; i < needs.size(); i++) {
             if (i > 0) needsText += ", ";
             needsText += needs[i];
@@ -810,7 +814,7 @@ void GotchiScene::draw() {
         std::string word, currentLine;
         while (wordStream >> word) {
             std::string testLine = currentLine.empty() ? word : currentLine + " " + word;
-            if (MeasureText(testLine.c_str(), needsFontSize) > rightPanelWidth && !currentLine.empty()) {
+            if (MeasureText(testLine.c_str(), needsFontSize) > maxPanelContentWidth && !currentLine.empty()) {
                 needsLines.push_back(currentLine);
                 currentLine = word;
             } else {
@@ -820,22 +824,36 @@ void GotchiScene::draw() {
         if (!currentLine.empty()) needsLines.push_back(currentLine);
     }
 
-    // Backing pill covers the whole panel -- mood header/name plus every
-    // needs-attention line -- not just the needs text on its own.
-    int panelHeight = 18 + 30 + (int)needsLines.size() * needsLineHeight;
-    DrawRectangleRounded({ (float)rx - 10, (float)ry - 12, (float)rightPanelWidth + 4, (float)panelHeight + 16 }, 0.12f, 8, {0, 0, 0, 140});
+    // Panel content width = widest of title/mood-name/each needs line,
+    // clamped to the wrap budget (needs lines never exceed it; title/mood
+    // name are short enough in practice that this rarely binds).
+    std::string moodName = gotchi->getMood().getMoodName();
+    int contentWidth = std::max(MeasureText("CURRENT MOOD", titleFontSize), MeasureText(moodName.c_str(), moodFontSize));
+    for (const auto& line : needsLines) {
+        contentWidth = std::max(contentWidth, MeasureText(line.c_str(), needsFontSize));
+    }
+    contentWidth = std::min(contentWidth, maxPanelContentWidth);
+
+    int panelWidth = contentWidth + panelPadding * 2;
+    int rx = GAME_W - panelMargin - panelWidth + panelPadding;
+    int ry = 40;
+
+    int panelHeight = titleFontSize + 6 + moodFontSize + 10 + (int)needsLines.size() * needsLineHeight;
+    DrawRectangleRounded(
+        { (float)(rx - panelPadding), (float)(ry - panelPadding),
+          (float)panelWidth, (float)(panelHeight + panelPadding * 2) },
+        0.12f, 8, {0, 0, 0, 150});
 
     // Current Mood
-    DrawText("CURRENT MOOD", rx, ry, 14, {255, 220, 100, 255});
-    ry += 18;
-    std::string moodName = gotchi->getMood().getMoodName();
-    DrawText(moodName.c_str(), rx, ry, 20, {255, 255, 255, 255});
-    ry += 30;
+    DrawText("CURRENT MOOD", rx, ry, titleFontSize, {255, 220, 100, 255});
+    ry += titleFontSize + 6;
+    DrawText(moodName.c_str(), rx, ry, moodFontSize, {255, 255, 255, 255});
+    ry += moodFontSize + 10;
 
     // Needs Attention -- plain text on the shared panel background, no
     // separate colored pill of its own.
     for (const auto& line : needsLines) {
-        DrawText(line.c_str(), rx, ry, needsFontSize, {255, 120, 120, 255});
+        DrawText(line.c_str(), rx, ry, needsFontSize, {255, 140, 140, 255});
         ry += needsLineHeight;
     }
 

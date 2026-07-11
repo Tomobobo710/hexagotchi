@@ -39,6 +39,10 @@ public:
     // Check if mouse is over any slot (for input gating)
     bool isMouseOverSlot() const;
 
+    // Screen-space bounds of the whole hotbar band, for positioning other
+    // UI (e.g. a hint label) relative to it.
+    Rectangle getBounds() const { return hotbarBounds_; }
+
 private:
     // Slot definition
     struct Slot {

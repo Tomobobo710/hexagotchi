@@ -180,12 +180,37 @@ void HexViewScene::draw() {
     // Draw vitals at top right
     drawVitals();
 
-    // Draw instructions
-    DrawText("HEX VIEW", 14, 8, 18, Color{180, 180, 255, 255});
-    DrawText("Right-click drag to pan  Mouse wheel to zoom", GAME_W - 290, 8, 12, Color{140, 140, 180, 255});
+    // Pan/zoom hint, top center -- pilled for readability over the map
+    {
+        const char* hint = "Right-click drag to pan  Mouse wheel to zoom";
+        int fontSize = 12;
+        int textWidth = MeasureText(hint, fontSize);
+        int padding = 8;
+        int hintX = (GAME_W - textWidth) / 2;
+        int hintY = 10;
+        Rectangle hintPill = {
+            (float)(hintX - padding), (float)(hintY - padding),
+            (float)(textWidth + padding * 2), (float)(fontSize + padding * 2)
+        };
+        DrawRectangleRounded(hintPill, 0.4f, 8, {0, 0, 0, 140});
+        DrawText(hint, hintX, hintY, fontSize, Color{200, 200, 230, 255});
+    }
 
-    // Hotbar instructions
-    DrawText("Drag items from bottom palette onto hexes", 20, GAME_H - 75, 14, Color{180, 220, 255, 200});
+    // Hotbar instructions -- centered, pilled, sitting just above the hotbar
+    if (hotbar_) {
+        const char* hint = "Drag items from bottom palette onto hexes";
+        int fontSize = 14;
+        int textWidth = MeasureText(hint, fontSize);
+        int padding = 8;
+        int hintX = (GAME_W - textWidth) / 2;
+        int hintY = static_cast<int>(hotbar_->getBounds().y) - fontSize - padding * 2 - 8;
+        Rectangle hintPill = {
+            (float)(hintX - padding), (float)(hintY - padding),
+            (float)(textWidth + padding * 2), (float)(fontSize + padding * 2)
+        };
+        DrawRectangleRounded(hintPill, 0.4f, 8, {0, 0, 0, 140});
+        DrawText(hint, hintX, hintY, fontSize, Color{200, 230, 255, 255});
+    }
 
     // Draw back button
     if (backButton_) {
@@ -253,12 +278,13 @@ void HexViewScene::update(float deltaTime) {
         return;
     }
 
-    // Lock the back button while the tutorial hasn't taught hex movement yet,
-    // so the player can't bail out of the hexboard step before trying it.
+    // Hide and disable the back button for the entire tutorial -- the
+    // player shouldn't be able to bail out of the hexboard steps at all
+    // while being walked through them.
     if (backButton_) {
-        bool backLocked = tutorialController_ && tutorialController_->isActive()
-                           && !tutorialController_->isActionUnlocked("walk");
-        backButton_->setEnabled(!backLocked);
+        bool tutorialActive = tutorialController_ && tutorialController_->isActive();
+        backButton_->setEnabled(!tutorialActive);
+        backButton_->setVisible(!tutorialActive);
     }
 
     // Update back button first (before click handlers)
@@ -509,32 +535,54 @@ void HexViewScene::drawVitals() const {
         {"Sleep", sleep, Color{160, 0, 255, 255}}         // Purple
     };
 
-    // Position at top right
-    float x = GAME_W - 140.0f;  // Right side
-    float y = 40.0f;            // Near top
-    float barWidth = 120.0f;
-    float barHeight = 8.0f;
-    float spacing = 16.0f;
+    // Layout: label drawn above each bar (not beside it) so everything is
+    // guaranteed to fit within a fixed-width pill regardless of label text
+    // length -- the old side-by-side layout let long labels ("Hygiene 91%")
+    // spill outside the pill's left edge.
+    float panelWidth = 150.0f;
+    float barWidth = panelWidth - 20.0f;  // inset from panel edges
+    float barHeight = 6.0f;
+    float rowHeight = 30.0f;  // label + bar + gap, per vital
+    int titleFontSize = 13;
+    int labelFontSize = 11;
+
+    float pillPadding = 10.0f;
+    float panelX = GAME_W - panelWidth - 16.0f;
+    float panelY = 12.0f;
+    float titleHeight = titleFontSize + 6.0f;
+    float pillHeight = titleHeight + vitals.size() * rowHeight + pillPadding;
+
+    DrawRectangleRounded(
+        {panelX - pillPadding, panelY - pillPadding,
+         panelWidth + pillPadding * 2.0f, pillHeight + pillPadding * 2.0f},
+        0.12f, 8, {0, 0, 0, 150});
 
     // Draw title
-    DrawText("VITALS", static_cast<int>(x - 35), static_cast<int>(y - 20), 12, WHITE);
+    DrawText("VITALS", static_cast<int>(panelX), static_cast<int>(panelY), titleFontSize, WHITE);
+
+    float barX = panelX + 10.0f;
+    float rowY = panelY + titleHeight;
 
     // Draw each vital bar
     for (size_t i = 0; i < vitals.size(); i++) {
-        float vitalY = y + i * spacing;
         const Vital& vital = vitals[i];
+        float labelY = rowY + i * rowHeight;
+        float barY = labelY + labelFontSize + 4.0f;
+
+        // Label with percentage, above the bar
+        std::string label = vital.name + " " + std::to_string(static_cast<int>(vital.value)) + "%";
+        DrawText(label.c_str(), static_cast<int>(panelX), static_cast<int>(labelY),
+                 labelFontSize, Color{210, 210, 220, 255});
 
         // Convert 0-100 to 0-1 for bar
         float normalized = vital.value / 100.0f;
 
         // Background (empty bar)
-        DrawRectangle(static_cast<int>(x), static_cast<int>(vitalY),
+        DrawRectangle(static_cast<int>(barX), static_cast<int>(barY),
                       static_cast<int>(barWidth), static_cast<int>(barHeight),
                       Color{40, 40, 40, 200});
 
         // Foreground (filled bar) - red for high values (bad)
-        // Use color that indicates severity (green = good, red = bad)
-        // For these vitals, higher = worse, so red = bad
         Color barColor = Color{200, 50, 50, 255};  // Reddish for "needs attention"
         if (vital.value < 30) {
             barColor = Color{50, 200, 50, 255};    // Green for healthy
@@ -542,13 +590,8 @@ void HexViewScene::drawVitals() const {
             barColor = Color{200, 200, 50, 255};   // Yellow for moderate
         }
 
-        DrawRectangle(static_cast<int>(x), static_cast<int>(vitalY),
+        DrawRectangle(static_cast<int>(barX), static_cast<int>(barY),
                       static_cast<int>(barWidth * normalized), static_cast<int>(barHeight),
                       barColor);
-
-        // Label with percentage
-        std::string label = vital.name + " " + std::to_string(static_cast<int>(vital.value)) + "%";
-        DrawText(label.c_str(), static_cast<int>(x - 75), static_cast<int>(vitalY - 1),
-                 10, Color{200, 200, 200, 255});
     }
 }
