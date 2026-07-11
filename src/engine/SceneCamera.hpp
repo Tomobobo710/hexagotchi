@@ -86,9 +86,12 @@ public:
     // Coordinate conversion
     Vector2 screenToWorld(Vector2 screenPos) const;
     Vector2 worldToScreen(Vector2 worldPos) const;
-    
+
     // Get the internal raylib camera
     Camera2D getRaylibCamera() const;
+
+    // Get visible world bounds (frustum) in world coordinates
+    Rectangle getVisibleBounds() const;
     
     // Pulse effect - useful for emphasis
     void pulse(float intensity, float duration);

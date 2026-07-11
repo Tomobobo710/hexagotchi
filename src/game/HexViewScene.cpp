@@ -165,10 +165,15 @@ void HexViewScene::draw() {
 
     BeginMode2D(cam);
     // Draw hex world tiles first (background)
+    // Use frustum culling to only draw visible tiles
     if (world) {
-        for (HexTile* tile : world->getTiles()) {
+        Rectangle visibleBounds = getCamera()->getVisibleBounds();
+        std::vector<HexTile*> visibleTiles = world->getVisibleTiles(visibleBounds);
+        for (HexTile* tile : visibleTiles) {
             tile->draw();
         }
+        // Free the vector (small allocation, but reusable could be better)
+        // For now, just let it go out of scope - this is the optimized path
     }
 
     // Draw Gotchi actor on top of the hex tiles
@@ -177,9 +182,17 @@ void HexViewScene::draw() {
     }
 
     // Draw items on the hex world (from direct placement)
+    // Use frustum culling to only draw visible items
     if (world) {
+        Rectangle visibleBounds = getCamera()->getVisibleBounds();
         for (const auto& item : world->getItems()) {
             if (item.consumed) continue;
+
+            // Skip items outside visible bounds
+            Rectangle itemBounds = HexCoords(item.hexQ, item.hexR).getBounds(hexSize_);
+            if (!CheckCollisionRecs(visibleBounds, itemBounds)) {
+                continue;
+            }
 
             // Draw item marker at hex center
             Vector2 itemPos = HexCoords(item.hexQ, item.hexR).toPixel(hexSize_);

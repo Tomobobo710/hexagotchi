@@ -2,15 +2,12 @@
 #include <cmath>
 #include "AssetPack.hpp"
 
-static const float SQRT3 = 1.7320508f;
-static const float HEX_FILL = 1.10f; // >1 covers transparent art margins
-
 // Convert hex coordinates to pixel coordinates (pointy-top hex, odd-r offset)
 // For pointy-top hexes, odd rows (r % 2 == 1) are offset by half a hex width
 Vector2 HexCoords::toPixel(float hexSize) const {
     // Pointy-top: width = sqrt(3) * S (across flats, horizontal)
     //              height = 2 * S (corner to corner, vertical)
-    const float width = SQRT3 * hexSize;
+    const float width = HEX_SQRT3 * hexSize;
     const float height = 2.0f * hexSize;
 
     // x position: odd rows shifted right by half width
@@ -26,9 +23,6 @@ Vector2 HexCoords::toPixel(float hexSize) const {
 
 // Inverse: convert pixel coordinates to hex coordinates
 HexCoords HexCoords::fromPixel(Vector2 p, float hexSize) {
-    const float SQRT3 = 1.7320508f;
-    const float HEX_FILL = 1.10f;
-
     // Get row first (y is independent of q offset)
     // y = 0.75 * height * r = 0.75 * 2*S * r = 1.5 * S * r
     float r = p.y / (1.5f * hexSize);
@@ -37,7 +31,7 @@ HexCoords HexCoords::fromPixel(Vector2 p, float hexSize) {
     // For rounding purposes, we use the continuous approximation first:
     // x ≈ width/HEX_FILL * (q + 0.5*r)   [treating r&1 as r for continuous]
     // q = x * HEX_FILL/width - 0.5*r
-    float width = SQRT3 * hexSize;
+    float width = HEX_SQRT3 * hexSize;
     float q_float = p.x * HEX_FILL / width - 0.5f * r;
 
     // Round to nearest integer hex coordinates
@@ -58,8 +52,20 @@ HexCoords HexCoords::fromPixel(Vector2 p, float hexSize) {
     return HexCoords(q_final, r_rounded);
 }
 
+// Get bounding rectangle for hex at given position
+Rectangle HexCoords::getBounds(float hexSize) const {
+    Vector2 pixel = toPixel(hexSize);
+    float w = HEX_SQRT3 * hexSize * HEX_FILL;
+    float h = 2.0f * hexSize * HEX_FILL;
+    return Rectangle{
+        pixel.x - w * 0.5f,
+        pixel.y - h * 0.5f,
+        w, h
+    };
+}
+
 HexTile::HexTile(HexCoords coords, TileType* tileType, float hexSize)
-    : SceneActor({0, 0}, SQRT3 * hexSize, 2.0f * hexSize),
+    : SceneActor({0, 0}, HEX_SQRT3 * hexSize, 2.0f * hexSize),
       coords(coords), tileType(tileType), hexSize(hexSize) {
     // Position will be updated by setHexPosition
     setHexPosition(coords);
@@ -92,7 +98,7 @@ void HexTile::updateVertices() {
 
     // Pointy-top hexagon vertices (6 points), center-relative
     // Pointy-top: width = sqrt(3) * S (across flats), height = 2 * S (corner to corner)
-    float hw = SQRT3 * hexSize * 0.5f;   // half width (across flats / 2)
+    float hw = HEX_SQRT3 * hexSize * 0.5f;   // half width (across flats / 2)
 
     // Vertices: top point, then clockwise
     vertices.push_back(Vector2{0.0f,     -hexSize});    // Top point (y = -S, corner to corner / 2)
@@ -105,21 +111,13 @@ void HexTile::updateVertices() {
 
 void HexTile::draw() {
     if (!visible) return;
-    if (texture.id != 0) {
-        static int n = 0;
-        if (n < 3) {
-            TraceLog(LOG_WARNING, "=== HEXDRAW pos=(%.0f,%.0f) texid=%d %dx%d a=%d ===",
-                position.x, position.y, texture.id, texture.width, texture.height, color.a);
-            n++;
-        }
-    }
 
     // Draw the tile texture if loaded
     if (texture.id != 0) {
         // Draw texture scaled to fit the hex cell using DrawTexturePro
         // Pointy-top: width = sqrt(3) * S, height = 2 * S
         Rectangle src = { 0, 0, (float)texture.width, (float)texture.height };
-        float w = SQRT3 * hexSize * HEX_FILL;
+        float w = HEX_SQRT3 * hexSize * HEX_FILL;
         float h = 2.0f  * hexSize * HEX_FILL;
         Rectangle dest = {
             position.x - w * 0.5f,
@@ -152,4 +150,8 @@ bool HexTile::containsPoint(Vector2 point) const {
     // Vertices are center-relative, so subtract position from point
     Vector2 local = { point.x - position.x, point.y - position.y };
     return CheckCollisionPointPoly(local, vertices.data(), (int)vertices.size());
+}
+
+Rectangle HexTile::getBounds() const {
+    return HexCoords(coords.q, coords.r).getBounds(hexSize);
 }

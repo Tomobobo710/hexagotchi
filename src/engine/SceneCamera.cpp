@@ -244,6 +244,19 @@ Vector2 SceneCamera::worldToScreen(Vector2 worldPos) const {
     return GetWorldToScreen2D(worldPos, getRaylibCamera());
 }
 
+Rectangle SceneCamera::getVisibleBounds() const {
+    // Calculate the visible world bounds based on camera position, zoom, and screen size
+    float halfWidth = (GAME_W * 0.5f) / zoom;
+    float halfHeight = (GAME_H * 0.5f) / zoom;
+
+    return Rectangle{
+        position.x - halfWidth,
+        position.y - halfHeight,
+        halfWidth * 2.0f,
+        halfHeight * 2.0f
+    };
+}
+
 void SceneCamera::pulse(float intensity, float duration) {
     pulseIntensity = intensity; pulseDuration = duration; pulseTimer = 0.0f;
 }

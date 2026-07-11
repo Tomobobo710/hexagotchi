@@ -1,9 +1,14 @@
 #ifndef HEX_TILE_HPP
 #define HEX_TILE_HPP
 
+#include "raylib.h"
 #include "SceneActor.hpp"
 #include "TileType.hpp"
 #include <vector>
+
+// Hex grid constants
+static const float HEX_SQRT3 = 1.7320508f;
+static const float HEX_FILL = 1.10f; // >1 covers transparent art margins
 
 // Hex grid coordinates (axial q, r)
 struct HexCoords {
@@ -16,6 +21,9 @@ struct HexCoords {
 
     // Inverse: convert pixel coordinates to hex coordinates
     static HexCoords fromPixel(Vector2 p, float hexSize);
+
+    // Get bounding rectangle in world space
+    Rectangle getBounds(float hexSize) const;
 };
 
 class HexTile : public SceneActor {
@@ -39,6 +47,9 @@ public:
 
     // Draw the hex tile
     void draw() override;
+
+    // Get tile bounds for culling
+    Rectangle getBounds() const;
 
     // Check if a point is inside this hex
     bool containsPoint(Vector2 point) const;

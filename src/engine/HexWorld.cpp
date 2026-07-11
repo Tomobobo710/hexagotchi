@@ -245,6 +245,21 @@ std::string HexWorld::getBiomeAt(float x, float y) const {
     return "unknown";
 }
 
+std::vector<HexTile*> HexWorld::getVisibleTiles(const Rectangle& bounds) const {
+    std::vector<HexTile*> visible;
+
+    // Simple rectangle intersection test for each tile
+    // This is much faster than drawing all 576 tiles when only ~100 are visible
+    for (auto tile : tiles) {
+        Rectangle tileBounds = tile->getCoords().getBounds(config.hexSize);
+        if (CheckCollisionRecs(bounds, tileBounds)) {
+            visible.push_back(tile);
+        }
+    }
+
+    return visible;
+}
+
 void HexWorld::placeItem(const Item& item) {
     items.push_back(item);
 }

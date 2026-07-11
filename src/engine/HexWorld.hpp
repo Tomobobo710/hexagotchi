@@ -1,6 +1,7 @@
 #ifndef HEX_WORLD_HPP
 #define HEX_WORLD_HPP
 
+#include "raylib.h"
 #include "HexTile.hpp"
 #include "Item.hpp"
 #include <vector>
@@ -70,6 +71,9 @@ public:
 
     // Get biome type at a position (returns string name)
     std::string getBiomeAt(float x, float y) const;
+
+    // Get tiles visible within the given world bounds (for culling)
+    std::vector<HexTile*> getVisibleTiles(const Rectangle& bounds) const;
 
     // Item management
     void placeItem(const Item& item);
