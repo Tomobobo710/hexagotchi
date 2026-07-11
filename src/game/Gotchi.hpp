@@ -73,6 +73,15 @@ public:
     // Wander control - public for scene initialization
     void setWanderEnabled(bool e);
 
+    // Freezes vital-stat drain/gain and mood updates while true (tutorial
+    // hand-holding: the player shouldn't see hunger/energy/etc moving while
+    // they're still being taught what the buttons do). Animation, movement,
+    // and the state machine keep running as normal. Vitals/mood ticking now
+    // lives in GotchiSim, so this just forwards to the shared GameState flag
+    // it reads every frame.
+    void setStatsFrozen(bool frozen) { if (gameState_) gameState_->statsFrozen = frozen; }
+    bool isStatsFrozen() const { return gameState_ && gameState_->statsFrozen; }
+
     // Path-based movement
     HexCoords getCurrentHex() const;
     void setPath(const std::vector<HexCoords>& path);

@@ -98,7 +98,8 @@ void Gotchi::update(float deltaTime) {
     // Update SceneActor base class (physics, etc.)
     SceneActor::update(deltaTime);
 
-    // Update action timer (not part of the tick simulation anymore)
+    // Vitals/mood ticking now lives centrally in GotchiSim (GameState is the
+    // single source of truth); this local loop only drives the action timer.
     actionTimer_ -= deltaTime;
     if (actionTimer_ <= 0) {
         // Action complete, return to idle

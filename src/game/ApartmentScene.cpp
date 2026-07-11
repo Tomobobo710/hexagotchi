@@ -87,7 +87,7 @@ void ApartmentScene::init() {
         { CharacterId::Tom, "That's... a technicality.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
-        { CharacterId::Mark, "It's two technicalities, Tom.\nBack to back.",
+        { CharacterId::Mark, "Hey, don't shoot the messanger.\nI don't make the rules.",
           1, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
         { CharacterId::Tom, "I am paying $1,400 a month.\nFOR AN ICE CUBE.",
@@ -317,3 +317,4 @@ void ApartmentScene::drawApartment() {
     DrawRectangle(720, 100, 180, 160, windowFrame);
     DrawRectangle(730, 110, 160, 140, windowSky);
 }
+

@@ -16,10 +16,12 @@
 #include "game/Model3DTestScene.hpp"
 #include "game/MergeScene.hpp"
 #include "game/ToyAnimationScene.hpp"
+#include "game/DeathScene.hpp"
 #include "game/SceneSelectScene.hpp"
 #include "game/TitleScene.hpp"
 #include "game/GotchiStatsScene.hpp"
 #include "game/MergeController.hpp"
+#include "game/TutorialController.hpp"
 #include "game/StorySequencer.hpp"
 #include "game/DialogSequences.hpp"
 #include "engine/GameState.h"
@@ -43,6 +45,9 @@ MergeController* mergeController = nullptr;
 
 // StorySequencer - created in main() and used in UpdateDrawFrame
 StorySequencer* storySequencer = nullptr;
+
+// TutorialController - created in main() and used in UpdateDrawFrame
+TutorialController* tutorialController = nullptr;
 
 // GotchiSim - simulation reducer (C-core)
 GotchiSim* gotchiSim = nullptr;
@@ -130,7 +135,7 @@ void UpdateDrawFrame() {
     // These standalone debug/demo scenes never use the shared dialog box at
     // all, so it's safe to keep it hidden every frame unconditionally.
     if (currentScene == "input_test" || currentScene == "hexboard" || currentScene == "sprite_test" ||
-        currentScene == "gotchi" || currentScene == "title") {
+        currentScene == "gotchi" || currentScene == "title" || currentScene == "death") {
         dialog->hide();
     }
 
@@ -264,6 +269,7 @@ int main() {
     sceneManager->registerScene("model3d_test", new Model3DTestScene());
     sceneManager->registerScene("merge", new MergeScene());
     sceneManager->registerScene("toy_animation", new ToyAnimationScene());
+    sceneManager->registerScene("death", new DeathScene());
     sceneManager->registerScene("title", new TitleScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     GotchiStatsScene* gotchiStatsScene = new GotchiStatsScene();
@@ -272,6 +278,10 @@ int main() {
     // Wire up shared GameState to scenes (vitals and mood are now shared)
     gotchiScene->setGameState(&globalGameState);
     gotchiStatsScene->setGameState(&globalGameState);
+
+    // OfficeScene reads live vitals for Loraine's "reports" beat in Scenario A.
+    OfficeScene* officeScene = static_cast<OfficeScene*>(sceneManager->getScene("office"));
+    if (officeScene) officeScene->setGameState(&globalGameState);
 
     // Wire up event bus for hexboard scene
     HexViewScene* hexViewScene = static_cast<HexViewScene*>(sceneManager->getScene("hexboard"));
@@ -287,6 +297,11 @@ int main() {
     mergeController = new MergeController(globalEventBus, globalGameState, *sceneManager);
     gotchiScene->setEventBus(&globalEventBus);
     gotchiScene->setMergeController(mergeController);
+
+    // Wire up the tutorial controller
+    tutorialController = new TutorialController(globalGameState);
+    gotchiScene->setTutorialController(tutorialController);
+    if (hexViewScene) hexViewScene->setTutorialController(tutorialController);
 
     // Wire up the story sequencer
     storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);
@@ -339,6 +354,7 @@ int main() {
     UnloadRenderTexture(gameTarget);
     delete dialog;
     delete mergeController;
+    delete tutorialController;
     delete storySequencer;
     delete gotchiSim;
     delete driversController;

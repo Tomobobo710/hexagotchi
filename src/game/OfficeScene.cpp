@@ -2,7 +2,17 @@
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
 #include "CharacterRegistry.hpp"
+#include "GameState.h"
 #include <cmath>
+#include <cstdio>
+
+namespace {
+// Round a live stat to a whole number for the "reports" beat -- Loraine reads
+// them aloud, so a clean integer reads better than a float.
+int statPct(float value) {
+    return (int)(value + 0.5f);
+}
+}
 
 OfficeScene::OfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {20, 22, 28, 255}), dialog(sharedDialog) {
@@ -37,6 +47,44 @@ void OfficeScene::init() {
     loraine->setTag("loraine");
     loraine->setVisible(false);
     addActor(loraine);
+
+    // Build Loraine's live "report" lines from the player's REAL vitals so the
+    // numbers on screen are the actual creature the player has been keeping (or
+    // neglecting). Corporate-speak names hide gotchi wellbeing stats -- the
+    // joke is HR reading a suffering pet's vitals as quarterly KPIs. Falls back
+    // to a default GotchiStats if no GameState is wired (isolated tests).
+    GotchiStats fallback;
+    const GotchiStats& v = gameState_ ? gameState_->vitals : fallback;
+    char buf[256];
+
+    // Line 1: the "engagement" framing -- Happiness dressed up as Engagement,
+    // Focus as Attention Capital.
+    std::snprintf(buf, sizeof(buf),
+        "Engagement's at %d%%, sir.\nAttention Capital, %d%%.",
+        statPct(v.getHappiness()), statPct(v.getStat(EmotionalStat::FOCUS)));
+    std::string loraineStats1 = buf;
+
+    // Line 2: vitals reframed -- Health as Operational Readiness, Energy as
+    // Bandwidth, Hunger inverted into a "Fuel Reserve" so low food reads as a
+    // red flag.
+    std::snprintf(buf, sizeof(buf),
+        "Operational Readiness, %d%%.\nBandwidth's down to %d%%.\nFuel Reserves at %d%%.",
+        statPct(v.getHealth()), statPct(v.getEnergy()),
+        statPct(100.0f - v.getHunger()));
+    std::string loraineStats2 = buf;
+
+    // Line 3: the soft stuff -- Hygiene as Presentation, Anxiety surfaced
+    // plainly as a "Risk Indicator," and the gut-punch: zero Friends.
+    std::snprintf(buf, sizeof(buf),
+        "Presentation, %d%%.\nRisk Indicator -- that's anxiety --\nflagged at %d%%.",
+        statPct(v.getHygiene()), statPct(v.getStat(EmotionalStat::ANXIETY)));
+    std::string loraineStats3 = buf;
+
+    // Line 4: the gut-punch, on its own line so it lands -- zero friends.
+    std::snprintf(buf, sizeof(buf),
+        "And... social connections: %d.",
+        statPct(v.getStat(SocialStat::FRIENDS)));
+    std::string loraineStats4 = buf;
 
     // --- Scenario 0 (Scenario A): the first merge into Tom's world ---------
     // Player merges in, Tom's already standing there feeling sick from it,
@@ -86,14 +134,39 @@ void OfficeScene::init() {
         { CharacterId::Larry, "Loraine, pull up the numbers\non Tom's latest merge.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
-        { CharacterId::Loraine, "[PLAYER STAT MESSAGE]",
+        { CharacterId::Loraine, "Here are the reports, sir.",
           2, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
 
-        // --- Comedy beat: lands on Tom coming in 15 minutes earlier ---------
+        // Larry squints at a wall of live vitals and can't parse a single one.
         { CharacterId::Larry, "Mm. The numbers don't lie, Tom.\nAnd the numbers are...\nHard to read...",
           1, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
+        // --- Injected: Larry punts to Loraine, she reads the REAL stats ------
+        { CharacterId::Larry, "Loraine. Walk me through it.\nIn plain English.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, loraineStats1,
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, loraineStats2,
+          2, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
+        { CharacterId::Loraine, loraineStats3,
+          2, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
+        { CharacterId::Loraine, loraineStats4,
+          2, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
+        // Tom clocks that every number just went down. Larry, of course, does not.
+        { CharacterId::Tom, "...Those numbers always just go down.\nEvery single one of them.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Mid, PoseEmotion::Sad },
+        { CharacterId::Larry, "Down means room to grow, Tom!\nUpside! I love it.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy, PoseEmotion::Mid },
+
+        // --- Comedy beat: lands on Tom coming in 15 minutes earlier ---------
         { CharacterId::Tom, "I'll do better next time. I just need to get a good night's sleep.",
           0, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy },
@@ -402,3 +475,4 @@ void OfficeScene::drawLarry(Vector2 pos) {
 void OfficeScene::drawLoraine(Vector2 pos) {
     drawPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ true, 1.0f);  // to Tom's left, faces right toward him
 }
+

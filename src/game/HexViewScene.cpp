@@ -191,23 +191,70 @@ void HexViewScene::draw() {
     if (backButton_) {
         backButton_->draw();
     }
+
+    // Draw the tutorial dialog on top of everything while it's this scene's turn
+    if (tutorialController_ && tutorialController_->isActive() && tutorialController_->currentScene() == "hexboard") {
+        tutorialController_->draw();
+    }
 }
 
 void HexViewScene::update(float deltaTime) {
+    // GotchiSim sets state_.collapsed when a vital need bottoms out (only
+    // once deathEnabled). That's our one death condition -- route it into
+    // Gotchi::isDead() so the death trigger below fires.
+    if (gotchi && gameState_ && gameState_->collapsed && !gotchi->isDead()) {
+        gotchi->setDead(true);
+    }
+
+    // Freeze vitals while the tutorial is actively teaching -- must happen
+    // before Scene::update() since that's what drives gotchi->update() (added
+    // via addActor()).
+    if (gotchi) {
+        gotchi->setStatsFrozen(tutorialController_ && tutorialController_->isActive());
+    }
+
     Scene::update(deltaTime);
 
     // Gotchi update is handled by Scene::update() since it was added via addActor()
     // Keeping only the explicit draw() call in HexViewScene::draw()
+
+    // One-shot: fire the death transition exactly once. See GotchiScene's
+    // matching check for why deathTriggered_ is needed on top of
+    // switchScene()'s own currentSceneName guard.
+    if (gotchi && gotchi->isDead() && !deathTriggered_) {
+        deathTriggered_ = true;
+        if (getSceneManager()) {
+            static_cast<SceneManager*>(getSceneManager())->switchScene("death");
+        }
+    }
 
     if (paused) {
         if (pauseMenu) pauseMenu->update(deltaTime);
         return;
     }
 
+    // Lock the back button while the tutorial hasn't taught hex movement yet,
+    // so the player can't bail out of the hexboard step before trying it.
+    if (backButton_) {
+        bool backLocked = tutorialController_ && tutorialController_->isActive()
+                           && !tutorialController_->isActionUnlocked("walk");
+        backButton_->setEnabled(!backLocked);
+    }
+
     // Update back button first (before click handlers)
     if (backButton_) {
         SceneInputHandler* ih = getInputHandler();
         backButton_->update(ih, deltaTime);
+    }
+
+    // Advance/reveal the tutorial dialog while it belongs to this scene; once
+    // an advance crosses back into a "gotchi" step, follow it there immediately.
+    if (tutorialController_ && tutorialController_->isActive() && tutorialController_->currentScene() == "hexboard") {
+        tutorialController_->update(deltaTime);
+        if (tutorialController_->currentScene() == "gotchi" && getSceneManager()) {
+            static_cast<SceneManager*>(getSceneManager())->switchScene("gotchi");
+            return;
+        }
     }
 
     // Camera panning logic
@@ -309,6 +356,7 @@ void HexViewScene::update(float deltaTime) {
 
                     if (!path.empty()) {
                         gotchi->setPath(path);
+                        if (tutorialController_) tutorialController_->reportAction("walk");
                     }
                 }
             }

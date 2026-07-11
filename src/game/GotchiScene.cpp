@@ -28,7 +28,7 @@
 // Action codes for CareAction events
 // ============================================================================
 // These match the shader modes and button order in GotchiScene::addButtons()
-// Order: Wash=0, Groom=1, Feed=2, Pet=3, Water=4, Give a Break=5
+// Order: Wash=0, Groom=1, Feed=2, Pet=3, Water=4, Merge=5
 // Warmth actions (for affection): Pet only (play/ball not yet implemented as button)
 // Hygiene actions (for mercy): Wash, Groom (not Water or Feed)
 static bool isWarmthAction(int actionCode) {
@@ -448,6 +448,13 @@ void GotchiScene::init() {
     // Add navigation buttons
     addButtons();
 
+    // Start the new-game tutorial the first time we ever land on this scene.
+    // shouldRun() reads GameState's "tutorial_seen" flag, so this is a no-op
+    // on every entry after the tutorial has completed once.
+    if (tutorialController_ && !tutorialController_->isActive() && tutorialController_->shouldRun()) {
+        tutorialController_->start();
+    }
+
     // Subscribe to CareAction events from ButtonPressed handlers
     // (the event is emitted in handleGotchiAction)
     if (eventBus_) {
@@ -477,20 +484,16 @@ void GotchiScene::addButtons() {
     buttonFeedbackTimer_ = 0.0f;
 
     // Add action buttons at the bottom
-    // Six buttons: Wash, Groom, Feed, Pet, Water, Give a Break (merge button)
+    // Seven buttons: Wash, Groom, Feed, Pet, Water, Merge, Explore
     float buttonWidth = 80.0f;
     float buttonHeight = 32.0f;
-    float totalWidth = 6 * buttonWidth + 5 * 10.0f;  // 6 buttons + 5 gaps
+    float totalWidth = 7 * buttonWidth + 6 * 10.0f;  // 7 buttons + 6 gaps
     float startX = (GAME_W - totalWidth) / 2.0f;
     float y = GAME_H - 40.0f;
 
-    // Determine initial merge button label based on seenReality
-    std::string mergeLabel = "Give a Break";
-    if (mergeController_) {
-        mergeLabel = mergeController_->mergeButtonLabel();
-    }
+    std::string mergeLabel = mergeController_ ? mergeController_->mergeButtonLabel() : "Merge";
 
-    std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Water", mergeLabel};
+    std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Water", mergeLabel, "EXPLORE"};
     for (size_t i = 0; i < labels.size(); i++) {
         float x = startX + i * (buttonWidth + 10.0f);
         // The 6th button (index 5) is the merge button
@@ -499,9 +502,6 @@ void GotchiScene::addButtons() {
 
     // Add "Detailed Vitals" button at bottom center
     addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 80);
-
-    // Add Explore button - created hidden, visibility controlled by predicate each frame
-    addExploreButton();
 }
 
 void GotchiScene::addButton(const std::string& label, float x, float y, bool isMergeButton) {
@@ -519,6 +519,10 @@ void GotchiScene::addButton(const std::string& label, float x, float y, bool isM
         btn->setOnClick([this]() {
             onMergeButtonClicked();
         });
+    } else if (label == "EXPLORE") {
+        btn->setOnClick([this]() {
+            onExploreButtonClicked();
+        });
     } else {
         // Other buttons trigger gotchi actions
         btn->setOnClick([this, label]() {
@@ -529,7 +533,7 @@ void GotchiScene::addButton(const std::string& label, float x, float y, bool isM
 }
 
 // The merge button callback - emits MergeRequested on the bus
-// This is the "Give a Break" button which becomes "Merge" after first merge
+// This is the "Merge" button
 void GotchiScene::onMergeButtonClicked() {
     // Emit MergeRequested event
     // The MergeController will decide whether to honor this request based on game state
@@ -541,9 +545,37 @@ void GotchiScene::onMergeButtonClicked() {
 void GotchiScene::update(float deltaTime) {
     Scene::update(deltaTime);
 
-    // Update the Gotchi every frame
+    // Detect the sleep-hits-0 collapse BEFORE freezing/updating the gotchi
+    // this frame, so the freeze takes effect the same frame sleep bottoms out.
+    applySleepCollapseGate();
+
+    // GotchiSim sets state_.collapsed when a vital need bottoms out (only
+    // once deathEnabled). That's our one death condition -- route it into
+    // Gotchi::isDead() so the existing DeathScene trigger below fires.
+    if (gotchi && gameState_ && gameState_->collapsed && !gotchi->isDead()) {
+        gotchi->setDead(true);
+    }
+
+    // Freeze vitals while the tutorial is actively teaching, or once the
+    // gotchi has collapsed from exhaustion -- see Gotchi::setStatsFrozen()
+    // for what this does/doesn't skip.
     if (gotchi) {
+        bool tutorialFreeze = tutorialController_ && tutorialController_->isActive();
+        bool collapseFreeze = gameState_ && gameState_->sleepCollapsed;
+        gotchi->setStatsFrozen(tutorialFreeze || collapseFreeze);
         gotchi->update(deltaTime);
+
+        // One-shot: fire the death transition exactly once. switchScene()'s
+        // own currentSceneName guard isn't enough here since the fade takes
+        // time to actually leave this scene -- without deathTriggered_ this
+        // would re-call switchScene() every frame of the fade and reset its
+        // timer forever.
+        if (gotchi->isDead() && !deathTriggered_) {
+            deathTriggered_ = true;
+            if (getSceneManager()) {
+                static_cast<SceneManager*>(getSceneManager())->switchScene("death");
+            }
+        }
     }
 
     // Mouse wheel zoom - allows zooming in/out around cursor position
@@ -564,12 +596,21 @@ void GotchiScene::update(float deltaTime) {
 
     // Update button states
     SceneInputHandler* input = getInputHandler();
+    applyTutorialLocks();
     for (auto& btn : buttons) {
         btn->update(input, deltaTime);
     }
 
-    // Update explore button visibility based on predicate
-    updateExploreButtonVisibility();
+    // Advance/reveal the tutorial dialog while it belongs to this scene; once
+    // an advance crosses into a "hexboard" step, follow it there immediately.
+    if (tutorialController_ && tutorialController_->isActive() && tutorialController_->currentScene() == "gotchi") {
+        tutorialController_->update(deltaTime);
+        if (tutorialController_->currentScene() == "hexboard" && getSceneManager()) {
+            static_cast<SceneManager*>(getSceneManager())->switchScene("hexboard");
+        } else if (tutorialController_->isFinished()) {
+            tutorialController_->finish();
+        }
+    }
 
     // Update cooldown timers
     for (auto& [name, timer] : buttonCooldowns_) {
@@ -801,6 +842,11 @@ void GotchiScene::draw() {
         btn->draw();
     }
 
+    // Draw the tutorial dialog on top of everything while it's this scene's turn
+    if (tutorialController_ && tutorialController_->isActive() && tutorialController_->currentScene() == "gotchi") {
+        tutorialController_->draw();
+    }
+
     // Draw action shader overlay on top of the gotchi
     if (actionOverlayTimer_ > 0.0f && actionOverlayMode_ >= 0) {
         Rectangle worldRect = getGotchiScreenRect();
@@ -866,8 +912,8 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         return;
     }
 
-    // Sleeping guard: only "Give a Break" (to wake) is allowed while sleeping
-    if (gotchi->isSleeping() && action != "Give a Break") {
+    // Sleeping guard: only "Merge" (to wake) is allowed while sleeping
+    if (gotchi->isSleeping() && action != "Merge") {
         lastClickedButton_ = "Gotchi is sleeping - give a break to wake";
         buttonFeedbackTimer_ = 1.5f;
         return;
@@ -934,7 +980,7 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         feedback = "Watered - Thirst quenched";
         shaderMode = 4; shaderDur = 2.5f;
         actionCode = 4;
-    } else if (action == "Give a Break") {
+    } else if (action == "Merge") {
         // Intentionally inert for now. Rest/sleep will be triggered by the events
         // system, not by this button. Show a neutral message; no stats, no mood,
         // no shader, no cooldown, no sleep/wake state change.
@@ -950,6 +996,8 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         buttonFeedbackTimer_ = 3.0f;
         cooldown = 2.0f;
         if (shaderMode >= 0) triggerActionShader(shaderMode, shaderDur);
+
+        if (tutorialController_) tutorialController_->reportAction(action);
 
         // Emit CareAction event for Box C (drivers computation)
         // Action codes: 0=Wash, 1=Groom, 2=Feed, 3=Pet, 4=Water
@@ -1007,47 +1055,43 @@ void GotchiScene::cleanup() {
     gotchi = nullptr;
 }
 
-// ============================================================================
-// Explore Button Implementation
-// ============================================================================
+void GotchiScene::applyTutorialLocks() {
+    bool collapsed = gameState_ && gameState_->sleepCollapsed;
 
-void GotchiScene::addExploreButton() {
-    // Add Explore button at top-right of screen (near instructions)
-    // It will be hidden by default and only visible when predicate returns true
-    float buttonWidth = 100.0f;
-    float buttonHeight = 32.0f;
-    float x = GAME_W - buttonWidth - 20.0f;
-    float y = 40.0f;
+    for (auto& btn : buttons) {
+        const std::string& label = btn->getLabel();
+        if (label == "DETAILED VITALS") continue;  // never gated
 
-    Button* btn = new Button({x, y}, buttonWidth, buttonHeight, "EXPLORE");
-    btn->setAnchor("top-left");
-    btn->setFontSize(14);
-    btn->setBackgroundColor({60, 60, 100, 180});  // Slightly transparent
-    btn->setHoverColor({100, 100, 160, 240});
-    btn->setBorderColor({150, 150, 200, 255});
-    btn->setVisible(false);  // Start hidden
+        if (label == "Merge") {
+            // Merge is locked at all times except the sleep-collapse gate --
+            // the tutorial never unlocks it (see TutorialController's hard
+            // "merge" exception), so this check alone covers both cases.
+            btn->setEnabled(collapsed);
+            continue;
+        }
 
-    btn->setOnClick([this]() {
-        onExploreButtonClicked();
-    });
+        // Once collapsed, every other button (including EXPLORE) locks so
+        // the only way forward is Merge.
+        if (collapsed) {
+            btn->setEnabled(false);
+            continue;
+        }
 
-    buttons.push_back(std::unique_ptr<Button>(btn));
+        if (tutorialController_) {
+            btn->setEnabled(tutorialController_->isActionUnlocked(label));
+        }
+    }
 }
 
-void GotchiScene::updateExploreButtonVisibility() {
-    // The Explore button is visible when:
-    // - seenReality is true (player has visited the real world - same condition as Merge button)
-    bool shouldShow = false;
-    if (gameState_ && gameState_->seenReality) {
-        shouldShow = true;
-    }
+void GotchiScene::applySleepCollapseGate() {
+    if (!gameState_) return;
 
-    // Find the Explore button and set its visibility
-    for (auto& btn : buttons) {
-        if (btn->getLabel() == "EXPLORE") {
-            btn->setVisible(shouldShow);
-            break;
-        }
+    // Only trip while the gotchi is actually out in the world -- Mode::Story
+    // already means merge is irrelevant (we're mid-beat), so don't collapse
+    // out from under a story scene.
+    if (!gameState_->sleepCollapsed && gameState_->sleep <= 0.0f && gameState_->mode == Mode::Gotchi) {
+        gameState_->sleepCollapsed = true;
+        if (gotchi) gotchi->setAction("wobble");
     }
 }
 

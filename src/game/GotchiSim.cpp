@@ -46,8 +46,9 @@ void GotchiSim::updateMood(float dt) {
 }
 
 void GotchiSim::update(float dt) {
-    // Skip vitals tick when in Story mode (simulator is paused)
-    if (state_.mode != Mode::Story) {
+    // Skip vitals tick when in Story mode (simulator is paused) or while
+    // the tutorial/collapse gate has frozen stats.
+    if (state_.mode != Mode::Story && !state_.statsFrozen) {
         // 1. Sleep metronome: drain while seenReality is true
         if (state_.seenReality) {
             state_.sleep -= SLEEP_DRAIN_RATE * dt;
