@@ -6,6 +6,8 @@
 #include "GotchiStats.hpp"
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <functional>
 
 // Include HexTile for HexCoords definition
 #include "HexTile.hpp"
@@ -28,7 +30,7 @@ public:
     // Constructor - vitals and mood are now passed from GameState (shared ownership)
     // GameState is passed for sleeping state synchronization
     Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef, GameState* gameState = nullptr);
-    ~Gotchi() = default;
+    ~Gotchi();
 
     // Lifecycle
     void update(float deltaTime) override;
@@ -66,14 +68,6 @@ public:
     void heal();      // Heal the gotchi
     void sleep();     // Put to sleep
     void wake();      // Wake up
-
-    // Movement (to be implemented)
-    void setTargetPosition(Vector2 target);
-    void moveToTarget(float deltaTime);
-    void wander(float deltaTime);
-
-    // Wander control - public for scene initialization
-    void setWanderEnabled(bool e);
 
     // Freezes vital-stat drain/gain and mood updates while true (tutorial
     // hand-holding: the player shouldn't see hunger/energy/etc moving while
@@ -126,21 +120,45 @@ public:
     void setHexSize(float size) { hexSize_ = size; }
     float getHexSize() const { return hexSize_; }
 
-    // Animation control
-    void setAction(const std::string& action);
-    void updateAnimation(float deltaTime);
+    // ------------------------------------------------------------------
+    // Animation system
+    // ------------------------------------------------------------------
+    // One clip is "current" at a time; playClip() switches the clip and
+    // holds it until something else calls playClip() again -- there is no
+    // separate timer that silently reverts to idle behind the scenes. A
+    // clip that should return to idle on its own (e.g. a one-shot "eat"
+    // animation) does so explicitly via onClipFinished, not via a
+    // fire-and-forget timer a caller has to remember to set.
+    //
+    // Loading: loadAnimationFrames(basePath) populates clips_ from
+    // whatever prefixes actually exist under basePath (see
+    // ANIMATION_ALIASES below for the logical-name -> asset-prefix map).
+    // Logical names with no matching art fall back to "idle" so a missing
+    // clip reads as "still idling", not "frozen on a blank frame".
+    void playClip(const std::string& logicalName, bool loop = true);
+    const std::string& currentClip() const { return currentClip_; }
 
-    // Texture loading helpers - public for scene initialization
+    // Fires once, the frame a non-looping clip reaches its last frame.
+    // Scenes/Gotchi's own state machine can react to this instead of a
+    // side-channel actionTimer_ (e.g. return to idle after eating).
+    void setOnClipFinished(std::function<void()> cb) { onClipFinished_ = cb; }
+
+    // Texture loading - public for scene initialization
     bool loadAnimationFrames(const std::string& basePath);
     void unloadAnimations();
 
     // Frame size accessor (for proper sizing based on actual sprite)
     Vector2 getFrameSize() const;
 
-    // Animation frame count accessors (for debug/probe)
-    size_t animIdleCount() const { return animIdle_.size(); }
-    size_t animWalkCount() const { return animWalk_.size(); }
-    size_t animMoveCount() const { return animMove_.size(); }
+    // Kept for existing debug/probe call sites.
+    size_t animIdleCount() const;
+    size_t animWalkCount() const;
+    size_t animMoveCount() const;
+
+    // Back-compat shim for existing callers (GotchiScene/HexViewScene/
+    // GotchiStatsScene all call setAction("idle") etc. today) -- forwards
+    // straight to playClip(). New code should call playClip() directly.
+    void setAction(const std::string& action) { playClip(action); }
 
     // Tick-based updates (private)
     void updateStats(float ticks);
@@ -167,45 +185,24 @@ private:
     // Shared GameState reference for synchronization
     GameState* gameState_ = nullptr;
 
-    // Wander control
-    bool wanderEnabled_;
+    // ------------------------------------------------------------------
+    // Animation state (see the public section above for the API)
+    // ------------------------------------------------------------------
+    // One map of already-loaded clips, keyed by the ASSET prefix (e.g.
+    // "idle", "wobble", "walk") -- not by logical action name. Populated
+    // entirely by loadAnimationFrames(); nothing else mutates it, so
+    // there's exactly one place that can leak or mis-load a texture.
+    std::unordered_map<std::string, std::vector<Texture2D>> clips_;
 
-    // Movement
-    Vector2 targetPosition_;
-    float wanderTimer_;
+    std::string currentClip_ = "idle";  // asset prefix currently playing
+    int currentFrameIndex_ = 0;
+    float frameTimer_ = 0.0f;
+    bool currentClipLoops_ = true;
+    float currentClipFrameDuration_ = 0.15f;  // seconds per frame for the current clip -- see clipFrameDuration()
+    std::function<void()> onClipFinished_;
 
-    // Animation
-    std::string currentAction_;
-    float actionTimer_;
-
-    // Animation frames (loaded at init)
-    // Note: Only animations that exist in assets are loaded
-    // Missing animations are mapped to available ones in setAction()
-    std::vector<Texture2D> animIdle_;
-    std::vector<Texture2D> animMove_;      // mapped to walk
-    std::vector<Texture2D> animEat_;       // mapped to bounce
-    std::vector<Texture2D> animSleep_;
-    std::vector<Texture2D> animPlay_;      // mapped to bounce
-    std::vector<Texture2D> animSad_;       // mapped to hurt
-    std::vector<Texture2D> animHappy_;     // mapped to idle/bounce
-    std::vector<Texture2D> animBounce_;    // available animation
-    std::vector<Texture2D> animHurt_;      // available animation
-    std::vector<Texture2D> animWalk_;      // available animation
-    std::vector<Texture2D> animDie_;       // death animation
-    std::vector<Texture2D> animDieTwo_;    // death animation variant 2 (fallover)
-    std::vector<Texture2D> animDieThree_;  // death animation variant 3 (downdie)
-    std::vector<Texture2D> animBlink_;     // blink animation (from idle_two)
-    std::vector<Texture2D> animFlash_;     // flash animation (from hurt_two)
-    std::vector<Texture2D> animStepping_;  // stepping animation (from walk_three)
-    std::vector<Texture2D> animRun_;       // running animation
-    std::vector<Texture2D> animArmswap_;   // armswap animation
-    std::vector<Texture2D> animEyetwitch_; // eyetwitch animation
-    std::vector<Texture2D> animGlitch_;    // glitch animation
-    std::vector<Texture2D> animLeaking_;   // leaking animation
-    std::vector<Texture2D> animLeanover_;  // leanover animation
-    std::vector<Texture2D> animSpin_;      // spin animation
-    std::vector<Texture2D> animWiggle_;    // wiggle animation
-    std::vector<Texture2D> animWobble_;    // wobble animation
+    void advanceClipFrame(float deltaTime);
+    const std::vector<Texture2D>* activeFrames() const;
 
 private:
     // Path-based movement state

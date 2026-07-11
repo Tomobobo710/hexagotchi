@@ -206,14 +206,35 @@ void HexViewScene::update(float deltaTime) {
         gotchi->setDead(true);
     }
 
-    // Freeze vitals while the tutorial is actively teaching -- must happen
-    // before Scene::update() since that's what drives gotchi->update() (added
-    // via addActor()). Written directly to GameState (what GotchiSim
-    // actually reads) since Gotchi::setStatsFrozen() forwards through
-    // Gotchi::gameState_, which nothing wires up -- see GotchiScene's
-    // matching fix for details.
+    // Sleep-collapse gate: same trigger as GotchiScene::applySleepCollapseGate()
+    // (the visible Sleep bar, SLEEP_DEBT, hits 100) -- duplicated here
+    // because the player can be exploring the hexboard when it happens, not
+    // just sitting on the home screen. Locks buttons via
+    // applyTutorialLocks()-equivalent logic below and holds the gotchi in
+    // "wobble" until the player merges (never auto-merges).
+    bool justCollapsed = false;
+    bool sleepMaxed = gotchi && gotchi->getStats().getStat(SecondaryStat::SLEEP_DEBT) >= 100.0f;
+    if (gameState_ && !gameState_->sleepCollapsed && sleepMaxed && gameState_->mode == Mode::Gotchi) {
+        gameState_->sleepCollapsed = true;
+        justCollapsed = true;
+    }
+    bool collapseFreeze = gameState_ && gameState_->sleepCollapsed;
+
+    // Merge only exists as a button on GotchiScene -- send the player back
+    // there immediately so the collapse doesn't strand them on the hexboard
+    // with no way to actually merge.
+    if (justCollapsed && getSceneManager()) {
+        static_cast<SceneManager*>(getSceneManager())->switchScene("gotchi");
+    }
+
+    // Freeze vitals while the tutorial is actively teaching, or once
+    // collapsed -- must happen before Scene::update() since that's what
+    // drives gotchi->update() (added via addActor()). Written directly to
+    // GameState (what GotchiSim actually reads) since Gotchi::setStatsFrozen()
+    // forwards through Gotchi::gameState_, which nothing wires up -- see
+    // GotchiScene's matching fix for details.
     if (gameState_) {
-        gameState_->statsFrozen = tutorialController_ && tutorialController_->isActive();
+        gameState_->statsFrozen = (tutorialController_ && tutorialController_->isActive()) || collapseFreeze;
     }
 
     Scene::update(deltaTime);
@@ -221,13 +242,20 @@ void HexViewScene::update(float deltaTime) {
     // Gotchi update is handled by Scene::update() since it was added via addActor()
     // Keeping only the explicit draw() call in HexViewScene::draw()
 
-    // One-shot: fire the death transition exactly once. See GotchiScene's
-    // matching check for why deathTriggered_ is needed on top of
-    // switchScene()'s own currentSceneName guard.
-    if (gotchi && gotchi->isDead() && !deathTriggered_) {
-        deathTriggered_ = true;
-        if (getSceneManager()) {
-            static_cast<SceneManager*>(getSceneManager())->switchScene("death");
+    // Death is the ONLY state that auto-transitions on its own -- see
+    // GotchiScene's matching block for the full rationale. Play the death
+    // animation, hold DEATH_HOLD_SECONDS, then switch to DeathScene once.
+    if (gotchi && gotchi->isDead() && deathHoldTimer_ < 0.0f) {
+        deathHoldTimer_ = DEATH_HOLD_SECONDS;
+        gotchi->playClip("fallover", false);
+    }
+    if (deathHoldTimer_ >= 0.0f) {
+        deathHoldTimer_ -= deltaTime;
+        if (deathHoldTimer_ <= 0.0f && !deathTriggered_) {
+            deathTriggered_ = true;
+            if (getSceneManager()) {
+                static_cast<SceneManager*>(getSceneManager())->switchScene("death");
+            }
         }
     }
 

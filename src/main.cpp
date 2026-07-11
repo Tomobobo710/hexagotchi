@@ -12,6 +12,7 @@
 #include "game/ApartmentScene.hpp"
 #include "game/TherapistOfficeScene.hpp"
 #include "game/OfficeScene.hpp"
+#include "game/KidsVisitScene.hpp"
 #include "game/SchoolScene.hpp"
 #include "game/Model3DTestScene.hpp"
 #include "game/MergeScene.hpp"
@@ -263,6 +264,7 @@ int main() {
     sceneManager->registerScene("sprite_test", new SpriteTestScene());
     sceneManager->registerScene("pizza_parlor", new PizzaParlorScene(dialog));
     sceneManager->registerScene("apartment", new ApartmentScene(dialog));
+    sceneManager->registerScene("kids_visit", new KidsVisitScene(dialog));
     sceneManager->registerScene("therapist_office", new TherapistOfficeScene(dialog));
     sceneManager->registerScene("office", new OfficeScene(dialog));
     sceneManager->registerScene("school", new SchoolScene(dialog));

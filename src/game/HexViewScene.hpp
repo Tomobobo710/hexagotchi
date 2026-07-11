@@ -87,6 +87,12 @@ private:
     // isDead() check in update().
     bool deathTriggered_ = false;
 
+    // Counts down from DEATH_HOLD_SECONDS once isDead() first flips true;
+    // the death animation plays and holds on screen for this long before
+    // switching to DeathScene. Negative = not counting.
+    float deathHoldTimer_ = -1.0f;
+    static constexpr float DEATH_HOLD_SECONDS = 5.0f;
+
     // Vitals display
     void drawVitals() const;
 };

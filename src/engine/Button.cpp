@@ -122,10 +122,28 @@ void Button::draw() {
         int textY = (int)(bounds.y + (bounds.height - fontSize) / 2.0f);
         DrawText(label.c_str(), textX, textY, fontSize, txt);
     }
+
+    // Tooltip: a small pill just above the button, only while hovered and
+    // enabled -- a locked button shouldn't explain a feature the player
+    // can't use yet.
+    if (!tooltip.empty() && hovered && enabled) {
+        int tipFontSize = 14;
+        int tipPadding = 8;
+        int tipWidth = MeasureText(tooltip.c_str(), tipFontSize);
+        float tipX = bounds.x + (bounds.width - tipWidth) / 2.0f - tipPadding;
+        float tipHeight = (float)(tipFontSize + tipPadding * 2);
+        float tipY = bounds.y - tipHeight - 6.0f;
+
+        Rectangle tipRect = { tipX, tipY, (float)(tipWidth + tipPadding * 2), tipHeight };
+        DrawRectangleRounded(tipRect, 0.3f, 8, {0, 0, 0, 200});
+        DrawText(tooltip.c_str(), (int)(tipX + tipPadding), (int)(tipY + tipPadding), tipFontSize, WHITE);
+    }
 }
 
 void Button::setLabel(const std::string& text) { label = text; }
 const std::string& Button::getLabel() const { return label; }
+
+void Button::setTooltip(const std::string& text) { tooltip = text; }
 
 void Button::setPosition(Vector2 pos) { position = pos; }
 Vector2 Button::getPosition() const { return position; }

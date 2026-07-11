@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 // Global event bus (extern'd in main.cpp)
 extern EventBus globalEventBus;
@@ -17,44 +18,6 @@ GotchiStatsScene::GotchiStatsScene()
     : Scene(720.0f, 720.0f, {40, 40, 60, 255}), simTime_(0.0f), frameCount_(0) {
     gotchiDir = "gotchis/001";
 }
-
-// ============================================================================
-// Enum-to-string helpers
-// ============================================================================
-
-std::string GotchiStatsScene::modeToString(Mode mode) const {
-    switch (mode) {
-        case Mode::Gotchi:    return "Gotchi";
-        case Mode::HexBoard:  return "HexBoard";
-        case Mode::Story:     return "Story";
-        default:              return "Unknown";
-    }
-}
-
-std::string GotchiStatsScene::firstMergeToString(FirstMerge fm) const {
-    switch (fm) {
-        case FirstMerge::NotYet:      return "NotYet";
-        case FirstMerge::Immediate:   return "Immediate";
-        case FirstMerge::AfterABit:   return "AfterABit";
-        case FirstMerge::AfterNeglect:return "AfterNeglect";
-        default:                      return "Unknown";
-    }
-}
-
-// ============================================================================
-// Value visitor for flags map
-// ============================================================================
-
-struct ValuePrinter {
-    std::string operator()(bool v) const { return v ? "true" : "false"; }
-    std::string operator()(int v) const { return std::to_string(v); }
-    std::string operator()(float v) const {
-        std::ostringstream oss;
-        oss << std::fixed << std::setprecision(2) << v;
-        return oss.str();
-    }
-    std::string operator()(const std::string& v) const { return v; }
-};
 
 void GotchiStatsScene::init() {
     Scene::init();
@@ -67,7 +30,6 @@ void GotchiStatsScene::init() {
 
     gotchi = new Gotchi({360.0f, 360.0f}, stats, mood, gameState_);
     gotchi->setTag("gotchi");
-    gotchi->setWanderEnabled(false);   // Stop floating in idle state
     addActor(gotchi);
 
     // Framing: set fixed world scale and compute camera zoom to fill ~60% of screen
@@ -91,12 +53,6 @@ void GotchiStatsScene::init() {
 
     // Set initial action (will use the loaded frames)
     gotchi->setAction("idle");
-
-    // Subscribe to CareAction events for the DEBUG panel
-    careActionToken_ = globalEventBus.subscribe(EventType::CareAction, [this](const Event& e) {
-        this->lastCareAction_ = e.ia;
-        this->careActionCount_++;
-    });
 
     // Add navigation button
     addNavigationButton("< BACK TO GOTCHI", "gotchi", (float)GAME_W / 2.0f, (float)GAME_H - 30);
@@ -153,82 +109,6 @@ void GotchiStatsScene::draw() {
     if (!gotchi) return;
 
     const GotchiStats& stats = gotchi->getStats();
-
-    // ==============================
-    // DEBUG PANEL (left side - right 3rd of screen)
-    // ==============================
-    // Only show DEBUG panel when we have access to globalGameState
-    // Draw semi-transparent dark background
-    int debugX = 480;
-    int debugY = 40;
-    DrawRectangle(debugX, debugY, 224, 600, {20, 20, 30, 200});
-
-    int dx = debugX + 10;
-    int dy = debugY + 15;
-    int lineH = 14;
-
-    // DEBUG header
-    DrawText("DEBUG STATE READOUT", dx, dy, 12, {100, 255, 100, 255});
-    dy += 18;
-
-    // Check if we can access globalGameState
-    if (gameState_) {
-        // Helper to print a line
-        auto printLine = [&](const std::string& label, const std::string& value) {
-            DrawText((label + ": " + value).c_str(), dx, dy, 11, {200, 200, 200, 255});
-            dy += lineH;
-        };
-
-        // Hidden drivers
-        printLine("drivers.affection", std::to_string(gameState_->drivers.affection));
-        printLine("drivers.mercy", std::to_string(gameState_->drivers.mercy));
-        printLine("drivers.survival", std::to_string(gameState_->drivers.survival));
-
-        // Metronome / neglect
-        printLine("sleep", std::to_string(gameState_->sleep));
-        printLine("grime", std::to_string(gameState_->grime));
-
-        // Flow
-        printLine("mode", modeToString(gameState_->mode));
-        printLine("seenReality", gameState_->seenReality ? "true" : "false");
-        printLine("deathEnabled", gameState_->deathEnabled ? "true" : "false");
-        printLine("collapsed", gameState_->collapsed ? "true" : "false");
-        printLine("firstMergeBucket", firstMergeToString(gameState_->firstMergeBucket));
-        printLine("storyBeatIndex", std::to_string(gameState_->storyBeatIndex));
-        printLine("mergeCount", std::to_string(gameState_->mergeCount));
-        printLine("mergeLockTimer", std::to_string(gameState_->mergeLockTimer));
-        printLine("engagedCareSide", gameState_->engagedCareSide ? "true" : "false");
-        printLine("engagedStorySide", gameState_->engagedStorySide ? "true" : "false");
-
-        // Meta
-        printLine("playtimeSeconds", std::to_string(static_cast<int>(gameState_->playtimeSeconds)));
-
-        // ENGINE NEEDS (the engine copy, not yet synced to visible bars)
-        printLine("ENGINE NEEDS:", "");
-        dy += 2;
-        printLine("  needs.hunger", std::to_string(gameState_->needs.hunger));
-        printLine("  needs.hygiene", std::to_string(gameState_->needs.hygiene));
-        printLine("  needs.affection", std::to_string(gameState_->needs.affection));
-        printLine("  needs.energy", std::to_string(gameState_->needs.energy));
-
-        // Flags
-        printLine("flags:", "");
-        dy += 2;
-        for (const auto& [key, value] : gameState_->flags) {
-            std::string printed = std::visit(ValuePrinter{}, value);
-            printLine("  " + key, printed);
-        }
-
-        // CareAction observation (from subscription)
-        printLine("CareAction:", "");
-        dy += 2;
-        printLine("  last", lastCareAction_ >= 0 ? std::to_string(lastCareAction_) : "N/A");
-        printLine("  count", std::to_string(careActionCount_));
-    } else {
-        DrawText("globalGameState not available", dx, dy, 11, {150, 150, 150, 255});
-        dy += lineH;
-        DrawText("(this scene needs gameState_ set)", dx, dy, 10, {100, 100, 100, 200});
-    }
 
     // ==============================
     // LEFT COLUMN: Core Vital Stats (moved right, now on left side)
@@ -353,33 +233,71 @@ void GotchiStatsScene::draw() {
     ey += 20;
 
     // ==============================
-    // BOTTOM CENTER: Mood & Status
+    // BOTTOM: Mood & Needs Attention
     // ==============================
     int mx2 = 16;
     int my2 = 540;
 
     // Current Mood
-    DrawText("CURRENT MOOD", mx2, my2, 14, {255, 220, 100, 255});
-    my2 += 18;
+    DrawText("CURRENT MOOD", mx2, my2, 24, {255, 220, 100, 255});
+    my2 += 40;
     std::string moodName = gotchi->getMood().getMoodName();
-    DrawText(moodName.c_str(), mx2, my2, 20, {255, 255, 255, 255});
-    my2 += 30;
-
-    // Mood color indicator
-    Color moodTint = gotchi->getMood().getMoodTint();
-    DrawRectangle(mx2, my2, 50, 50, moodTint);
-    DrawRectangleLines(mx2, my2, 50, 50, {255, 255, 255, 200});
+    DrawText(moodName.c_str(), mx2, my2, 40, {255, 255, 255, 255});
     my2 += 60;
 
-    // Age
-    float age = stats.getStat(SecondaryStat::AGE);
-    DrawText(("Age: " + std::to_string(static_cast<int>(age))).c_str(), mx2, my2, 12, {200, 200, 200, 255});
-    my2 += 16;
+    // Needs Attention -- one wrapped pill listing every stat currently out
+    // of range, matching the old center-panel look (light-blue pill, red
+    // text) instead of the plain unreadable line it had regressed to.
+    std::vector<std::string> needs;
+    if (stats.getNormalizedStat(SecondaryStat::FOOD_LEVEL) > 0.7f) needs.push_back("Hungry");
+    if (stats.getNormalizedStat(SecondaryStat::HYDRATION) > 0.7f) needs.push_back("Thirsty");
+    if (stats.getNormalizedStat(SecondaryStat::SLEEP_DEBT) > 0.7f) needs.push_back("Sleepy");
+    if (stats.getNormalizedStat(SecondaryStat::FITALITY) < 0.3f) needs.push_back("Sick");
+    if (stats.getNormalizedStat(EmotionalStat::HAPPINESS) < 0.3f) needs.push_back("Sad");
 
-    // Show tick rate
-    std::string tickText = "Ticks: " + std::to_string(static_cast<int>(gotchi->getStats().getStat(SecondaryStat::AGE)));
-    DrawText(tickText.c_str(), mx2, my2, 12, {150, 150, 200, 255});
-    my2 += 16;
+    if (!needs.empty()) {
+        std::string needsText = "[NEEDS ATTENTION] ";
+        for (size_t i = 0; i < needs.size(); i++) {
+            if (i > 0) needsText += ", ";
+            needsText += needs[i];
+        }
+
+        int fontSize = 20;
+        int maxWidth = GAME_W - mx2 - 16;
+
+        // Word-wrap into lines that fit maxWidth.
+        std::vector<std::string> lines;
+        std::istringstream wordStream(needsText);
+        std::string word, currentLine;
+        while (wordStream >> word) {
+            std::string testLine = currentLine.empty() ? word : currentLine + " " + word;
+            if (MeasureText(testLine.c_str(), fontSize) > maxWidth && !currentLine.empty()) {
+                lines.push_back(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (!currentLine.empty()) lines.push_back(currentLine);
+
+        int pillPadding = 12;
+        int lineHeight = fontSize + 6;
+        int pillHeight = (int)lines.size() * lineHeight + pillPadding * 2;
+        int pillWidth = 0;
+        for (const auto& line : lines) {
+            pillWidth = std::max(pillWidth, MeasureText(line.c_str(), fontSize));
+        }
+        pillWidth += pillPadding * 2;
+
+        DrawRectangle(mx2, my2, pillWidth, pillHeight, {135, 206, 250, 255});
+
+        int textY = my2 + pillPadding;
+        for (const auto& line : lines) {
+            DrawText(line.c_str(), mx2 + pillPadding, textY, fontSize, {230, 60, 60, 255});
+            textY += lineHeight;
+        }
+        my2 += pillHeight;
+    }
 
     // Draw buttons
     for (auto& btn : buttons) {
@@ -389,11 +307,6 @@ void GotchiStatsScene::draw() {
 
 void GotchiStatsScene::cleanup() {
     Scene::cleanup();
-    // Unsubscribe from CareAction events
-    if (careActionToken_ != 0) {
-        globalEventBus.unsubscribe(careActionToken_);
-        careActionToken_ = 0;
-    }
     gotchi = nullptr;
     buttons.clear();
 }

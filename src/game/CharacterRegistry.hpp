@@ -17,6 +17,7 @@ enum class CharacterId {
     Karen,
     Ronzer,
     Jimmy,
+    Bimmy,          // Jimmy's brother -- Tom & Karen's other son
     Judy,
     Larry,
     Loraine,        // Larry's secretary

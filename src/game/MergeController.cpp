@@ -18,9 +18,12 @@ MergeController::MergeController(EventBus& bus, GameState& state, SceneManager& 
             return;  // Ignore if merge is locked
         }
         if (state_.seenReality) {
-            // After first merge, check the voluntary flag
-            if (!state_.getBool(flag::VOLUNTARY_MERGE_UNLOCKED, false)) {
-                return;  // Ignore manual request when flag is false
+            // After first merge, Merge is only unlocked by the sleep-collapse
+            // gate (see GotchiScene::applySleepCollapseGate() /
+            // HexViewScene::update()) -- the player wobbling at SLEEP_DEBT
+            // 100. There is no other way to voluntarily merge post-tutorial.
+            if (!state_.sleepCollapsed) {
+                return;  // Ignore manual request when not sleep-collapsed
             }
         }
         // Request is valid — enter the merge
@@ -46,10 +49,12 @@ void MergeController::update(float dt) {
         }
     }
 
-    // 3. If seenReality, mode == Gotchi, merge available, and sleep <= 0, force a merge
-    if (state_.seenReality && state_.mode == Mode::Gotchi && isMergeAvailable() && state_.sleep <= 0.0f) {
-        enterMerge(true);
-    }
+    // Sleep hitting its cap NEVER auto-merges -- it only locks every button
+    // except Merge and holds the gotchi in the wobble pose (see
+    // GotchiScene::applySleepCollapseGate()). The player must click Merge
+    // themselves. The one and only auto-transition is death (see
+    // GotchiScene/HexViewScene's death-timer handling), which is unrelated
+    // to MergeController entirely.
 }
 
 bool MergeController::isMergeAvailable() const {
@@ -80,13 +85,14 @@ void MergeController::enterMerge(bool forced) {
     //
     // mergeCount is only incremented on the way BACK (returnFromMerge), so at
     // enter-time it still reads the count BEFORE this merge:
-    //   first merge ever -> mergeCount == 0  (also !seenReality)
-    // Checks 2 and 3 fire at hardcoded later merge counts (fill in when those
-    // story beats exist), e.g.:
-    //   if (state_.mergeCount == N) recordHappinessCheckpoint(state_, 2);
-    //   if (state_.mergeCount == M) recordHappinessCheckpoint(state_, 3);
+    //   1st merge -> mergeCount == 0 (also !seenReality) -> check 1
+    //   3rd merge -> mergeCount == 2                      -> check 2
+    // Check 3 fires at a later hardcoded merge count once that beat exists:
+    //   else if (state_.mergeCount == M) recordHappinessCheckpoint(state_, 3);
     if (state_.mergeCount == 0) {
         recordHappinessCheckpoint(state_, 1);   // Check 1 -- the first merge
+    } else if (state_.mergeCount == 2) {
+        recordHappinessCheckpoint(state_, 2);   // Check 2 -- the third merge
     }
 
     // 3.3 First-merge timing bucket (computed only on first merge)
@@ -135,6 +141,12 @@ void MergeController::returnFromMerge() {
 
     // Reset sleep to full so the next drain cycle can begin
     state_.sleep = SLEEP_FULL;
+
+    // Reset the visible Sleep bar too (0 = rested, 100 = exhausted) -- this
+    // is the stat GotchiScene's vitals HUD actually shows the player;
+    // state_.sleep above is a separate hidden 0..1 metronome that drives the
+    // merge-forcing/collapse gate, not what's on screen.
+    state_.vitals.setStat(SecondaryStat::SLEEP_DEBT, 0.0f);
 
     // Set engagedStorySide
     state_.engagedStorySide = true;

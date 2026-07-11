@@ -10,6 +10,7 @@
 #include "EventType.h"
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 // ============================================================================
 // Action Overlay Fragment Shaders
@@ -387,16 +388,15 @@ void GotchiScene::init() {
     GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
     GotchiMood& mood = gameState_ ? gameState_->mood : defaultMood_;
 
-    // Get saved hex position from GameState, default to center (0, 0)
-    int gotchiQ = gameState_ ? gameState_->gotchiHexQ : 0;
-    int gotchiR = gameState_ ? gameState_->gotchiHexR : 0;
-
-    // Create gotchi at the saved hex position
-    HexCoords startHex(gotchiQ, gotchiR);
-    Vector2 gotchiPos = startHex.toPixel(128.0f);  // Use a reasonable hex size for gotchi scene
+    // This scene is always a fixed close-up shot of the gotchi centered on
+    // its own 720x720 screen -- gotchiHexQ/gotchiHexR is HexViewScene's
+    // hexboard-world tile coordinate (can be far from the origin), not a
+    // position on this screen. Reusing it here made the gotchi drift toward
+    // whatever tile it last stood on out on the hexboard instead of staying
+    // centered.
+    Vector2 gotchiPos = {360.0f, 360.0f};
     gotchi = new Gotchi(gotchiPos, stats, mood, gameState_);
     gotchi->setTag("gotchi");
-    gotchi->setHexSize(128.0f);
     addActor(gotchi);
 
     // Initialize the Gotchi (no longer resets vitals - they persist in GameState)
@@ -405,13 +405,10 @@ void GotchiScene::init() {
     // Load animation frames using the Gotchi's loader
     gotchi->loadAnimationFrames(gotchiDir);
 
-    // Fix 1: Set initial action AFTER loading frames - this now properly starts idle animation
+    // Set initial action AFTER loading frames - this now properly starts idle animation
     gotchi->setAction("idle");
 
-    // Fix 2: Disable wandering so gotchi stays still in idle state
-    gotchi->setWanderEnabled(false);
-
-    // Fix 3: Size the gotchi based on actual frame dimensions (native 64px)
+    // Size the gotchi based on actual frame dimensions (native 64px)
     Vector2 frameSize = gotchi->getFrameSize();
     if (frameSize.x > 0 && frameSize.y > 0) {
         gotchi->setSize(frameSize.x, frameSize.y);  // Base size = native frame pixels
@@ -487,46 +484,62 @@ void GotchiScene::init() {
 
 void GotchiScene::addButtons() {
     buttons.clear();
+    mergeButton_ = nullptr;  // buttons.clear() just destroyed whatever this pointed to
     lastClickedButton_ = "";
     buttonCooldowns_.clear();
     buttonFeedbackTimer_ = 0.0f;
 
-    // Add action buttons at the bottom
-    // Seven buttons: Explore, Wash, Groom, Feed, Pet, Water, Merge
-    float buttonWidth = 80.0f;
-    float buttonHeight = 32.0f;
-    float totalWidth = 7 * buttonWidth + 6 * 10.0f;  // 7 buttons + 6 gaps
+    // Eight buttons, 2 rows of 4, 2x the old size:
+    // Row 1: Explore, Wash, Groom, Feed
+    // Row 2: Pet, Water, Sleep (inert placeholder), Merge
+    float buttonWidth = 160.0f;
+    float buttonHeight = 64.0f;
+    float gap = 16.0f;
+    float totalWidth = 4 * buttonWidth + 3 * gap;
     float startX = (GAME_W - totalWidth) / 2.0f;
-    float y = GAME_H - 40.0f;
+    float row1Y = GAME_H - 160.0f;
+    float row2Y = GAME_H - 80.0f;
 
     std::string mergeLabel = mergeController_ ? mergeController_->mergeButtonLabel() : "Merge";
 
-    std::vector<std::string> labels = {"EXPLORE", "Wash", "Groom", "Feed", "Pet", "Water", mergeLabel};
-    for (size_t i = 0; i < labels.size(); i++) {
-        float x = startX + i * (buttonWidth + 10.0f);
-        // The last button (index 6) is the merge button
-        addButton(labels[i], x, y, (i == 6));
+    std::vector<std::string> row1 = {"EXPLORE", "Wash", "Groom", "Feed"};
+    std::vector<std::string> row2 = {"Pet", "Water", "Sleep", mergeLabel};
+
+    for (size_t i = 0; i < row1.size(); i++) {
+        float x = startX + i * (buttonWidth + gap);
+        addButton(row1[i], x, row1Y, false);
+    }
+    for (size_t i = 0; i < row2.size(); i++) {
+        float x = startX + i * (buttonWidth + gap);
+        // The last button in row 2 (index 3) is the merge button
+        addButton(row2[i], x, row2Y, (i == 3));
     }
 
-    // Add "Detailed Vitals" button at bottom center
-    addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, (float)GAME_H - 80);
+    // Add "Detailed Vitals" button at the top of the screen instead of the
+    // bottom -- the bottom is now fully packed with the 2x8-button layout.
+    addNavigationButton("DETAILED VITALS", "gotchi_stats", (float)GAME_W / 2.0f, 20.0f);
 }
 
 void GotchiScene::addButton(const std::string& label, float x, float y, bool isMergeButton) {
-    float buttonWidth = 80.0f;
-    float buttonHeight = 32.0f;
+    float buttonWidth = 160.0f;
+    float buttonHeight = 64.0f;
     Button* btn = new Button({x, y}, buttonWidth, buttonHeight, label);
     btn->setAnchor("top-left");
-    btn->setFontSize(12);
+    btn->setFontSize(20);
     btn->setBackgroundColor({60, 60, 100, 220});
     btn->setHoverColor({100, 100, 160, 240});
     btn->setBorderColor({150, 150, 200, 255});
+
+    if (label == "Sleep") {
+        btn->setTooltip("Use this to sleep in HexLand!");
+    }
 
     if (isMergeButton) {
         // Merge button emits MergeRequested on the event bus
         btn->setOnClick([this]() {
             onMergeButtonClicked();
         });
+        mergeButton_ = btn;
     } else if (label == "EXPLORE") {
         btn->setOnClick([this]() {
             onExploreButtonClicked();
@@ -576,15 +589,6 @@ void GotchiScene::update(float deltaTime) {
         if (gameState_) gameState_->statsFrozen = tutorialFreeze || collapseFreeze;
         gotchi->update(deltaTime);
 
-        // Gotchi::update()'s own action-timer logic auto-resets back to
-        // "idle" once actionTimer_ elapses (setAction("wobble") never sets
-        // one), so re-assert wobble every frame while collapsed to hold the
-        // pose until the player merges -- there's no timed "wobble is over"
-        // moment here, it should stay locked in place indefinitely.
-        if (collapseFreeze) {
-            gotchi->setAction("wobble");
-        }
-
         // Sync gotchi's current hex position to GameState
         if (gameState_) {
             HexCoords currentHex = gotchi->getCurrentHex();
@@ -599,15 +603,25 @@ void GotchiScene::update(float deltaTime) {
         needsBackgroundUpdate_ = false;
     }
 
-    // One-shot: fire the death transition exactly once. switchScene()'s
-    // own currentSceneName guard isn't enough here since the fade takes
-    // time to actually leave this scene -- without deathTriggered_ this
-    // would re-call switchScene() every frame of the fade and reset its
-    // timer forever.
-    if (gotchi->isDead() && !deathTriggered_) {
-        deathTriggered_ = true;
-        if (getSceneManager()) {
-            static_cast<SceneManager*>(getSceneManager())->switchScene("death");
+    // Death is the ONLY state that auto-transitions on its own -- sleep
+    // maxing out only locks buttons and holds "wobble", waiting on the
+    // player to press Merge. On death: play the death animation, hold it on
+    // screen for DEATH_HOLD_SECONDS, then switch to DeathScene once.
+    if (gotchi->isDead() && deathHoldTimer_ < 0.0f) {
+        deathHoldTimer_ = DEATH_HOLD_SECONDS;
+        gotchi->playClip("fallover", false);  // play once, hold last frame
+    }
+    if (deathHoldTimer_ >= 0.0f) {
+        deathHoldTimer_ -= deltaTime;
+        // switchScene()'s own currentSceneName guard isn't enough here since
+        // the fade takes time to actually leave this scene -- without
+        // deathTriggered_ this would re-call switchScene() every frame of
+        // the fade and reset its timer forever.
+        if (deathHoldTimer_ <= 0.0f && !deathTriggered_) {
+            deathTriggered_ = true;
+            if (getSceneManager()) {
+                static_cast<SceneManager*>(getSceneManager())->switchScene("death");
+            }
         }
     }
 
@@ -618,11 +632,27 @@ void GotchiScene::update(float deltaTime) {
     // Update merge button label if seenReality has changed
     if (mergeController_) {
         const char* currentLabel = mergeController_->mergeButtonLabel();
-        // Check if the merge button label needs to be updated
-        if (buttons.size() > 6) {
-            std::string currentButtonLabel = buttons[6]->getLabel();
+        // Merge is always the last button added in addButtons() (row 2,
+        // index 3 of 4 -- i.e. the last of the whole 8-button vector), but
+        // indexing that positionally is exactly what broke last time the
+        // layout changed (a stale buttons[6] silently started overwriting
+        // "Sleep" once the row grew from 7 to 8 buttons). Look it up by the
+        // Button object actually flagged as the merge button instead.
+        if (mergeButton_) {
+            std::string currentButtonLabel = mergeButton_->getLabel();
             if (currentButtonLabel != currentLabel) {
-                buttons[6]->setLabel(currentLabel);
+                mergeButton_->setLabel(currentLabel);
+            }
+        }
+    }
+
+    // Sleep only appears once the player has merged at least once
+    // (GameState::seenReality) -- it doesn't exist as an option before then.
+    if (gameState_) {
+        for (auto& btn : buttons) {
+            if (btn->getLabel() == "Sleep") {
+                btn->setVisible(gameState_->seenReality);
+                break;
             }
         }
     }
@@ -642,6 +672,18 @@ void GotchiScene::update(float deltaTime) {
             static_cast<SceneManager*>(getSceneManager())->switchScene("hexboard");
         } else if (tutorialController_->isFinished()) {
             tutorialController_->finish();
+
+            // The tutorial makes the player actually press Feed/Pet/Wash to
+            // teach the buttons, which for real changes hunger/happiness/
+            // cleanliness/mood -- reset that back to a fresh starting state
+            // once the tutorial is done, so those forced practice presses
+            // don't leave the gotchi in a different state than a player who
+            // skips nothing sees at the real start of the game.
+            if (gameState_) {
+                gameState_->vitals.reset();
+                gameState_->mood.clearMoodOverlays();
+                gameState_->mood.setCurrentMood(GotchiMoodType::MOOD_00_HAPPY);
+            }
         }
     }
 
@@ -684,6 +726,11 @@ void GotchiScene::draw() {
     // ==============================
     int lx = 16;
     int ly = 40;
+
+    // Backing pill so the panel reads over busy background art -- sized to
+    // the actual content (header + 6 stat rows), not an oversized guess.
+    DrawRectangleRounded({ (float)lx - 10, (float)ly - 12, 225.0f, 140.0f }, 0.12f, 8, {0, 0, 0, 140});
+
     DrawText("VITAL STATS", lx, ly, 14, {100, 200, 255, 255});
     ly += 18;
 
@@ -736,131 +783,80 @@ void GotchiScene::draw() {
     ly += 24;
 
     // ==============================
-    // CENTER: Mood Display
+    // TOP-RIGHT: Current Mood + Needs Attention
     // ==============================
-    int cx = 280;
-    int cy = 40;
-
-    // Current Mood (large, prominent)
-    DrawText("CURRENT MOOD", cx, cy, 14, {255, 220, 100, 255});
-    cy += 20;
-    std::string moodName = gotchi->getMood().getMoodName();
-    DrawText(moodName.c_str(), cx, cy, 24, {255, 255, 255, 255});
-    cy += 35;
-
-    // Mood color indicator
-    Color moodTint = gotchi->getMood().getMoodTint();
-    DrawRectangle(cx, cy, 40, 40, moodTint);
-    DrawRectangleLines(cx, cy, 40, 40, {255, 255, 255, 200});
-    cy += 50;
-
-    // Mood description
-    DrawText("Mood Drivers:", cx, cy, 12, {150, 150, 200, 255});
-    cy += 16;
-
-    // Calculate and display key mood drivers
-    float happiness = gotchi->getStats().getNormalizedStat(EmotionalStat::HAPPINESS);
-    float excitement = gotchi->getStats().getNormalizedStat(EmotionalStat::EXCITEMENT);
-    float satisfaction = gotchi->getStats().getNormalizedStat(EmotionalStat::SATISFACTION);
-
-    std::vector<std::pair<std::string, float>> moodDrivers;
-    moodDrivers.push_back({"Happiness", happiness});
-    moodDrivers.push_back({"Excitement", excitement});
-    moodDrivers.push_back({"Satisfaction", satisfaction});
-    moodDrivers.push_back({"Energy", energy});
-    moodDrivers.push_back({"Health", health});
-
-    for (const auto& driver : moodDrivers) {
-        DrawText((driver.first + ": " + std::to_string(static_cast<int>(driver.second * 100)) + "%").c_str(), cx, cy, 11, {180, 180, 200, 255});
-        cy += 14;
-    }
-
-    // ==============================
-    // TOP-RIGHT: Status & Info
-    // ==============================
-    int rx = 520;
+    int rx = 460;
     int ry = 40;
+    int rightPanelWidth = GAME_W - rx - 16;
 
-    // Draw a blinking/running indicator to show simulation is active
-    float blinkTimer = std::fmod(simTime_, 1.0f);
-    bool blinkOn = blinkTimer < 0.5f;
+    // Needs Attention text -- wrapped to fit the panel width, computed up
+    // front so we know the whole panel's height before drawing its pill.
+    std::vector<std::string> needs;
+    float happiness = gotchi->getStats().getNormalizedStat(EmotionalStat::HAPPINESS);
+    if (hunger > 0.7f) needs.push_back("Hungry");
+    if (thirst > 0.7f) needs.push_back("Thirsty");
+    if (sleep > 0.7f) needs.push_back("Sleepy");
+    if (health < 0.3f) needs.push_back("Sick");
+    if (happiness < 0.3f) needs.push_back("Sad");
 
-    if (blinkOn) {
-        DrawText("RUNNING", rx, ry, 12, {100, 255, 100, 255});
-    } else {
-        DrawText("RUNNING", rx, ry, 12, {50, 200, 50, 255});
-    }
-    ry += 16;
-
-    // Status indicators
-    std::string statusText;
-    if (gotchi->isSleeping()) {
-        statusText = "[SLEEPING] - Needs rest";
-        DrawText(statusText.c_str(), rx, ry, 12, {150, 100, 255, 255});
-        ry += 16;
-    } else if (gotchi->isDead()) {
-        statusText = "[DEAD] - Game Over";
-        DrawText(statusText.c_str(), rx, ry, 12, {255, 50, 50, 255});
-        ry += 16;
-    } else if (!gotchi->isActive()) {
-        statusText = "[INACTIVE] - Click to interact";
-        DrawText(statusText.c_str(), rx, ry, 12, {255, 200, 50, 255});
-        ry += 16;
-    } else {
-        // Check for needs that require action
-        std::vector<std::string> needs;
-        if (hunger > 0.7f) needs.push_back("Hungry");
-        if (thirst > 0.7f) needs.push_back("Thirsty");
-        if (sleep > 0.7f) needs.push_back("Sleepy");
-        if (health < 0.3f) needs.push_back("Sick");
-        if (happiness < 0.3f) needs.push_back("Sad");
-
-        if (!needs.empty()) {
-            for (size_t i = 0; i < needs.size(); i++) {
-                if (i > 0) statusText += ", ";
-                statusText += needs[i];
-            }
-            statusText = "[NEEDS ATTENTION] " + statusText;
-            DrawText(statusText.c_str(), rx, ry, 12, {255, 100, 100, 255});
-            ry += 16;
-        } else {
-            DrawText("[ALL GOOD] - Gotchi is content", rx, ry, 12, {100, 255, 100, 255});
-            ry += 16;
+    int needsFontSize = 14;
+    int needsLineHeight = needsFontSize + 4;
+    std::vector<std::string> needsLines;
+    if (!needs.empty()) {
+        std::string needsText = "[NEEDS ATTENTION] ";
+        for (size_t i = 0; i < needs.size(); i++) {
+            if (i > 0) needsText += ", ";
+            needsText += needs[i];
         }
+
+        std::istringstream wordStream(needsText);
+        std::string word, currentLine;
+        while (wordStream >> word) {
+            std::string testLine = currentLine.empty() ? word : currentLine + " " + word;
+            if (MeasureText(testLine.c_str(), needsFontSize) > rightPanelWidth && !currentLine.empty()) {
+                needsLines.push_back(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (!currentLine.empty()) needsLines.push_back(currentLine);
     }
 
-    // Show formatted time
-    int totalSeconds = static_cast<int>(simTime_);
-    int minutes = totalSeconds / 60;
-    int seconds = totalSeconds % 60;
+    // Backing pill covers the whole panel -- mood header/name plus every
+    // needs-attention line -- not just the needs text on its own.
+    int panelHeight = 18 + 30 + (int)needsLines.size() * needsLineHeight;
+    DrawRectangleRounded({ (float)rx - 10, (float)ry - 12, (float)rightPanelWidth + 4, (float)panelHeight + 16 }, 0.12f, 8, {0, 0, 0, 140});
 
-    std::ostringstream clock;
-    clock << "Time: " << (minutes < 10 ? "0" : "") << minutes << ":"
-          << (seconds < 10 ? "0" : "") << seconds;
-    DrawText(clock.str().c_str(), rx, ry, 11, {200, 200, 200, 255});
-    ry += 16;
+    // Current Mood
+    DrawText("CURRENT MOOD", rx, ry, 14, {255, 220, 100, 255});
+    ry += 18;
+    std::string moodName = gotchi->getMood().getMoodName();
+    DrawText(moodName.c_str(), rx, ry, 20, {255, 255, 255, 255});
+    ry += 30;
 
-    // Show tick rate
-    std::string tickText = "Ticks: " + std::to_string(static_cast<int>(gotchi->getStats().getStat(SecondaryStat::AGE)));
-    DrawText(tickText.c_str(), rx, ry, 11, {150, 150, 200, 255});
-    ry += 16;
-
-    // Stats summary
-    DrawText("STAT SUMMARY", rx, ry, 12, {150, 150, 255, 255});
-    ry += 16;
-
-    std::ostringstream summary;
-    summary << "Health: " << static_cast<int>(health * 100)
-            << " | Hunger: " << static_cast<int>(hunger * 100)
-            << " | Energy: " << static_cast<int>(energy * 100)
-            << " | Mood: " << moodName;
-    DrawText(summary.str().c_str(), rx, ry, 11, {200, 200, 200, 255});
+    // Needs Attention -- plain text on the shared panel background, no
+    // separate colored pill of its own.
+    for (const auto& line : needsLines) {
+        DrawText(line.c_str(), rx, ry, needsFontSize, {255, 120, 120, 255});
+        ry += needsLineHeight;
+    }
 
     // Draw button click message above action buttons
     if (!lastClickedButton_.empty()) {
-        int msgWidth = MeasureText(lastClickedButton_.c_str(), 12);
+        int msgFontSize = 24;
+        int msgWidth = MeasureText(lastClickedButton_.c_str(), msgFontSize);
         int msgX = (GAME_W - msgWidth) / 2;
-        DrawText(lastClickedButton_.c_str(), msgX, GAME_H - 140, 12, {255, 255, 255, 255});
+        int msgY = GAME_H - 210;  // was -240; moved down 30px
+
+        int pillPadding = 8;
+        Rectangle msgPill = {
+            (float)(msgX - pillPadding), (float)(msgY - pillPadding),
+            (float)(msgWidth + pillPadding * 2), (float)(msgFontSize + pillPadding * 2)
+        };
+        DrawRectangleRounded(msgPill, 0.4f, 8, {0, 0, 0, 160});
+
+        DrawText(lastClickedButton_.c_str(), msgX, msgY, msgFontSize, {255, 255, 255, 255});
     }
 
     // Draw buttons with cooldown overlay
@@ -1020,6 +1016,12 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         lastClickedButton_ = "Not available yet";
         buttonFeedbackTimer_ = 1.5f;
         return;   // early-out BEFORE the success block, so no cooldown/shader fires
+    } else if (action == "Sleep") {
+        stats.setStat(SecondaryStat::SLEEP_DEBT, 0.0f);
+        stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
+        mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 8.0f);
+        feedback = "Slept - Fully rested";
+        // No shader overlay for this one -- shaderMode stays -1.
     } else {
         success = false;
     }
@@ -1171,14 +1173,19 @@ void GotchiScene::updateBackgroundForHex(int q, int r) {
 }
 
 void GotchiScene::applySleepCollapseGate() {
-    if (!gameState_) return;
+    if (!gameState_ || !gotchi) return;
 
+    // Trips off the visible Sleep bar (SLEEP_DEBT, 0=rested/100=exhausted --
+    // what the player actually watches on the HUD), not the separate hidden
+    // 0..1 "sleep" metronome, which no longer forces or gates anything.
+    //
     // Only trip while the gotchi is actually out in the world -- Mode::Story
     // already means merge is irrelevant (we're mid-beat), so don't collapse
     // out from under a story scene.
-    if (!gameState_->sleepCollapsed && gameState_->sleep <= 0.0f && gameState_->mode == Mode::Gotchi) {
+    bool sleepMaxed = gotchi->getStats().getStat(SecondaryStat::SLEEP_DEBT) >= 100.0f;
+    if (!gameState_->sleepCollapsed && sleepMaxed && gameState_->mode == Mode::Gotchi) {
         gameState_->sleepCollapsed = true;
-        if (gotchi) gotchi->setAction("wobble");
+        gotchi->setAction("wobble");
     }
 }
 

@@ -130,7 +130,9 @@ void OfficeScene::init() {
           2, false, false, PortraitEmotion::Mid, "Loraine (the secretary)",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy },
 
-        // --- Larry asks for Tom's merge metrics; Loraine reads the stats ----
+        // --- Larry asks for Tom's own vitals (the player-managed stats);
+        // Loraine reads them. These are TOM'S numbers -- his performance as a
+        // well-kept toy -- not the alien's. See Scenario D's frame comment.
         { CharacterId::Larry, "Loraine, pull up the numbers\non Tom's latest merge.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
@@ -232,6 +234,94 @@ void OfficeScene::init() {
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Narrator, "Tom goes back out there.",
           -1, false },
+    });
+
+    // --- Scenario 2 (Scenario Z): the endcap -------------------------------
+    // A tiny reusable "return Tom to the gotchi side" beat: Tom walks in from
+    // off the left edge to the middle of the office, mutters one psych-himself-
+    // up line, and that's it. Use this scenario whenever a merge sequence just
+    // needs to end on the office and hand back to the tomagotchi side without a
+    // full scripted scene. The specific mutter is picked at trigger time from a
+    // small pool (see triggerScenario) so repeat visits don't always read the
+    // same line -- the text baked here is just the default/fallback.
+    scenarios.push_back({
+        { CharacterId::Tom, "Keep it together. You need this job.",
+          0, false, false, PortraitEmotion::Sad, "",
+          /*movesAtStart*/ { ActorMove{0, {{500.0f, 320.0f}}, 200.0f} }, {},
+          PoseEmotion::Sad },
+    });
+
+    // --- Scenario 3 (Scenario D): "what does Tom actually DO?" -------------
+    // THE CORE FRAME: Tom IS a tomagotchi. Larry runs a business of people who
+    // are tomagotchis for players in another universe -- Tom is one of his
+    // assets. Tom's JOB is to BE the toy: to get fed, cleaned, kept happy, and
+    // to perform for the alien kid (= the actual PLAYER) pressing the buttons.
+    // Loraine reads TOM'S OWN live vitals -- the stats the player has been
+    // managing -- as his performance review. The KPI is the alien's engagement
+    // (they keep playing), and a well-kept toy drives it. Larry is fully in on
+    // the reality; this is just his industry. Comedy = the gap between how
+    // gravely Larry treats it and how absurd "professional pet" is; dark =
+    // Tom slowly getting that his whole worth is being a fun toy.
+    scenarios.push_back({
+        { CharacterId::Larry, "Tom. Sit. Well -- stand. We don't\nhave chairs. This is a big one.",
+          1, false, false, PortraitEmotion::Mid, "",
+          /*movesAtStart*/ {
+              ActorMove{0, {{371.0f, 309.0f}}, 900.0f},
+              ActorMove{1, {{581.0f, 304.0f}}, 900.0f},
+          }, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Larry, "Your player's up for their quarterly\nEngagement review. Your player, Tom.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "...The kid. The little alien\nwho won't stop poking me.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Larry, "The CLIENT, Tom. The player. You are\ntheir toy. A happy toy keeps them playing.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "Why does some snot-faced alien kid\nget to press buttons on ME all day?",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "I'm a grown man. I have a divorce.\nI have a KEY to an apartment.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Larry, "And a book of business worth MILLIONS\nin engagement. Loraine -- his numbers.",
+          1, false, false, PortraitEmotion::Mid, "",
+          /*movesAtStart*/ {
+              ActorMove{2, {{206.0f, 342.0f}}, 320.0f},
+          }, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Loraine, "Right away, sir.",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        // Loraine reads TOM'S OWN live vitals -- the ones the player manages.
+        // This is his performance review as a toy; a fed/clean/happy Tom is
+        // what keeps the alien engaged.
+        { CharacterId::Loraine, loraineStats1,
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, loraineStats2,
+          2, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
+        { CharacterId::Larry, "You SEE that, Tom? When YOUR numbers\ndip, the player logs off. Bad for everyone.",
+          1, true, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Sad },
+        { CharacterId::Tom, "...So my job is to let myself\nbe taken care of. By a child. An alien one.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Larry, "Now you're getting it!\nThat's the whole job, baby!",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "Eat when they feed me.\nSleep when they let me. Smile for the glass.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Loraine, "It's more stable than most careers,\nhonestly. Full benefits, too.",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "...I don't know what to do with that.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Larry, "Nothing! Do NOTHING harder! Go out there\nand get PAMPERED, champ! Engagement!",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
     });
 }
 
@@ -346,6 +436,23 @@ void OfficeScene::cleanup() {
 void OfficeScene::triggerScenario(int index) {
     if (activeScenario >= 0) return;
     if (index < 0 || index >= (int)scenarios.size()) return;
+
+    // Scenario Z (endcap) picks Tom's mutter from a small pool so repeat uses
+    // don't always read the same line. Rotates deterministically (no rand seed
+    // needed); overwrites just this scenario's single line's text in place.
+    if (index == 2 && !scenarios[2].empty()) {
+        static const char* Z_MUTTERS[] = {
+            "Keep it together. You need this job.",
+            "Ugh. Mondays.",
+            "Just smile. Just nod. Just breathe.",
+            "One more day. It's just one more day.",
+            "You're a professional. You're a professional.",
+        };
+        static int zPick = 0;
+        int n = (int)(sizeof(Z_MUTTERS) / sizeof(Z_MUTTERS[0]));
+        scenarios[2][0].text = Z_MUTTERS[zPick % n];
+        zPick++;
+    }
 
     activeScenario = index;
     lineIndex = 0;

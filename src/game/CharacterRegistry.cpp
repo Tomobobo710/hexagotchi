@@ -41,6 +41,14 @@ const CharacterInfo kJimmy = {
     {"poses/jimmy/jimmyposesad.png", "poses/jimmy/jimmyposemid.png", "poses/jimmy/jimmyposehappy.png", "poses/jimmy/jimmyposescared.png"},
 };
 
+const CharacterInfo kBimmy = {
+    "Bimmy",
+    {60, 170, 90, 255}, {60, 170, 90, 255},   // green kid, distinct from Jimmy's blue
+    {60, 170, 90, 255}, {20, 70, 40, 255},
+    {"portraits/bimmy/bimmysad.png", "portraits/bimmy/bimmymid.png", "portraits/bimmy/bimmyhappy.png"},
+    {"poses/bimmy/bimmyposesad.png", "poses/bimmy/bimmyposemid.png", "poses/bimmy/bimmyposehappy.png", "poses/bimmy/bimmyposescared.png"},
+};
+
 const CharacterInfo kJudy = {
     "Judy",
     {255, 255, 255, 255}, {22, 160, 133, 255},
@@ -103,6 +111,7 @@ const CharacterInfo& CharacterRegistry::get(CharacterId id) {
         case CharacterId::Karen:     return kKaren;
         case CharacterId::Ronzer:    return kRonzer;
         case CharacterId::Jimmy:     return kJimmy;
+        case CharacterId::Bimmy:     return kBimmy;
         case CharacterId::Judy:      return kJudy;
         case CharacterId::Larry:     return kLarry;
         case CharacterId::Loraine:   return kLoraine;

@@ -11,12 +11,30 @@ Sequence ScenarioDirector::SelectSequence(const GameState& state) {
     // StorySequencer wraps whatever we return in its own merge-in / merge-out
     // transitions, so a sequence is just the story steps between them.
 
-    // --- 2nd merge: the pizza parlor beat ---
+    // --- 2nd merge: pizza -> kids at the apartment -> office endcap ---
     //   pizza_parlor 0  -- Karen needling Tom, Ronzer heckling
-    // Merge in -> pizza -> merge back out to the gotchi scene.
+    //   kids_visit   0  -- Bimmy & Jimmy at Tom's cold apartment
+    //   office       2  -- Scenario Z endcap: Tom mutters, then merge out
+    // Merge in -> these three -> merge back out to the gotchi scene.
     if (state.mergeCount == 1) {
         return {
             { "pizza_parlor", 0, false },
+            { "kids_visit", 0, false },
+            { "office", 2, false },
+        };
+    }
+
+    // --- 3rd merge: what does Tom even DO -> therapy -> office endcap ---
+    //   office            3  -- Scenario D: Larry takes the "job" gravely,
+    //                            Tom questions why anyone cares, Loraine reads
+    //                            live stats as the player's clue
+    //   therapist_office  0  -- "The Last Session": the digital-pet metaphor
+    //   office            2  -- Scenario Z endcap, then merge out
+    if (state.mergeCount == 2) {
+        return {
+            { "office", 3, false },
+            { "therapist_office", 0, false },
+            { "office", 2, false },
         };
     }
 

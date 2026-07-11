@@ -48,6 +48,8 @@ private:
     float simTime_ = 0.0f;  // Total simulation time
     int frameCount_ = 0;    // Frame counter for animation
     std::vector<std::unique_ptr<Button>> buttons;
+    Button* mergeButton_ = nullptr;  // Non-owning; points into buttons. Set in addButton() so the
+                                      // merge-label refresh in update() never has to guess an index.
     std::string lastClickedButton_;  // Message to display when a button is clicked
     EventBus* eventBus_ = nullptr;   // Event bus for merge button events and CareAction subscription
     int careActionToken_ = 0;        // Event subscription token for CareAction
@@ -75,6 +77,12 @@ private:
     // One-shot guard so the "death" scene switch only fires once per entry
     // into this scene -- see the isDead() check in update().
     bool deathTriggered_ = false;
+
+    // Counts down from DEATH_HOLD_SECONDS once isDead() first flips true;
+    // the death animation plays and holds on screen for this long before
+    // GotchiScene actually switches to DeathScene. Negative = not counting.
+    float deathHoldTimer_ = -1.0f;
+    static constexpr float DEATH_HOLD_SECONDS = 5.0f;
 
     // Button cooldown system
     std::map<std::string, float> buttonCooldowns_;
@@ -117,10 +125,6 @@ private:
     // Background management
     void loadBiomeBackgrounds();
     void updateBackgroundForHex(int q, int r);
-
-    // Explore button logic
-    void addExploreButton();
-    void updateExploreButtonVisibility();
 
     // Back button on hexboard - handled in HexViewScene
     // This is just a placeholder to note the navigation relationship

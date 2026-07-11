@@ -35,7 +35,9 @@ inline bool IsIntegerScalingEnabled() {
 inline constexpr float GOTCHI_WORLD_SCALE = 2.0f;
 
 // Gotchi screen fraction - target fraction of framebuffer height to fill with the gotchi
-// 0.60 means the gotchi will fill ~60% of the 720px framebuffer height (~432px)
-inline constexpr float GOTCHI_SCREEN_FRAC = 0.60f;
+// 0.30 means the gotchi will fill ~30% of the 720px framebuffer height (~216px) --
+// halved from 0.60 (too much screen real estate). The action-shader overlay
+// reads the gotchi's own screen rect, so it shrinks along with the sprite.
+inline constexpr float GOTCHI_SCREEN_FRAC = 0.30f;
 
 #endif // GAME_CONSTANTS_HPP

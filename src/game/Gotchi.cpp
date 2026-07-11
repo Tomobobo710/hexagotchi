@@ -13,9 +13,40 @@
 const float GOTCHI_WIDTH = 64.0f;
 const float GOTCHI_HEIGHT = 64.0f;
 const float GOTCHI_MOVE_SPEED = 50.0f;
-const float GOTCHI_WANDER_SPEED = 20.0f;
 const float GOTCHI_TICK_RATE = 10.0f;  // Base tick rate in seconds
 
+namespace {
+    // Logical action name -> real asset-file prefix under assets/gotchis/NNN/.
+    // Only names actually used anywhere in the codebase are listed (grep for
+    // `setAction("` / `playClip("` across src/ if you're adding a new one).
+    // A name with no entry here, or whose target prefix has no loaded
+    // frames, falls back to "idle" in playClip() -- so a missing clip reads
+    // as "still idling", never a blank/frozen sprite.
+    const std::unordered_map<std::string, std::string>& clipAliases() {
+        static const std::unordered_map<std::string, std::string> table = {
+            {"idle",   "idle"},
+            {"walk",   "walk"},
+            {"move",   "walk"},    // legacy name for the same clip
+            {"wobble", "wobble"},  // sleep-collapse hold pose
+            // "eat", "play", "sleep" have no dedicated art in
+            // assets/gotchis/001 (no eat_*/play_*/sleep_*.png exist) --
+            // deliberately NOT aliased to a substitute clip here. playClip()
+            // falls back to idle for any name that isn't in this table or
+            // whose target has no frames, so care actions still show the
+            // gotchi idling (not frozen/invisible) until real art exists.
+        };
+        return table;
+    }
+
+    // Seconds per frame, per clip -- defaults to DEFAULT_CLIP_FRAME_DURATION
+    // for any prefix not listed here. Wobble runs at 4x that (25% speed),
+    // per request, since 0.15s read as too fast for the sleep-collapse hold.
+    constexpr float DEFAULT_CLIP_FRAME_DURATION = 0.15f;
+    float clipFrameDuration(const std::string& prefix) {
+        if (prefix == "wobble") return DEFAULT_CLIP_FRAME_DURATION * 4.0f;
+        return DEFAULT_CLIP_FRAME_DURATION;
+    }
+}
 
 Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef, GameState* gameState)
     : SceneActor(position, GOTCHI_WIDTH, GOTCHI_HEIGHT),
@@ -25,10 +56,6 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef, Gam
       sleeping_(false),
       dead_(false),
       debugMode_(false),
-      wanderEnabled_(true),  // Default to enabled for compatibility
-      wanderTimer_(0.0f),
-      currentAction_("idle"),
-      actionTimer_(0.0f),
       hexSize_(64.0f),  // Default hex size, can be set by scene
       pathIndex_(0),
       followingPath_(false),
@@ -43,35 +70,7 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef, Gam
     setGravityEnabled(false);
     setFriction(0.95f);
     setLayer(ACTOR_LAYER_FOREGROUND);
-
-    // Initialize animation frames
-    animIdle_.clear();
-    animMove_.clear();
-    animEat_.clear();
-    animSleep_.clear();
-    animPlay_.clear();
-    animSad_.clear();
-    animHappy_.clear();
-    animBounce_.clear();
-    animHurt_.clear();
-    animWalk_.clear();
-    animDie_.clear();
-    animDieTwo_.clear();
-    animDieThree_.clear();
-    animBlink_.clear();
-    animFlash_.clear();
-    animStepping_.clear();
-    animRun_.clear();
-    animArmswap_.clear();
-    animEyetwitch_.clear();
-    animGlitch_.clear();
-    animLeaking_.clear();
-    animLeanover_.clear();
-    animSpin_.clear();
-    animWiggle_.clear();
-    animWobble_.clear();
 }
-
 
 void Gotchi::init() {
     // NOTE: Vitals are now owned by GameState and persist across scenes.
@@ -82,65 +81,39 @@ void Gotchi::init() {
     mood_.setCurrentMood(GotchiMoodType::MOOD_00_HAPPY);
 
     // Set initial action
-    setAction("idle");
-
+    playClip("idle");
 }
 
 void Gotchi::update(float deltaTime) {
-    // Skip updates if dead
+    // Skip everything except the animation clip while dead -- the death/
+    // fallover clip should still play out (and hold its last frame) instead
+    // of freezing on whatever frame it happened to be on the instant
+    // setDead(true) was called.
     if (dead_) {
+        advanceClipFrame(deltaTime);
         return;
     }
-
-    TraceLog(LOG_DEBUG, "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f)",
-             followingPath_ ? 1 : 0, pathIndex_, position.x, position.y);
 
     // Update SceneActor base class (physics, etc.)
     SceneActor::update(deltaTime);
 
-    // Vitals/mood ticking now lives centrally in GotchiSim (GameState is the
-    // single source of truth); this local loop only drives the action timer.
-    actionTimer_ -= deltaTime;
-    if (actionTimer_ <= 0) {
-        // Action complete, return to idle
-        if (!sleeping_ && currentAction_ != "idle") {
-            setAction("idle");
-        }
-    }
-
-    // Animation update
-    updateAnimation(deltaTime);
-
-    // Movement logic - only if wander is enabled
-    if (!sleeping_ && currentAction_ == "idle" && wanderEnabled_) {
-        // Random wandering
-        wanderTimer_ -= deltaTime;
-        if (wanderTimer_ <= 0) {
-            wander(deltaTime);
-            wanderTimer_ = 2.0f + (rand() % 3) * 0.5f;  // 2-3.5 seconds
-        }
-    }
+    // Advance the current animation clip's frame timer.
+    advanceClipFrame(deltaTime);
 
     // State machine update (handles autonomous item-based behavior)
     updateStateMachine(deltaTime);
 
-    // Path-based movement (higher priority than wander/target)
+    // Path-based movement (only real, player/state-machine-driven movement --
+    // wander/random-target drifting has been removed entirely: it moved the
+    // gotchi and re-triggered "walk" on its own schedule with no gate for
+    // "the gotchi should be holding still right now" states like the
+    // sleep-collapse wobble, which it kept silently overriding).
     if (followingPath_ && !currentPath_.empty()) {
         updatePathMovement(deltaTime);
-    }
-
-    // Move towards target if set (fallback for non-path movement)
-    if (targetPosition_.x != 0 || targetPosition_.y != 0) {
-        moveToTarget(deltaTime);
     }
 }
 
 void Gotchi::updatePathMovement(float deltaTime) {
-    TraceLog(LOG_DEBUG,
-        "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f) dead=%d sleeping=%d pathN=%d",
-        followingPath_ ? 1 : 0, pathIndex_, position.x, position.y,
-        dead_ ? 1 : 0, sleeping_ ? 1 : 0, (int)currentPath_.size());
-
     if (dead_ || sleeping_) return;
     if (currentPath_.empty()) { followingPath_ = false; return; }
     if (pathIndex_ >= static_cast<int>(currentPath_.size())) {
@@ -148,7 +121,7 @@ void Gotchi::updatePathMovement(float deltaTime) {
         HexCoords finalHex = currentPath_[currentPath_.size() - 1];
         position = finalHex.toPixel(hexSize_);
         followingPath_ = false;
-        setAction("idle");
+        playClip("idle");
         velocity = {0, 0};
         return;
     }
@@ -165,13 +138,13 @@ void Gotchi::updatePathMovement(float deltaTime) {
         pathIndex_++;
         if (pathIndex_ >= static_cast<int>(currentPath_.size())) {
             followingPath_ = false;
-            setAction("idle");
+            playClip("idle");
         }
     } else {
         position.x += (delta.x / distance) * step;
         position.y += (delta.y / distance) * step;
         setScale({ delta.x >= 0.0f ? 1.0f : -1.0f, 1.0f });  // face travel direction
-        setAction("walk");
+        playClip("walk");
     }
     velocity = {0, 0};  // do not fight or depend on base physics
 }
@@ -232,7 +205,6 @@ void Gotchi::updateStats(float ticks) {
     // Check for death
     if (currentHealth <= 0.0f) {
         dead_ = true;
-        setAction("idle");
         if (debugMode_) {
             std::cout << "[Gotchi] Has died!\n";
         }
@@ -246,33 +218,15 @@ void Gotchi::draw() {
     float h = height * std::fabs(scale.y);
     Rectangle dest = { position.x - w * 0.5f, position.y - h * 0.5f, w, h };  // centered
 
+    const std::vector<Texture2D>* frames = activeFrames();
     const Texture2D* drawTexture = nullptr;
-    Rectangle src = { 0.0f, 0.0f, 0.0f, 0.0f };   // always initialized
+    Rectangle src = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    if (animating && animIsFrameList) {
-        if (!animFrames.empty()) {
-            int idx = currentFrame % static_cast<int>(animFrames.size());  // bounds-safe
-            if (idx < 0) idx = 0;
-            drawTexture = &animFrames[idx];
-            src = { 0.0f, 0.0f, (float)drawTexture->width, (float)drawTexture->height };
-        }
-    } else if (animating) {
-        drawTexture = &texture;
-        src = { (float)(currentFrame * frameWidth), 0.0f, (float)frameWidth, (float)frameHeight };
-    } else if (texture.id != 0) {
-        drawTexture = &texture;
-        src = { 0.0f, 0.0f, (float)texture.width, (float)texture.height };
-    }
-
-    // Check if animFrames has valid textures
-    bool validFrame = false;
-    if (animating && animIsFrameList && !animFrames.empty()) {
-        int idx = currentFrame % static_cast<int>(animFrames.size());
-        if (idx >= 0 && idx < (int)animFrames.size()) {
-            if (animFrames[idx].id != 0) {
-                validFrame = true;
-            }
-        }
+    if (frames && !frames->empty()) {
+        int idx = currentFrameIndex_ % static_cast<int>(frames->size());
+        if (idx < 0) idx = 0;
+        drawTexture = &(*frames)[idx];
+        src = { 0.0f, 0.0f, (float)drawTexture->width, (float)drawTexture->height };
     }
 
     if (drawTexture && drawTexture->id != 0) {
@@ -308,11 +262,6 @@ void Gotchi::draw() {
 
 void Gotchi::setActive(bool a) {
     active_ = a;
-    if (!active_) {
-        pause();
-    } else {
-        play();
-    }
 }
 
 bool Gotchi::isActive() const {
@@ -325,12 +274,8 @@ void Gotchi::setSleeping(bool sleeping) {
     if (gameState_) {
         gameState_->sleeping = sleeping;
     }
-    if (sleeping) {
-        setAction("sleep");
-        setFriction(0.99f);  // Don't move while sleeping
-    } else {
-        setFriction(0.95f);
-    }
+    setFriction(sleeping ? 0.99f : 0.95f);  // Don't move while sleeping
+    playClip("idle");  // no dedicated sleep art (see clipAliases()) -- idle stands in
 }
 
 bool Gotchi::isSleeping() const {
@@ -339,10 +284,6 @@ bool Gotchi::isSleeping() const {
 
 void Gotchi::setDead(bool dead) {
     dead_ = dead;
-    if (dead_) {
-        setAction("idle");
-        pause();
-    }
 }
 
 bool Gotchi::isDead() const {
@@ -361,10 +302,6 @@ void Gotchi::interact() {
     mood_.addMoodOverlay(GotchiMoodType::MOOD_10_JOYFUL, 5.0f);
     mood_.addMoodOverlay(GotchiMoodType::MOOD_31_PLAYFUL, 3.0f);
 
-    // Set playful action
-    setAction("play");
-    actionTimer_ = 2.0f;
-
     if (debugMode_) {
         std::cout << "[Gotchi] Interacted! Happiness increased.\n";
     }
@@ -382,9 +319,6 @@ void Gotchi::feed() {
     mood_.addMoodOverlay(GotchiMoodType::MOOD_02_SATISFIED, 10.0f);
     mood_.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
 
-    setAction("eat");
-    actionTimer_ = 3.0f;
-
     if (debugMode_) {
         std::cout << "[Gotchi] Fed! Hunger reduced.\n";
     }
@@ -399,9 +333,6 @@ void Gotchi::play() {
 
     mood_.addMoodOverlay(GotchiMoodType::MOOD_01_EXCITED, 8.0f);
     mood_.addMoodOverlay(GotchiMoodType::MOOD_31_PLAYFUL, 5.0f);
-
-    setAction("play");
-    actionTimer_ = 4.0f;
 }
 
 void Gotchi::clean() {
@@ -412,9 +343,6 @@ void Gotchi::clean() {
 
     mood_.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
     mood_.addMoodOverlay(GotchiMoodType::MOOD_14_PEACEFUL, 8.0f);
-
-    setAction("idle");
-    actionTimer_ = 1.0f;
 
     if (debugMode_) {
         std::cout << "[Gotchi] Cleaned!\n";
@@ -430,9 +358,6 @@ void Gotchi::heal() {
     mood_.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
     mood_.addMoodOverlay(GotchiMoodType::MOOD_45_HEALTHY, 15.0f);
 
-    setAction("idle");
-    actionTimer_ = 1.0f;
-
     if (debugMode_) {
         std::cout << "[Gotchi] Healed!\n";
     }
@@ -442,7 +367,6 @@ void Gotchi::sleep() {
     if (dead_) return;
 
     setSleeping(true);
-    setAction("sleep");
 
     mood_.addMoodOverlay(GotchiMoodType::MOOD_06_SLEEPY, 0.0f);  // Clear existing
     mood_.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 30.0f);
@@ -458,415 +382,108 @@ void Gotchi::wake() {
     mood_.clearMoodOverlays();
     mood_.addMoodOverlay(GotchiMoodType::MOOD_00_HAPPY, 10.0f);
 
-    setAction("idle");
-
     if (debugMode_) {
         std::cout << "[Gotchi] Woke up!\n";
     }
 }
 
-void Gotchi::setTargetPosition(Vector2 target) {
-    targetPosition_ = target;
+const std::vector<Texture2D>* Gotchi::activeFrames() const {
+    auto it = clips_.find(currentClip_);
+    if (it == clips_.end() || it->second.empty()) return nullptr;
+    return &it->second;
 }
 
-void Gotchi::moveToTarget(float deltaTime) {
-    if (dead_ || sleeping_) return;
+void Gotchi::playClip(const std::string& logicalName, bool loop) {
+    // Resolve the logical name to an asset prefix, falling back to idle if
+    // there's no alias or the aliased clip has no loaded frames -- see
+    // clipAliases() for the whole table and why some names intentionally
+    // aren't in it.
+    std::string prefix = logicalName;
+    auto aliasIt = clipAliases().find(logicalName);
+    if (aliasIt != clipAliases().end()) {
+        prefix = aliasIt->second;
+    }
 
-    Vector2 delta = {targetPosition_.x - position.x, targetPosition_.y - position.y};
-    float distance = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+    auto clipIt = clips_.find(prefix);
+    if (clipIt == clips_.end() || clipIt->second.empty()) {
+        prefix = "idle";
+    }
 
-    if (distance > 5.0f) {
-        // Normalize and move
-        float scale = GOTCHI_MOVE_SPEED * deltaTime / distance;
-        velocity.x = delta.x * scale;
-        velocity.y = delta.y * scale;
+    if (currentClip_ == prefix) return;  // already playing this clip -- don't restart it
 
-        setAction("move");
-        actionTimer_ = 0.0f;  // Reset for animation
+    currentClip_ = prefix;
+    currentFrameIndex_ = 0;
+    frameTimer_ = 0.0f;
+    currentClipLoops_ = loop;
+    currentClipFrameDuration_ = clipFrameDuration(prefix);
+}
 
-        // Face direction
-        if (delta.x > 0) {
-            setScale({1.0f, 1.0f});
+void Gotchi::advanceClipFrame(float deltaTime) {
+    const std::vector<Texture2D>* frames = activeFrames();
+    if (!frames || frames->size() <= 1) return;
+
+    frameTimer_ += deltaTime;
+    while (frameTimer_ >= currentClipFrameDuration_) {
+        frameTimer_ -= currentClipFrameDuration_;
+        int next = currentFrameIndex_ + 1;
+        if (next >= (int)frames->size()) {
+            if (currentClipLoops_) {
+                currentFrameIndex_ = 0;
+            } else {
+                currentFrameIndex_ = (int)frames->size() - 1;
+                if (onClipFinished_) onClipFinished_();
+                break;
+            }
         } else {
-            setScale({-1.0f, 1.0f});
-        }
-    } else {
-        // Arrived
-        targetPosition_ = {0, 0};
-        velocity = {0, 0};
-        setAction("idle");
-    }
-}
-
-void Gotchi::wander(float deltaTime) {
-    if (dead_ || sleeping_) return;
-
-    // Random direction
-    float angle = (rand() % 360) * (PI / 180.0f);
-    Vector2 dir = {std::cos(angle), std::sin(angle)};
-
-    velocity.x = dir.x * GOTCHI_WANDER_SPEED;
-    velocity.y = dir.y * GOTCHI_WANDER_SPEED;
-
-    setAction("move");
-    actionTimer_ = 0.0f;
-
-    // Set facing direction
-    if (dir.x > 0) {
-        setScale({1.0f, 1.0f});
-    } else {
-        setScale({-1.0f, 1.0f});
-    }
-
-    // Stop after wandering for a bit
-    setTargetPosition({position.x + dir.x * 100, position.y + dir.y * 100});
-}
-
-void Gotchi::setAction(const std::string& action) {
-    // Only early-return if same action AND animating with valid frames
-    // This ensures idle animation starts properly after loadAnimationFrames()
-    if (currentAction_ == action && animating && !animFrames.empty()) return;
-
-    currentAction_ = action;
-    actionTimer_ = 0.0f;
-
-    // Animation setup based on action
-    // Maps logical actions to available animation files
-    if (action == "idle") {
-        clearAnimation();
-        if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.2f, true);
-            play();
-        }
-    } else if (action == "move") {
-        // Map 'move' to 'walk' animation
-        clearAnimation();
-        if (!animMove_.empty()) {
-            setAnimationFrames(animMove_, 0.1f, true);
-            play();
-        }
-    } else if (action == "walk") {
-        // Explicit walk animation for path following
-        clearAnimation();
-        if (!animWalk_.empty()) {
-            setAnimationFrames(animWalk_, 0.15f, true);
-            play();
-        } else if (!animMove_.empty()) {
-            // Fallback to move animation
-            setAnimationFrames(animMove_, 0.15f, true);
-            play();
-        }
-    } else if (action == "eat") {
-        clearAnimation();
-        if (!animEat_.empty()) {
-            setAnimationFrames(animEat_, 0.15f, false);
-            play();
-        } else if (!animBounce_.empty()) {
-            setAnimationFrames(animBounce_, 0.15f, false);
-            play();
-        } else if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.2f, true);   // keep the gotchi visible while "eating"
-            play();
-        }
-    } else if (action == "sleep") {
-        clearAnimation();
-        if (!animSleep_.empty()) {
-            setAnimationFrames(animSleep_, 0.3f, true);
-            play();
-        } else if (!animIdle_.empty()) {
-            // Fallback to idle if sleep not available
-            setAnimationFrames(animIdle_, 0.3f, true);
-            play();
-        }
-    } else if (action == "play") {
-        // Map 'play' to available animation (bounce doesn't exist, use idle as fallback)
-        clearAnimation();
-        if (!animPlay_.empty()) {
-            setAnimationFrames(animPlay_, 0.1f, false);
-            play();
-        } else if (!animBounce_.empty()) {
-            setAnimationFrames(animBounce_, 0.1f, false);
-            play();
-        } else if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.15f, true);
-            play();
-        }
-    } else if (action == "sad") {
-        // Map 'sad' to 'hurt' animation
-        clearAnimation();
-        if (!animSad_.empty()) {
-            setAnimationFrames(animSad_, 0.25f, true);
-            play();
-        } else if (!animHurt_.empty()) {
-            setAnimationFrames(animHurt_, 0.25f, true);
-            play();
-        } else if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.25f, true);
-            play();
-        }
-    } else if (action == "happy") {
-        // Map 'happy' to 'idle' or 'bounce' animation
-        clearAnimation();
-        if (!animHappy_.empty()) {
-            setAnimationFrames(animHappy_, 0.15f, true);
-            play();
-        } else if (!animBounce_.empty()) {
-            setAnimationFrames(animBounce_, 0.15f, true);
-            play();
-        } else if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.15f, true);
-            play();
-        }
-    } else if (action == "die") {
-        // Death animation - try specific variants first, then fallback
-        clearAnimation();
-        if (!animDie_.empty()) {
-            setAnimationFrames(animDie_, 0.2f, false);
-            play();
-        } else if (!animDieTwo_.empty()) {
-            setAnimationFrames(animDieTwo_, 0.2f, false);
-            play();
-        } else if (!animDieThree_.empty()) {
-            setAnimationFrames(animDieThree_, 0.2f, false);
-            play();
-        }
-    } else if (action == "fallover") {
-        clearAnimation();
-        if (!animDieTwo_.empty()) {
-            setAnimationFrames(animDieTwo_, 0.2f, false);
-            play();
-        } else if (!animDie_.empty()) {
-            setAnimationFrames(animDie_, 0.2f, false);
-            play();
-        }
-    } else if (action == "downdie") {
-        clearAnimation();
-        if (!animDieThree_.empty()) {
-            setAnimationFrames(animDieThree_, 0.2f, false);
-            play();
-        } else if (!animDie_.empty()) {
-            setAnimationFrames(animDie_, 0.2f, false);
-            play();
-        }
-    } else if (action == "run") {
-        clearAnimation();
-        if (!animRun_.empty()) {
-            setAnimationFrames(animRun_, 0.1f, true);
-            play();
-        } else if (!animWalk_.empty()) {
-            setAnimationFrames(animWalk_, 0.1f, true);
-            play();
-        }
-    } else if (action == "armswap") {
-        clearAnimation();
-        if (!animArmswap_.empty()) {
-            setAnimationFrames(animArmswap_, 0.15f, false);
-            play();
-        }
-    } else if (action == "eyetwitch") {
-        clearAnimation();
-        if (!animEyetwitch_.empty()) {
-            setAnimationFrames(animEyetwitch_, 0.1f, false);
-            play();
-        }
-    } else if (action == "glitch") {
-        clearAnimation();
-        if (!animGlitch_.empty()) {
-            setAnimationFrames(animGlitch_, 0.1f, false);
-            play();
-        }
-    } else if (action == "leaking") {
-        clearAnimation();
-        if (!animLeaking_.empty()) {
-            setAnimationFrames(animLeaking_, 0.15f, true);
-            play();
-        }
-    } else if (action == "leanover") {
-        clearAnimation();
-        if (!animLeanover_.empty()) {
-            setAnimationFrames(animLeanover_, 0.15f, true);
-            play();
-        }
-    } else if (action == "spin") {
-        clearAnimation();
-        if (!animSpin_.empty()) {
-            setAnimationFrames(animSpin_, 0.15f, true);
-            play();
-        }
-    } else if (action == "wiggle") {
-        clearAnimation();
-        if (!animWiggle_.empty()) {
-            setAnimationFrames(animWiggle_, 0.15f, false);
-            play();
-        }
-    } else if (action == "wobble") {
-        clearAnimation();
-        if (!animWobble_.empty()) {
-            setAnimationFrames(animWobble_, 0.15f, false);
-            play();
-        }
-    } else if (action == "attack") {
-        // Map attack to glitch or die animation (no exact attack exists)
-        clearAnimation();
-        if (!animGlitch_.empty()) {
-            setAnimationFrames(animGlitch_, 0.1f, false);
-            play();
-        } else if (!animDie_.empty()) {
-            setAnimationFrames(animDie_, 0.15f, false);
-            play();
-        } else if (!animHurt_.empty()) {
-            setAnimationFrames(animHurt_, 0.15f, false);
-            play();
-        }
-    } else if (action == "blink") {
-        // Map blink to blink animation (from idle_two)
-        clearAnimation();
-        if (!animBlink_.empty()) {
-            setAnimationFrames(animBlink_, 0.2f, true);
-            play();
-        } else if (!animEyetwitch_.empty()) {
-            setAnimationFrames(animEyetwitch_, 0.1f, false);
-            play();
-        } else if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.2f, true);
-            play();
-        }
-    } else if (action == "flash") {
-        // Map flash to flash animation (from hurt_two)
-        clearAnimation();
-        if (!animFlash_.empty()) {
-            setAnimationFrames(animFlash_, 0.25f, true);
-            play();
-        } else if (!animHurt_.empty()) {
-            setAnimationFrames(animHurt_, 0.25f, true);
-            play();
-        }
-    } else if (action == "stepping") {
-        // Map stepping to stepping animation (from walk_three)
-        clearAnimation();
-        if (!animStepping_.empty()) {
-            setAnimationFrames(animStepping_, 0.15f, true);
-            play();
-        } else if (!animWalk_.empty()) {
-            setAnimationFrames(animWalk_, 0.15f, true);
-            play();
-        }
-    } else if (action == "bounce") {
-        // Map bounce to idle animation (no exact bounce exists)
-        clearAnimation();
-        if (!animBounce_.empty()) {
-            setAnimationFrames(animBounce_, 0.15f, false);
-            play();
-        } else if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.15f, false);
-            play();
-        }
-    } else if (action == "sleep") {
-        // Fallback to idle if sleep not available
-        clearAnimation();
-        if (!animSleep_.empty()) {
-            setAnimationFrames(animSleep_, 0.3f, true);
-            play();
-        } else if (!animIdle_.empty()) {
-            setAnimationFrames(animIdle_, 0.3f, true);
-            play();
+            currentFrameIndex_ = next;
         }
     }
-}
-
-void Gotchi::updateAnimation(float deltaTime) {
-    // Animation is updated by SceneActor::update() when animating
-    // This is called from Gotchi::update()
 }
 
 bool Gotchi::loadAnimationFrames(const std::string& basePath) {
-    animIdle_.clear();
-    animMove_.clear();
-    animEat_.clear();
-    animSleep_.clear();
-    animPlay_.clear();
-    animSad_.clear();
-    animHappy_.clear();
-    animBounce_.clear();
-    animHurt_.clear();
-    animWalk_.clear();
-    animDie_.clear();
-    animDieTwo_.clear();
-    animDieThree_.clear();
-    animBlink_.clear();
-    animFlash_.clear();
-    animStepping_.clear();
-    animRun_.clear();
-    animArmswap_.clear();
-    animEyetwitch_.clear();
-    animGlitch_.clear();
-    animLeaking_.clear();
-    animLeanover_.clear();
-    animSpin_.clear();
-    animWiggle_.clear();
-    animWobble_.clear();
+    // Properly UnloadTexture()s any frames from a prior load -- see
+    // unloadAnimations() for why that matters.
+    unloadAnimations();
 
-    // Load animation frames using AssetPack
-    // Expected format: basePath_action_00.png, basePath_action_01.png, etc.
-    // Returns true if at least idle frames were loaded
+    // Load every real asset prefix that exists under basePath. This is the
+    // ONE place that decides what clips exist; playClip() only ever looks
+    // things up here, it never has its own per-action loading logic.
+    static const char* PREFIXES[] = {
+        "idle", "walk", "wobble", "run", "wiggle", "spin", "blink", "flash",
+        "hurt", "glitch", "armswap", "eyetwitch", "leaking", "leanover",
+        "stepping", "die", "fallover", "downdie",
+    };
+    for (const char* prefix : PREFIXES) {
+        auto frames = AssetPack::loadFrames(basePath, prefix);
+        if (!frames.empty()) {
+            clips_[prefix] = std::move(frames);
+        }
+    }
 
-    animIdle_ = AssetPack::loadFrames(basePath, "idle");
-    animMove_ = AssetPack::loadFrames(basePath, "walk");  // Map move to walk
-    animEat_ = AssetPack::loadFrames(basePath, "bounce");  // Map eat to bounce (doesn't exist, returns empty)
-    animSleep_ = AssetPack::loadFrames(basePath, "sleep"); // Doesn't exist, returns empty
-    animPlay_ = AssetPack::loadFrames(basePath, "bounce"); // Map play to bounce (doesn't exist, returns empty)
-    animSad_ = AssetPack::loadFrames(basePath, "hurt");
-    animHappy_ = AssetPack::loadFrames(basePath, "happy"); // Doesn't exist, returns empty
-    animBounce_ = AssetPack::loadFrames(basePath, "bounce"); // Doesn't exist, returns empty
-    animHurt_ = AssetPack::loadFrames(basePath, "hurt");
-    animWalk_ = AssetPack::loadFrames(basePath, "walk");
-    animDie_ = AssetPack::loadFrames(basePath, "die");
-    animDieTwo_ = AssetPack::loadFrames(basePath, "fallover");
-    animDieThree_ = AssetPack::loadFrames(basePath, "downdie");
-    animBlink_ = AssetPack::loadFrames(basePath, "blink");
-    animFlash_ = AssetPack::loadFrames(basePath, "flash");
-    animStepping_ = AssetPack::loadFrames(basePath, "stepping");
-    animRun_ = AssetPack::loadFrames(basePath, "run");
-    animArmswap_ = AssetPack::loadFrames(basePath, "armswap");
-    animEyetwitch_ = AssetPack::loadFrames(basePath, "eyetwitch");
-    animGlitch_ = AssetPack::loadFrames(basePath, "glitch");
-    animLeaking_ = AssetPack::loadFrames(basePath, "leaking");
-    animLeanover_ = AssetPack::loadFrames(basePath, "leanover");
-    animSpin_ = AssetPack::loadFrames(basePath, "spin");
-    animWiggle_ = AssetPack::loadFrames(basePath, "wiggle");
-    animWobble_ = AssetPack::loadFrames(basePath, "wobble");
+    currentClip_ = "idle";
+    currentFrameIndex_ = 0;
+    frameTimer_ = 0.0f;
 
-
-    // Return true if at least idle frames were loaded
-    return !animIdle_.empty();
+    return clips_.count("idle") != 0;
 }
 
 void Gotchi::unloadAnimations() {
-    animIdle_.clear();
-    animMove_.clear();
-    animEat_.clear();
-    animSleep_.clear();
-    animPlay_.clear();
-    animSad_.clear();
-    animHappy_.clear();
-    animBounce_.clear();
-    animHurt_.clear();
-    animWalk_.clear();
-    animDie_.clear();
-    animDieTwo_.clear();
-    animDieThree_.clear();
-    animBlink_.clear();
-    animFlash_.clear();
-    animStepping_.clear();
-    animRun_.clear();
-    animArmswap_.clear();
-    animEyetwitch_.clear();
-    animGlitch_.clear();
-    animLeaking_.clear();
-    animLeanover_.clear();
-    animSpin_.clear();
-    animWiggle_.clear();
-    animWobble_.clear();
+    // Every loadAnimationFrames() call issues a fresh GPU texture per PNG
+    // (~130 files for one gotchi). GotchiScene::init() reconstructs a
+    // brand-new Gotchi (and reloads all its frames) every single time the
+    // scene is re-entered, so this MUST actually UnloadTexture() everything
+    // -- not just clear the map -- or each round-trip through another scene
+    // piles up another full set of leaked GPU textures on top of the last.
+    for (auto& entry : clips_) {
+        for (Texture2D& tex : entry.second) {
+            if (tex.id != 0) UnloadTexture(tex);
+        }
+    }
+    clips_.clear();
+}
+
+Gotchi::~Gotchi() {
+    unloadAnimations();
 }
 
 std::string Gotchi::serialize() const {
@@ -893,7 +510,7 @@ void Gotchi::setHexPosition(int q, int r) {
     currentPath_.clear();
     pathIndex_ = 0;
     followingPath_ = false;
-    setAction("idle");
+    playClip("idle");
 }
 
 void Gotchi::setPath(const std::vector<HexCoords>& path) {
@@ -902,15 +519,7 @@ void Gotchi::setPath(const std::vector<HexCoords>& path) {
     followingPath_ = true;
 
     // Start with walk animation
-    setAction("walk");
-}
-
-void Gotchi::setWanderEnabled(bool enabled) {
-    wanderEnabled_ = enabled;
-    // Reset velocity when disabling wander to prevent residual movement
-    if (!enabled) {
-        velocity = {0.0f, 0.0f};
-    }
+    playClip("walk");
 }
 
 void Gotchi::setDebugMode(bool debug) {
@@ -919,6 +528,20 @@ void Gotchi::setDebugMode(bool debug) {
 
 bool Gotchi::isDebugMode() const {
     return debugMode_;
+}
+
+size_t Gotchi::animIdleCount() const {
+    auto it = clips_.find("idle");
+    return it == clips_.end() ? 0 : it->second.size();
+}
+
+size_t Gotchi::animWalkCount() const {
+    auto it = clips_.find("walk");
+    return it == clips_.end() ? 0 : it->second.size();
+}
+
+size_t Gotchi::animMoveCount() const {
+    return animWalkCount();  // "move" was always an alias for "walk"
 }
 
 // ============================================================================
@@ -1091,10 +714,6 @@ void Gotchi::consumeItem(Item* item) {
             break;
     }
 
-    // Set action for consumption animation
-    setAction("eat");
-    actionTimer_ = 1.5f;
-
     if (debugMode_) {
         std::cout << "[Gotchi] Item consumed.\n";
     }
@@ -1139,16 +758,16 @@ Item* Gotchi::getItemOnCurrentHex() {
 }
 
 Vector2 Gotchi::getFrameSize() const {
-    // Return size of first idle frame if available (idle has highest priority)
-    if (!animIdle_.empty()) {
-        return { (float)animIdle_[0].width, (float)animIdle_[0].height };
+    // Return size of the idle clip's first frame if available.
+    auto it = clips_.find("idle");
+    if (it != clips_.end() && !it->second.empty()) {
+        return { (float)it->second[0].width, (float)it->second[0].height };
     }
-    // Fall back to any loaded animation
-    if (!animWalk_.empty()) {
-        return { (float)animWalk_[0].width, (float)animWalk_[0].height };
-    }
-    if (!animMove_.empty()) {
-        return { (float)animMove_[0].width, (float)animMove_[0].height };
+    // Fall back to any loaded clip.
+    for (const auto& entry : clips_) {
+        if (!entry.second.empty()) {
+            return { (float)entry.second[0].width, (float)entry.second[0].height };
+        }
     }
     // Default to base size if no frames loaded
     return { 64.0f, 64.0f };

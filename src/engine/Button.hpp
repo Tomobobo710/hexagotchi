@@ -71,6 +71,11 @@ public:
     bool isHovered() const;
     bool isPressed() const;
 
+    // Tooltip: a short line drawn just above the button while it's hovered
+    // (and enabled -- a locked button doesn't need to explain itself).
+    // Empty string (the default) means no tooltip is ever drawn.
+    void setTooltip(const std::string& text);
+
     // Callback
     void setOnClick(std::function<void()> callback);
 
@@ -111,6 +116,8 @@ protected:
     bool hovered;
     bool pressed;      // Mouse is down and was pressed while over this button
     float hoverAmount; // 0..1 eased hover tint
+
+    std::string tooltip;
 
     std::function<void()> onClick;
 

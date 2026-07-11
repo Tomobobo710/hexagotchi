@@ -21,12 +21,12 @@ TutorialController::TutorialController(GameState& state)
 
     steps_ = {
         { "Hi! Welcome to HexLand!", "", "gotchi" },
-        { "This is me, your gotchi -- I live here on the hex board just outside.", "", "gotchi" },
-        { "Let's try the hex board first. Press SPACE to head out there.", "", "gotchi" },
+        { "This is me, your gotchi -- I live here on the HexMap just outside.", "", "gotchi" },
+        { "Let's try the explore the HexMap first. Press SPACE to head out there.", "", "gotchi" },
 
-        { "This is the hex board! Click any tile to send me walking there.", "walk", "hexboard" },
+        { "This is the HexMap! Click any tile to send me walking there.", "walk", "hexboard" },
         { "Nice! You can drag food or water from the palette below onto a tile, and I'll go eat or drink it.", "", "hexboard" },
-        { "That's the hex board basics. Let's head back so I can show you my home screen.", "", "hexboard" },
+        { "That's the HexMap basics. Let's head back so I can show you my home screen.", "", "hexboard" },
 
         { "This is my home screen. These buttons take care of me directly.", "", "gotchi" },
         { "Try Feed -- it fills me up when I'm hungry.", "Feed", "gotchi" },

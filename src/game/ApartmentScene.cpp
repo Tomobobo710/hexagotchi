@@ -42,7 +42,7 @@ void ApartmentScene::init() {
     // busted toilet, then into Tom being behind on rent -- Mark stays sunny,
     // Tom sinks. Tom is pathetic, Mark is cheerfully unhelpful.
     scenarios.push_back({
-        { CharacterId::Narrator, "It is 48 degrees inside Tom's apartment.\nThis is December.",
+        { CharacterId::Narrator, "It is 48 degrees inside Tom's apartment.",
           -1, false },
         { CharacterId::Tom, "Mark. I've called you six times.\nThe heat's been out for THREE WEEKS.",
           0, false, false, PortraitEmotion::Sad, "Tom Gatchi",
@@ -317,4 +317,5 @@ void ApartmentScene::drawApartment() {
     DrawRectangle(720, 100, 180, 160, windowFrame);
     DrawRectangle(730, 110, 160, 140, windowSky);
 }
+
 
