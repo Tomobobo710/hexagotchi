@@ -118,8 +118,8 @@ Vector2 Hotbar::getDragIconPosition() const {
 
     Vector2 mousePos = inputHandler_->getMousePosition();
 
-    // Center the icon on the cursor (icon is 48x48, so offset by half size)
-    return {mousePos.x - 24.0f, mousePos.y - 24.0f};
+    // Center the icon on the cursor - DrawImageCentered handles the offset
+    return mousePos;
 }
 
 bool Hotbar::update(float deltaTime, SceneCamera* camera) {
@@ -248,7 +248,6 @@ void Hotbar::draw() const {
             }
             DrawCircleV(pos, radius, dragColor);
         }
-        DrawCircleLines((int)pos.x, (int)pos.y, 26.0f, WHITE);
     }
 }
 
