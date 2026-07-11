@@ -74,13 +74,11 @@ private:
     // world. This is the only way Merge ever unlocks.
     void applySleepCollapseGate();
 
-    // One-shot guard so the "death" scene switch only fires once per entry
-    // into this scene -- see the isDead() check in update().
-    bool deathTriggered_ = false;
-
     // Counts down from DEATH_HOLD_SECONDS once isDead() first flips true;
-    // the death animation plays and holds on screen for this long before
-    // GotchiScene actually switches to DeathScene. Negative = not counting.
+    // the death animation plays and holds on screen for this long. The
+    // scene switch into the merge transition (and eventually DeathScene) is
+    // driven externally by DeathSequencer, not from here -- see the isDead()
+    // block in update().
     float deathHoldTimer_ = -1.0f;
     static constexpr float DEATH_HOLD_SECONDS = 5.0f;
 

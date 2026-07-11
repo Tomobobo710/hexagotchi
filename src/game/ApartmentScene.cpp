@@ -213,6 +213,12 @@ void ApartmentScene::init() {
         { CharacterId::Mark, "Look. Just try to have some fun\nout there, okay, kiddo?",
           1, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "Jimmy's birthday party should be fun.\nAre you still gonna come by?",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "Sure thing. Gotta run though.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Narrator, "Mark leaves the door open on his way out.\nThe shower is still full of gray water.",
           -1, false },
     });

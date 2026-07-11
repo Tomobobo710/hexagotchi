@@ -24,6 +24,7 @@
 #include "game/MergeController.hpp"
 #include "game/TutorialController.hpp"
 #include "game/StorySequencer.hpp"
+#include "game/DeathSequencer.hpp"
 #include "game/DialogSequences.hpp"
 #include "engine/GameState.h"
 #include "engine/SaveManager.h"
@@ -46,6 +47,9 @@ MergeController* mergeController = nullptr;
 
 // StorySequencer - created in main() and used in UpdateDrawFrame
 StorySequencer* storySequencer = nullptr;
+
+// DeathSequencer - created in main() and used in UpdateDrawFrame
+DeathSequencer* deathSequencer = nullptr;
 
 // TutorialController - created in main() and used in UpdateDrawFrame
 TutorialController* tutorialController = nullptr;
@@ -196,6 +200,9 @@ void UpdateDrawFrame() {
             storySequencer->skipCurrentStep();
         }
     }
+    if (deathSequencer) {
+        deathSequencer->update(dt);
+    }
     // Freeze vitals/mood ticking here, once, regardless of which scene is
     // currently active -- GotchiScene/HexViewScene used to each set this
     // themselves in their own update(), which left it unset (stale/false)
@@ -317,6 +324,9 @@ int main() {
     // Wire up the story sequencer
     storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);
 
+    // Wire up the death sequencer
+    deathSequencer = new DeathSequencer(globalEventBus, globalGameState, *sceneManager);
+
     // Wire up the sim reducer (C-core)
     gotchiSim = new GotchiSim(globalEventBus, globalGameState);
 
@@ -367,6 +377,7 @@ int main() {
     delete mergeController;
     delete tutorialController;
     delete storySequencer;
+    delete deathSequencer;
     delete gotchiSim;
     delete driversController;
     // delete saveWiring;  // DISABLED: Save system shut off for game jam

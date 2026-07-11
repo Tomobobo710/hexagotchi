@@ -605,24 +605,18 @@ void GotchiScene::update(float deltaTime) {
 
     // Death is the ONLY state that auto-transitions on its own -- sleep
     // maxing out only locks buttons and holds "wobble", waiting on the
-    // player to press Merge. On death: play the death animation, hold it on
-    // screen for DEATH_HOLD_SECONDS, then switch to DeathScene once.
+    // player to press Merge. On death: play the death animation and hold it
+    // on screen for DEATH_HOLD_SECONDS. The merge -> DeathScene handoff
+    // after that is driven by DeathSequencer (see main.cpp), which keeps
+    // running across the scene switch this scene's own update() can't
+    // survive -- see its header for why that has to live outside any one
+    // scene's update().
     if (gotchi->isDead() && deathHoldTimer_ < 0.0f) {
         deathHoldTimer_ = DEATH_HOLD_SECONDS;
         gotchi->playClip("fallover", false);  // play once, hold last frame
     }
     if (deathHoldTimer_ >= 0.0f) {
         deathHoldTimer_ -= deltaTime;
-        // switchScene()'s own currentSceneName guard isn't enough here since
-        // the fade takes time to actually leave this scene -- without
-        // deathTriggered_ this would re-call switchScene() every frame of
-        // the fade and reset its timer forever.
-        if (deathHoldTimer_ <= 0.0f && !deathTriggered_) {
-            deathTriggered_ = true;
-            if (getSceneManager()) {
-                static_cast<SceneManager*>(getSceneManager())->switchScene("death");
-            }
-        }
     }
 
     // Mouse wheel zoom - allows zooming in/out around cursor position

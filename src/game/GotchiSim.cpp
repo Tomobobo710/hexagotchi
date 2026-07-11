@@ -43,9 +43,11 @@ void GotchiSim::updateMood(float dt) {
 }
 
 void GotchiSim::update(float dt) {
-    // Skip vitals tick when in Story mode (simulator is paused) or while
-    // the tutorial/collapse gate has frozen stats.
-    if (state_.mode != Mode::Story && !state_.statsFrozen) {
+    // Skip vitals tick when in Story mode (simulator is paused), while the
+    // tutorial/collapse gate has frozen stats, or once the gotchi has died --
+    // collapsed is a terminal game-over state, nothing should keep ticking
+    // underneath the death animation/hold/DeathScene transition.
+    if (state_.mode != Mode::Story && !state_.statsFrozen && !state_.collapsed) {
         // 1. Sleep metronome: always drains, including before the first-ever
         // merge -- it's what forces/unlocks that first merge via the
         // sleep-collapse gate (see GotchiScene::applySleepCollapseGate()).
@@ -68,13 +70,13 @@ void GotchiSim::update(float dt) {
             state_.grime = 1.0f;
         }
 
-        // 5. Collapse / survival: only while deathEnabled is true
-        if (state_.deathEnabled && !state_.collapsed) {
-            // Check if any visible need is at/under COLLAPSE_NEED_THRESHOLD
-            if (state_.needs.hunger <= COLLAPSE_NEED_THRESHOLD ||
-                state_.needs.hygiene <= COLLAPSE_NEED_THRESHOLD ||
-                state_.needs.affection <= COLLAPSE_NEED_THRESHOLD ||
-                state_.needs.energy <= COLLAPSE_NEED_THRESHOLD) {
+        // 5. Collapse / survival: death is always possible now (no more
+        // story-climax gate) -- driven directly by the visible Health bar
+        // (FITALITY) hitting 0, since that's the stat the player actually
+        // watches drain. The old state_.needs struct is mostly dead (only
+        // .affection is ever written elsewhere), so it's no longer checked.
+        if (!state_.collapsed) {
+            if (state_.vitals.getStat(SecondaryStat::FITALITY) <= 0.0f) {
                 state_.collapsed = true;
                 state_.drivers.survival = 0.0f;
                 if (!collapsedEmitted_) {

@@ -242,22 +242,10 @@ void HexViewScene::update(float deltaTime) {
     // Gotchi update is handled by Scene::update() since it was added via addActor()
     // Keeping only the explicit draw() call in HexViewScene::draw()
 
-    // Death is the ONLY state that auto-transitions on its own -- see
-    // GotchiScene's matching block for the full rationale. Play the death
-    // animation, hold DEATH_HOLD_SECONDS, then switch to DeathScene once.
-    if (gotchi && gotchi->isDead() && deathHoldTimer_ < 0.0f) {
-        deathHoldTimer_ = DEATH_HOLD_SECONDS;
-        gotchi->playClip("fallover", false);
-    }
-    if (deathHoldTimer_ >= 0.0f) {
-        deathHoldTimer_ -= deltaTime;
-        if (deathHoldTimer_ <= 0.0f && !deathTriggered_) {
-            deathTriggered_ = true;
-            if (getSceneManager()) {
-                static_cast<SceneManager*>(getSceneManager())->switchScene("death");
-            }
-        }
-    }
+    // Death's merge -> DeathScene handoff is driven externally by
+    // DeathSequencer (see main.cpp), which switches away from whichever
+    // scene is current the moment GotchiSim emits PetCollapsed -- no
+    // per-scene handling needed here.
 
     if (paused) {
         if (pauseMenu) pauseMenu->update(deltaTime);

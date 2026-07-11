@@ -3,6 +3,53 @@
 #include <iostream>
 #include <iomanip>
 
+// ============================================================================
+// Tunable per-tick rates -- edit these directly to adjust pacing. All values
+// are "amount per GOTCHI_TICK_RATE-second tick" (see GotchiSim.hpp), applied
+// every frame scaled by a fractional `ticks` -- see GotchiStats::tick().
+// ============================================================================
+
+// Core vital drain/gain (per tick)
+const float TICK_HUNGER_RATE      = 14.0f;  // Hunger increases (~71s full at TICK_HUNGER_RATE=14, tick=10s)
+const float TICK_THIRST_RATE      = 16.0f;  // Thirst increases (~63s full)
+const float TICK_SLEEP_DEBT_RATE  = 22.22f; // Sleep debt increases (~45s full-to-exhausted) -- fastest bar by design
+const float TICK_ENERGY_DRAIN     = -6.0f;  // Energy drains while awake
+const float TICK_CLEANLINESS_RATE = -9.0f;  // Gets dirty (~111s full)
+
+// Emotional decay (per tick)
+const float TICK_HAPPINESS_DECAY   = -1.0f;
+const float TICK_EXCITEMENT_DECAY  = -0.5f;
+
+// Sleeping recovery (per tick, only while sleeping == true)
+const float SLEEP_ENERGY_RECOVERY     = 5.0f;
+const float SLEEP_SLEEP_DEBT_RECOVERY = -8.0f;
+const float SLEEP_HAPPINESS_RECOVERY  = 1.0f;
+
+// Awake baseline recovery (per tick, only while sleeping == false). Small
+// positive trickle -- doing nothing still nets a loss once needs cross their
+// health thresholds below, but this keeps a freshly-cared-for gotchi from
+// slowly bleeding health for no reason.
+const float AWAKE_ENERGY_RECOVERY   = 0.5f;
+const float AWAKE_HEALTH_REGEN      = 0.2f;
+
+// Health drain thresholds and per-need penalty (per tick, once a need
+// crosses its threshold -- these stack if multiple needs are unmet at once).
+// Tuned so total neglect (no button presses at all) kills in ~30s: hunger/
+// thirst reach their (lowered) thresholds by ~15-20s, and once 2-3 needs are
+// stacked the combined penalty burns through 100 health in the remaining
+// ~10-15s. Pressing Feed/Water/Wash/Pet resets the underlying need and pulls
+// its penalty back out of the stack immediately.
+const float HEALTH_HUNGER_THRESHOLD     = 20.0f;  // crossed ~14s in at TICK_HUNGER_RATE=14
+const float HEALTH_HUNGER_PENALTY       = 15.0f;
+const float HEALTH_THIRST_THRESHOLD     = 20.0f;  // crossed ~12.5s in at TICK_THIRST_RATE=16
+const float HEALTH_THIRST_PENALTY       = 15.0f;
+const float HEALTH_SLEEP_DEBT_THRESHOLD = 25.0f;  // crossed ~11s in at TICK_SLEEP_DEBT_RATE=22.22
+const float HEALTH_SLEEP_DEBT_PENALTY   = 12.0f;
+const float HEALTH_CLEANLINESS_THRESHOLD = 50.0f;
+const float HEALTH_CLEANLINESS_PENALTY   = 6.0f;
+const float HEALTH_HAPPINESS_THRESHOLD  = 60.0f;
+const float HEALTH_HAPPINESS_PENALTY    = 6.0f;
+
 // Stat property defaults
 // Core vital stats
 const float DEFAULT_HEALTH = 100.0f;
@@ -661,30 +708,28 @@ void GotchiStats::tick(float ticks, bool sleeping) {
     // Age increases with each tick (time passing)
     addStat(SecondaryStat::AGE, ticks);
 
-    // Core vital stats drain/gain. Sleep is the fastest by design (~45s
-    // full-to-exhausted, 22.22/10s-tick); the others are sped up to sit
-    // closer behind it (same lever used to tune sleep -- only the per-tick
-    // amount, GOTCHI_TICK_RATE itself stays untouched).
-    addStat(SecondaryStat::FOOD_LEVEL, 14.0f * ticks);    // Hunger increases (~71s full)
-    addStat(SecondaryStat::HYDRATION, 16.0f * ticks);     // Thirst increases (~63s full)
-    addStat(SecondaryStat::SLEEP_DEBT, 22.22f * ticks);    // Sleep debt increases (~45s full-to-exhausted at GOTCHI_TICK_RATE=10s)
-    addStat(SecondaryStat::ENERGY, -6.0f * ticks);       // Energy drains
-    addStat(SecondaryStat::CLEANLINESS, -9.0f * ticks);  // Gets dirty (~111s full)
+    // Core vital stats drain/gain -- see the tunable constants block at the
+    // top of this file.
+    addStat(SecondaryStat::FOOD_LEVEL, TICK_HUNGER_RATE * ticks);
+    addStat(SecondaryStat::HYDRATION, TICK_THIRST_RATE * ticks);
+    addStat(SecondaryStat::SLEEP_DEBT, TICK_SLEEP_DEBT_RATE * ticks);
+    addStat(SecondaryStat::ENERGY, TICK_ENERGY_DRAIN * ticks);
+    addStat(SecondaryStat::CLEANLINESS, TICK_CLEANLINESS_RATE * ticks);
 
     // Emotional stats decay
-    addStat(EmotionalStat::HAPPINESS, -1.0f * ticks);
-    addStat(EmotionalStat::EXCITEMENT, -0.5f * ticks);
+    addStat(EmotionalStat::HAPPINESS, TICK_HAPPINESS_DECAY * ticks);
+    addStat(EmotionalStat::EXCITEMENT, TICK_EXCITEMENT_DECAY * ticks);
 
     // Natural recovery - faster when sleeping
     if (sleeping) {
         // Faster recovery when sleeping
-        addStat(SecondaryStat::ENERGY, 5.0f * ticks);
-        addStat(SecondaryStat::SLEEP_DEBT, -8.0f * ticks);
-        addStat(EmotionalStat::HAPPINESS, 1.0f * ticks);
+        addStat(SecondaryStat::ENERGY, SLEEP_ENERGY_RECOVERY * ticks);
+        addStat(SecondaryStat::SLEEP_DEBT, SLEEP_SLEEP_DEBT_RECOVERY * ticks);
+        addStat(EmotionalStat::HAPPINESS, SLEEP_HAPPINESS_RECOVERY * ticks);
     } else {
         // Base recovery when awake
-        addStat(SecondaryStat::ENERGY, 0.5f * ticks);
-        addStat(SecondaryStat::FITALITY, 0.2f * ticks);
+        addStat(SecondaryStat::ENERGY, AWAKE_ENERGY_RECOVERY * ticks);
+        addStat(SecondaryStat::FITALITY, AWAKE_HEALTH_REGEN * ticks);
     }
 
     // Clamp all stats to valid ranges (use the stat's built-in clamping via setStat)
@@ -696,13 +741,14 @@ void GotchiStats::tick(float ticks, bool sleeping) {
     setStat(EmotionalStat::HAPPINESS, getStat(EmotionalStat::HAPPINESS));
     setStat(EmotionalStat::EXCITEMENT, getStat(EmotionalStat::EXCITEMENT));
 
-    // Health impacts from unmet needs
+    // Health impacts from unmet needs -- see the tunable constants block at
+    // the top of this file. These stack if multiple needs are unmet at once.
     float healthDrain = 0.0f;
-    if (getStat(SecondaryStat::FOOD_LEVEL) > 80) healthDrain += 2.0f;
-    if (getStat(SecondaryStat::HYDRATION) > 80) healthDrain += 2.0f;
-    if (getStat(SecondaryStat::SLEEP_DEBT) > 80) healthDrain += 1.5f;
-    if (getStat(SecondaryStat::CLEANLINESS) > 70) healthDrain += 1.0f;
-    if (getStat(EmotionalStat::HAPPINESS) < 20) healthDrain += 1.0f;
+    if (getStat(SecondaryStat::FOOD_LEVEL) > HEALTH_HUNGER_THRESHOLD) healthDrain += HEALTH_HUNGER_PENALTY;
+    if (getStat(SecondaryStat::HYDRATION) > HEALTH_THIRST_THRESHOLD) healthDrain += HEALTH_THIRST_PENALTY;
+    if (getStat(SecondaryStat::SLEEP_DEBT) > HEALTH_SLEEP_DEBT_THRESHOLD) healthDrain += HEALTH_SLEEP_DEBT_PENALTY;
+    if (getStat(SecondaryStat::CLEANLINESS) > HEALTH_CLEANLINESS_THRESHOLD) healthDrain += HEALTH_CLEANLINESS_PENALTY;
+    if (getStat(EmotionalStat::HAPPINESS) < HEALTH_HAPPINESS_THRESHOLD) healthDrain += HEALTH_HAPPINESS_PENALTY;
 
     addStat(SecondaryStat::FITALITY, -healthDrain * ticks);
 
