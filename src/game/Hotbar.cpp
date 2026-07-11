@@ -1,6 +1,25 @@
 #include "Hotbar.hpp"
 #include "SceneCamera.hpp"
 #include "SceneInputHandler.hpp"
+#include "../engine/AssetPack.hpp"
+#include <cmath>
+
+// Helper: draw an image centered at position with specified size
+static void DrawImageCentered(Texture2D image, Vector2 position, float size) {
+    if (image.id == 0) return;  // No image loaded
+
+    float srcWidth = (float)image.width;
+    float srcHeight = (float)image.height;
+
+    // Compute aspect-corrected size
+    float scale = size / fmaxf(srcWidth, srcHeight);
+    float drawWidth = srcWidth * scale;
+    float drawHeight = srcHeight * scale;
+
+    // Draw from centered position (top-left offset by half size)
+    Vector2 drawPos = {position.x - drawWidth / 2.0f, position.y - drawHeight / 2.0f};
+    DrawTextureV(image, drawPos, WHITE);
+}
 
 // ============================================================================
 // Hotbar implementation
@@ -14,19 +33,25 @@ Hotbar::Hotbar() {
     slots_[0].type = HexItemOverlay::ItemType::FOOD;
     slots_[0].label = "Food";
     slots_[0].careActionCode = 0;  // CARE_ACTION_FEED
-    slots_[0].color = Color{160, 80, 40, 255};  // Orange-brown
+    slots_[0].color = Color{160, 80, 40, 255};  // Orange-brown (unused when image loaded)
 
     slots_[1].index = 1;
     slots_[1].type = HexItemOverlay::ItemType::BALL;
     slots_[1].label = "Ball";
     slots_[1].careActionCode = 1;  // CARE_ACTION_PET (warmth)
-    slots_[1].color = Color{200, 60, 60, 255};  // Red
+    slots_[1].color = Color{200, 60, 60, 255};  // Red (unused when image loaded)
 
     slots_[2].index = 2;
     slots_[2].type = HexItemOverlay::ItemType::WATER;
     slots_[2].label = "Water";
     slots_[2].careActionCode = 4;  // CARE_ACTION_WATER
-    slots_[2].color = Color{60, 140, 220, 255};  // Blue
+    slots_[2].color = Color{60, 140, 220, 255};  // Blue (unused when image loaded)
+
+    // Load images for each slot type
+    // Keys match the relative paths in assets/tools/
+    slots_[0].image = AssetPack::loadTexture("tools/food.png");
+    slots_[1].image = AssetPack::loadTexture("tools/ball.png");
+    slots_[2].image = AssetPack::loadTexture("tools/water.png");
 }
 
 void Hotbar::init(float screenWidth, float screenHeight) {
@@ -88,13 +113,13 @@ bool Hotbar::isMouseOverSlot(int slotIndex) const {
 }
 
 Vector2 Hotbar::getDragIconPosition() const {
-    // The drag icon follows the cursor with an offset
+    // The drag icon follows the cursor
     if (!inputHandler_) return {0, 0};
 
     Vector2 mousePos = inputHandler_->getMousePosition();
 
-    // Offset slightly up so the cursor isn't covered
-    return {mousePos.x - 16.0f, mousePos.y - 40.0f};
+    // Center the icon on the cursor (icon is 48x48, so offset by half size)
+    return {mousePos.x - 24.0f, mousePos.y - 24.0f};
 }
 
 bool Hotbar::update(float deltaTime, SceneCamera* camera) {
@@ -116,7 +141,6 @@ bool Hotbar::update(float deltaTime, SceneCamera* camera) {
                 // Start drag from this slot
                 dragging_ = true;
                 draggedItemType_ = slots_[i].type;
-                dragOffset_ = {16.0f, 24.0f};  // Icon center offset
                 anySlotPressed = true;
                 pressedSlotIndex = i;
                 break;
@@ -154,17 +178,23 @@ void Hotbar::draw() const {
         DrawRectangleRounded(slot.bounds, 0.2f, 6, Color{55, 55, 85, 235});
         DrawRectangleRoundedLinesEx(slot.bounds, 0.2f, 6, 2.0f, Color{130, 130, 180, 255});
 
-        // Slot icon (placeholder circle), nudged up to leave room for the
-        // label strip along the slot's bottom edge instead of below it.
+        // Slot icon - draw image if loaded, otherwise use placeholder circle
         Vector2 center = {
             slot.bounds.x + slot.bounds.width / 2.0f,
             slot.bounds.y + slot.bounds.height * 0.40f
         };
-        float radius = slot.bounds.width * 0.26f;
 
-        DrawCircleV(center, radius, slot.color);
-        DrawCircleLines(static_cast<int>(center.x), static_cast<int>(center.y),
-                         radius, Color{255, 255, 255, 90});
+        if (slot.image.id != 0) {
+            // Draw the actual asset image
+            float iconSize = slot.bounds.width * 0.65f;
+            DrawImageCentered(slot.image, center, iconSize);
+        } else {
+            // Fallback: placeholder circle
+            float radius = slot.bounds.width * 0.26f;
+            DrawCircleV(center, radius, slot.color);
+            DrawCircleLines(static_cast<int>(center.x), static_cast<int>(center.y),
+                             radius, Color{255, 255, 255, 90});
+        }
 
         // Slot label as a small strip along the slot's bottom edge, fully
         // inside the slot bounds -- guarantees it never runs off-screen
@@ -182,24 +212,43 @@ void Hotbar::draw() const {
     // Draw dragged icon if dragging
     if (dragging_) {
         Vector2 pos = getDragIconPosition();
-        float radius = 20.0f;
 
-        // Find color for dragged item type
-        Color dragColor = WHITE;
+        // Find image for dragged item type
+        Texture2D dragImage = {0};
         switch (draggedItemType_) {
             case HexItemOverlay::ItemType::FOOD:
-                dragColor = Color{160, 80, 40, 255};
+                dragImage = slots_[0].image;
                 break;
             case HexItemOverlay::ItemType::BALL:
-                dragColor = Color{200, 60, 60, 255};
+                dragImage = slots_[1].image;
                 break;
             case HexItemOverlay::ItemType::WATER:
-                dragColor = Color{60, 140, 220, 255};
+                dragImage = slots_[2].image;
                 break;
         }
 
-        DrawCircleV(pos, radius, dragColor);
-        DrawCircleLines((int)pos.x, (int)pos.y, radius + 2.0f, WHITE);
+        if (dragImage.id != 0) {
+            // Draw the actual image centered at drag position
+            float iconSize = 48.0f;
+            DrawImageCentered(dragImage, pos, iconSize);
+        } else {
+            // Fallback: colored circle
+            float radius = 20.0f;
+            Color dragColor = WHITE;
+            switch (draggedItemType_) {
+                case HexItemOverlay::ItemType::FOOD:
+                    dragColor = Color{160, 80, 40, 255};
+                    break;
+                case HexItemOverlay::ItemType::BALL:
+                    dragColor = Color{200, 60, 60, 255};
+                    break;
+                case HexItemOverlay::ItemType::WATER:
+                    dragColor = Color{60, 140, 220, 255};
+                    break;
+            }
+            DrawCircleV(pos, radius, dragColor);
+        }
+        DrawCircleLines((int)pos.x, (int)pos.y, 26.0f, WHITE);
     }
 }
 
@@ -218,4 +267,13 @@ Vector2 Hotbar::getDroppedWorldPosition() const {
 void Hotbar::clearPendingDrop() {
     pendingDrop_ = false;
     droppedWorldPos_ = {0, 0};
+}
+
+Hotbar::~Hotbar() {
+    // Unload all slot images
+    for (int i = 0; i < numSlots_; i++) {
+        if (slots_[i].image.id != 0) {
+            UnloadTexture(slots_[i].image);
+        }
+    }
 }

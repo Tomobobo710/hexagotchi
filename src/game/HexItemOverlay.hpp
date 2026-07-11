@@ -20,7 +20,7 @@ public:
 
     // Construct with hex coordinates and pixel position - position is stored directly
     HexItemOverlay(HexCoords hex, ItemType itemType, Vector2 position, float hexSize);
-    ~HexItemOverlay() = default;
+    ~HexItemOverlay();
 
     // Update - check if gotchi has arrived and fire the effect
     // Returns true if the overlay should be removed (consumed)
@@ -46,6 +46,9 @@ private:
     // Visual properties (colors for placeholders)
     Color itemColor_ = WHITE;
     std::string itemName_ = "";
+
+    // Image asset for this item
+    Texture2D image_ = {0};
 
     // Animation
     float pulseTimer_ = 0.0f;

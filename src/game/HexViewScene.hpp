@@ -69,6 +69,11 @@ private:
     HexCoords clickMarkerHex_{0, 0};
     Vector2   clickMarkerWorld_{0, 0};
 
+    // Tool images (cached for performance)
+    Texture2D toolFoodImage_ = {0};
+    Texture2D toolBallImage_ = {0};
+    Texture2D toolWaterImage_ = {0};
+
     // Hotbar UI (screen-space palette of items)
     std::unique_ptr<Hotbar> hotbar_;
 

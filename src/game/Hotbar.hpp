@@ -14,7 +14,7 @@ class SceneInputHandler;
 class Hotbar {
 public:
     Hotbar();
-    ~Hotbar() = default;
+    ~Hotbar();
 
     // Initialize - sets up slots and their positions
     void init(float screenWidth, float screenHeight);
@@ -49,10 +49,11 @@ private:
         int index;                    // Slot number (0, 1, 2)
         HexItemOverlay::ItemType type; // Item type for this slot
         Rectangle bounds;             // Screen-space position/size
-        Color color;                  // Visual color for placeholder
+        Color color;                  // Visual color for placeholder (unused when image loaded)
 
         std::string label;
         int careActionCode;           // For event emission
+        Texture2D image;              // Image asset for this slot (from assets/tools/)
     };
 
     // Items supported (2-3 per design)
@@ -64,8 +65,6 @@ private:
     // Drag state
     bool dragging_ = false;
     HexItemOverlay::ItemType draggedItemType_ = HexItemOverlay::ItemType::FOOD;
-    Vector2 dragOffset_;            // Mouse offset from slot center
-    Vector2 dragPosition_;          // Current mouse position during drag
 
     // Drop state
     bool pendingDrop_ = false;

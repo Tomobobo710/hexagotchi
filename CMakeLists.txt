@@ -30,8 +30,10 @@ if(RBUILD_DESKTOP)
     file(GLOB GAME_SRCS
         "src/game/ControlsOverlay.cpp"
         "src/game/CharacterRegistry.cpp"
+        "src/game/CreditsScene.cpp"
         "src/game/DeathScene.cpp"
         "src/game/DriversController.cpp"
+        "src/game/EndingScene.cpp"
         "src/game/Gotchi.cpp"
         "src/game/GotchiMood.cpp"
         "src/game/GotchiScene.cpp"
@@ -370,6 +372,8 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp
         ${CMAKE_SOURCE_DIR}/src/game/DeathSequencer.cpp
         ${CMAKE_SOURCE_DIR}/src/game/DeathScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/EndingScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/CreditsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ScenarioDirector.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TutorialController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp

@@ -4,6 +4,7 @@
 #include "../engine/SceneInputHandler.hpp"
 #include "../engine/HexPathFinder.hpp"
 #include "../engine/Item.hpp"
+#include "../engine/AssetPack.hpp"
 #include "../engine/SceneManager.hpp"
 #include "../engine/GameState.h"
 #include "EventBus.h"
@@ -11,6 +12,47 @@
 #include "Hotbar.hpp"
 #include <cmath>
 #include <string>
+
+// ============================================================================
+// Helper functions
+// ============================================================================
+
+// Helper: draw an image centered at position with specified size
+static void DrawImageCentered(Texture2D image, Vector2 position, float size) {
+    if (image.id == 0) return;  // No image loaded
+
+    float srcWidth = (float)image.width;
+    float srcHeight = (float)image.height;
+
+    // Compute aspect-corrected size
+    float scale = size / fmaxf(srcWidth, srcHeight);
+    float drawWidth = srcWidth * scale;
+    float drawHeight = srcHeight * scale;
+
+    // Draw from centered position (top-left offset by half size)
+    Vector2 drawPos = {position.x - drawWidth / 2.0f, position.y - drawHeight / 2.0f};
+    DrawTextureV(image, drawPos, WHITE);
+}
+
+// Helper: get image for an item type
+static Texture2D GetItemImage(ItemType type) {
+    switch (type) {
+        case ItemType::FOOD:   return AssetPack::loadTexture("tools/food.png");
+        case ItemType::WATER:  return AssetPack::loadTexture("tools/water.png");
+        case ItemType::TOY:    return AssetPack::loadTexture("tools/ball.png");
+        default:               return Texture2D{0};
+    }
+}
+
+// Helper: get image key for an item type
+static std::string GetItemImageKey(ItemType type) {
+    switch (type) {
+        case ItemType::FOOD:   return "tools/food.png";
+        case ItemType::WATER:  return "tools/water.png";
+        case ItemType::TOY:    return "tools/ball.png";
+        default:               return "";
+    }
+}
 
 // ============================================================================
 // HexViewScene implementation
@@ -29,6 +71,11 @@ HexViewScene::~HexViewScene() {
     if (gotchi) {
         delete gotchi;
     }
+
+    // Unload cached tool images
+    if (toolFoodImage_.id != 0) UnloadTexture(toolFoodImage_);
+    if (toolBallImage_.id != 0) UnloadTexture(toolBallImage_);
+    if (toolWaterImage_.id != 0) UnloadTexture(toolWaterImage_);
 }
 
 void HexViewScene::init() {
@@ -94,6 +141,11 @@ void HexViewScene::init() {
     hotbar_->init(GAME_W, GAME_H);
     hotbar_->setInputHandler(getInputHandler());
 
+    // Load cached tool images for world items
+    toolFoodImage_ = AssetPack::loadTexture("tools/food.png");
+    toolBallImage_ = AssetPack::loadTexture("tools/ball.png");
+    toolWaterImage_ = AssetPack::loadTexture("tools/water.png");
+
     // Add Back button
     addBackButton();
 }
@@ -131,28 +183,39 @@ void HexViewScene::draw() {
 
             // Draw item marker at hex center
             Vector2 itemPos = HexCoords(item.hexQ, item.hexR).toPixel(hexSize_);
-            Color itemColor;
 
-            // Color based on item type
+            // Draw the cached tool image if available
+            Texture2D image = {0};
             switch (item.type) {
-                case ItemType::FOOD:       itemColor = YELLOW; break;   // Orange/Yellow for food
-                case ItemType::WATER:      itemColor = BLUE; break;     // Blue for water
-                case ItemType::MEDICINE:   itemColor = RED; break;      // Red for medicine
-                case ItemType::TOY:        itemColor = PINK; break;     // Pink for toys
-                case ItemType::CLEANING:   itemColor = GREEN; break;    // Green for cleaning
-                case ItemType::SLEEP:      itemColor = PURPLE; break;   // Purple for sleep
-                case ItemType::ENERGY:     itemColor = ORANGE; break;   // Orange for energy
-                case ItemType::HAPPINESS:  itemColor = {100, 200, 255, 255}; break;     // Cyan-like for happiness
-                default:                   itemColor = WHITE; break;
+                case ItemType::FOOD:   image = toolFoodImage_; break;
+                case ItemType::WATER:  image = toolWaterImage_; break;
+                case ItemType::TOY:    image = toolBallImage_; break;
+                default:               break;
             }
 
-            // Draw item as a circle
-            DrawCircleV(itemPos, 12.0f, itemColor);
-            DrawCircleLines((int)itemPos.x, (int)itemPos.y, 12.0f, Color{255, 255, 255, 200});
+            if (image.id != 0) {
+                // Draw the actual tool image
+                float iconSize = hexSize_ * 0.6f;
+                DrawImageCentered(image, itemPos, iconSize);
+            } else {
+                // Fallback: draw colored circle with value text
+                Color itemColor;
+                switch (item.type) {
+                    case ItemType::MEDICINE:   itemColor = RED; break;
+                    case ItemType::CLEANING:   itemColor = GREEN; break;
+                    case ItemType::SLEEP:      itemColor = PURPLE; break;
+                    case ItemType::ENERGY:     itemColor = ORANGE; break;
+                    case ItemType::HAPPINESS:  itemColor = {100, 200, 255, 255}; break;
+                    default:                   itemColor = WHITE; break;
+                }
+                DrawCircleV(itemPos, 12.0f, itemColor);
+            }
 
-            // Draw a small indicator of item value
-            DrawText(std::to_string((int)item.value).c_str(),
-                    (int)itemPos.x, (int)itemPos.y - 18, 10, WHITE);
+            // Draw a small indicator of item value (only for tool items)
+            if (item.type == ItemType::FOOD || item.type == ItemType::WATER || item.type == ItemType::TOY) {
+                DrawText(std::to_string((int)item.value).c_str(),
+                        (int)itemPos.x, (int)itemPos.y - 18, 10, WHITE);
+            }
         }
     }
 
