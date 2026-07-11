@@ -159,6 +159,7 @@ portraits/loraine/lorainehappy.png
 portraits/loraine/lorainemid.png
 portraits/loraine/lorainesad.png
 portraits/mark/markmid.png
+portraits/narrator/narratormid.png
 portraits/phone/phonemid.png
 portraits/ronzer/ronzerhappy.png
 portraits/ronzer/ronzermid.png

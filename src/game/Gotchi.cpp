@@ -556,10 +556,15 @@ void Gotchi::setAction(const std::string& action) {
             play();
         }
     } else if (action == "eat") {
-        // Map 'eat' to 'bounce' animation (mouth movement)
         clearAnimation();
         if (!animEat_.empty()) {
             setAnimationFrames(animEat_, 0.15f, false);
+            play();
+        } else if (!animBounce_.empty()) {
+            setAnimationFrames(animBounce_, 0.15f, false);
+            play();
+        } else if (!animIdle_.empty()) {
+            setAnimationFrames(animIdle_, 0.2f, true);   // keep the gotchi visible while "eating"
             play();
         }
     } else if (action == "sleep") {
