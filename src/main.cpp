@@ -208,9 +208,14 @@ void UpdateDrawFrame() {
     // themselves in their own update(), which left it unset (stale/false)
     // during any other scene visited while the tutorial is active (e.g. the
     // toy_animation intro on the way into GotchiScene), letting the sim run
-    // unguarded during that window.
+    // unguarded during that window. Also stays frozen on the title screen
+    // itself and before the very first tutorial start -- gotchiSim ticks
+    // from app boot, well before the player has even clicked START GAME, so
+    // without this check stats were already visibly non-full by the time
+    // the tutorial's first line appeared.
     if (tutorialController) {
-        globalGameState.statsFrozen = tutorialController->isActive() || globalGameState.sleepCollapsed;
+        bool preGame = (currentScene == "title" || currentScene == "toy_animation");
+        globalGameState.statsFrozen = preGame || tutorialController->isActive() || globalGameState.sleepCollapsed;
     }
     if (gotchiSim) {
         gotchiSim->update(dt);

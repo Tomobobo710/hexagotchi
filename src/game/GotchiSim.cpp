@@ -33,7 +33,7 @@ void GotchiSim::tickVitals(float dt) {
     // lurching. dt itself is untouched, so this can't reintroduce the
     // dt-spike-during-scene-load bug from shrinking GOTCHI_TICK_RATE.
     float ticks = dt / GOTCHI_TICK_RATE;
-    state_.vitals.tick(ticks, state_.sleeping);
+    state_.vitals.tick(ticks, state_.sleeping, state_.onHexboard);
 }
 
 // Separate method for mood updates (runs every frame, outside vitals tick gate)

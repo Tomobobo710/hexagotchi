@@ -235,6 +235,7 @@ void HexViewScene::update(float deltaTime) {
     // GotchiScene's matching fix for details.
     if (gameState_) {
         gameState_->statsFrozen = (tutorialController_ && tutorialController_->isActive()) || collapseFreeze;
+        gameState_->onHexboard = true;
     }
 
     Scene::update(deltaTime);

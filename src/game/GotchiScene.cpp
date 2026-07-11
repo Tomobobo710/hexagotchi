@@ -586,7 +586,10 @@ void GotchiScene::update(float deltaTime) {
     if (gotchi) {
         bool tutorialFreeze = tutorialController_ && tutorialController_->isActive();
         bool collapseFreeze = gameState_ && gameState_->sleepCollapsed;
-        if (gameState_) gameState_->statsFrozen = tutorialFreeze || collapseFreeze;
+        if (gameState_) {
+            gameState_->statsFrozen = tutorialFreeze || collapseFreeze;
+            gameState_->onHexboard = false;
+        }
         gotchi->update(deltaTime);
 
         // Sync gotchi's current hex position to GameState
@@ -958,9 +961,25 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
     bool success = true;
     int actionCode = -1;  // For CareAction event
 
+    // Every care action gives a direct FITALITY (health) boost, plus stacks
+    // a temporary regen-rate boost (decays back to 0 -- see
+    // GotchiStats::boostHealthRegen()/healthRegenBoost_) so pressing buttons
+    // repeatedly gives a real burst of ongoing recovery, not just one-time
+    // flat adds. Previously nothing touched health directly, so it could
+    // only ever recover via the slow passive AWAKE_HEALTH_REGEN trickle,
+    // which couldn't outrun neglect penalties even with perfect play.
+    // Actions with more actual "care" weight (Feed/Water/Sleep addressing a
+    // fast-draining need) heal more.
+    const float HEALTH_BOOST_MINOR = 8.0f;   // Wash, Groom, Pet
+    const float HEALTH_BOOST_MAJOR = 15.0f;  // Feed, Water, Sleep
+    const float HEALTH_REGEN_BOOST_MINOR = 15.0f;
+    const float HEALTH_REGEN_BOOST_MAJOR = 25.0f;
+
     if (action == "Wash") {
         gotchi->clean();
         stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
+        stats.addStat(SecondaryStat::FITALITY, HEALTH_BOOST_MINOR);
+        stats.boostHealthRegen(HEALTH_REGEN_BOOST_MINOR);
         mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
         mood.addMoodOverlay(GotchiMoodType::MOOD_14_PEACEFUL, 8.0f);
         feedback = "Washed - Cleanliness 100%";
@@ -970,6 +989,8 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         gotchi->interact();
         stats.addStat(EmotionalStat::HAPPINESS, 10.0f);
         stats.addStat(EmotionalStat::FRIEDNSHIP, 2.0f); // NOTE: enum is misspelled
+        stats.addStat(SecondaryStat::FITALITY, HEALTH_BOOST_MINOR);
+        stats.boostHealthRegen(HEALTH_REGEN_BOOST_MINOR);
         mood.addMoodOverlay(GotchiMoodType::MOOD_10_JOYFUL, 5.0f);
         mood.addMoodOverlay(GotchiMoodType::MOOD_52_BEAUTIFUL, 10.0f);
         feedback = "Groomed - Happy & shiny!";
@@ -978,6 +999,8 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
     } else if (action == "Feed") {
         gotchi->feed();
         stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
+        stats.addStat(SecondaryStat::FITALITY, HEALTH_BOOST_MAJOR);
+        stats.boostHealthRegen(HEALTH_REGEN_BOOST_MAJOR);
         mood.addMoodOverlay(GotchiMoodType::MOOD_02_SATISFIED, 10.0f);
         mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 5.0f);
         feedback = "Fed - Hunger reduced";
@@ -988,6 +1011,8 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         stats.addStat(EmotionalStat::HAPPINESS, 10.0f);
         stats.addStat(EmotionalStat::LOVE, 5.0f);
         stats.addStat(EmotionalStat::FRIEDNSHIP, 3.0f); // NOTE: enum is misspelled
+        stats.addStat(SecondaryStat::FITALITY, HEALTH_BOOST_MINOR);
+        stats.boostHealthRegen(HEALTH_REGEN_BOOST_MINOR);
         mood.addMoodOverlay(GotchiMoodType::MOOD_10_JOYFUL, 8.0f);
         mood.addMoodOverlay(GotchiMoodType::MOOD_30_LOVING, 15.0f);
         feedback = "Petted - Happiness up";
@@ -998,6 +1023,8 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
         // Giving water REDUCES the dehydration value.
         stats.addStat(SecondaryStat::HYDRATION, -30.0f);
         stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
+        stats.addStat(SecondaryStat::FITALITY, HEALTH_BOOST_MAJOR);
+        stats.boostHealthRegen(HEALTH_REGEN_BOOST_MAJOR);
         mood.addMoodOverlay(GotchiMoodType::MOOD_12_RELIEVED, 5.0f);
         mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 4.0f);
         feedback = "Watered - Thirst quenched";
@@ -1013,6 +1040,8 @@ void GotchiScene::handleGotchiAction(const std::string& action) {
     } else if (action == "Sleep") {
         stats.setStat(SecondaryStat::SLEEP_DEBT, 0.0f);
         stats.addStat(EmotionalStat::SATISFACTION, 5.0f);
+        stats.addStat(SecondaryStat::FITALITY, HEALTH_BOOST_MAJOR);
+        stats.boostHealthRegen(HEALTH_REGEN_BOOST_MAJOR);
         mood.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 8.0f);
         feedback = "Slept - Fully rested";
         // No shader overlay for this one -- shaderMode stays -1.

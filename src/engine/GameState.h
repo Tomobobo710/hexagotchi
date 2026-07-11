@@ -74,7 +74,22 @@ struct GameState {
     // gate is holding); freezes vitals/mood ticking in GotchiSim so the
     // player isn't watching needs drain while they're still being walked
     // through the controls. Set/cleared by the scenes, read by GotchiSim.
-    bool  statsFrozen      = false;
+    //
+    // Defaults true (not false) because gotchiSim->update() runs every
+    // frame from app startup, including the title screen and the
+    // toy_animation intro -- neither of which ever touches this flag. If it
+    // defaulted false, vitals would tick unguarded during that window, so
+    // stats were already visibly non-full by the time the tutorial's first
+    // line appeared. GotchiScene::update()/HexViewScene::update() are the
+    // only things that ever flip this to false, once they're actually
+    // running each frame.
+    bool  statsFrozen      = true;
+
+    // True while HexViewScene is the current scene -- Health (FITALITY) and
+    // SLEEP_DEBT don't tick while exploring the hexboard (everything else
+    // still does). Set/cleared by HexViewScene/GotchiScene, read by
+    // GotchiSim -> GotchiStats::tick().
+    bool  onHexboard       = false;
 
     // Gotchi hex position for persistence across scene transitions
     int   gotchiHexQ = 0;  // Current hex Q coordinate for gotchi

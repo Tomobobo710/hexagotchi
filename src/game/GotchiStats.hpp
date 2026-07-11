@@ -176,7 +176,10 @@ public:
     // Tick-based updates - called every GOTCHI_TICK_RATE seconds
     // ticks is the number of ticks that have passed (may be fractional)
     // sleeping: true if gotchi is sleeping (applies faster recovery)
-    void tick(float ticks, bool sleeping);
+    // pauseHealthAndSleep: true while exploring the hexboard -- SLEEP_DEBT
+    // and FITALITY (health) don't tick there (see HexViewScene), everything
+    // else (hunger/thirst/cleanliness/happiness/mood) still does.
+    void tick(float ticks, bool sleeping, bool pauseHealthAndSleep = false);
 
     // Stat accessors - using enums
     float getStat(SecondaryStat stat) const;
@@ -233,6 +236,13 @@ public:
     // Debug
     void dumpAllStats() const;
 
+    // Adds to a temporary boost on top of the passive health regen rate
+    // (AWAKE_HEALTH_REGEN), which decays back to 0 over time -- see
+    // healthRegenBoost_ and HEALTH_REGEN_BOOST_DECAY_PER_TICK in tick().
+    // Called from care-action handlers so pressing buttons gives the gotchi
+    // a real burst of recovery, not just a one-time flat add.
+    void boostHealthRegen(float amount) { healthRegenBoost_ += amount; }
+
 private:
     // Storage for 100 stats as floats
     // Using separate arrays by category for organization
@@ -243,6 +253,10 @@ private:
     std::array<float, 10> socialStats_;
     std::array<float, 10> environmentalStats_;
     std::array<float, 10> skillStats_;
+
+    // Temporary extra health-regen-per-tick, stacked by boostHealthRegen()
+    // and decayed toward 0 every tick() call -- see tick().
+    float healthRegenBoost_ = 0.0f;
 
     // Stat properties lookup
     StatProperties getProperties(SecondaryStat stat) const;

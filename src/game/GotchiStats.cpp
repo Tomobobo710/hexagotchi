@@ -32,6 +32,14 @@ const float SLEEP_HAPPINESS_RECOVERY  = 1.0f;
 const float AWAKE_ENERGY_RECOVERY   = 0.5f;
 const float AWAKE_HEALTH_REGEN      = 0.2f;
 
+// Temporary regen boost stacked by care actions (see GotchiStats::
+// boostHealthRegen(), called from GotchiScene::handleGotchiAction()) --
+// added on top of AWAKE_HEALTH_REGEN each tick, then decayed back toward 0
+// by this amount per tick. At the default decay, a single +20 boost fades
+// out over ~4 ticks (~40s), giving a real burst of recovery instead of a
+// one-time flat add.
+const float HEALTH_REGEN_BOOST_DECAY_PER_TICK = 5.0f;
+
 // Health drain thresholds and per-need penalty (per tick, once a need
 // crosses its threshold -- these stack if multiple needs are unmet at once).
 // Tuned so total neglect (no button presses at all) kills in ~30s: hunger/
@@ -212,6 +220,12 @@ void GotchiStats::reset() {
     skillStats_[7] = 40.0f;       // FORAGING
     skillStats_[8] = 30.0f;       // BUILDING
     skillStats_[9] = 20.0f;       // COMBAT
+
+    // Clear any leftover temporary health-regen boost from care actions
+    // pressed before this reset (e.g. the tutorial's forced Feed/Pet/Wash
+    // presses) -- otherwise a fresh gotchi can start with several seconds
+    // of extra regen still decaying, skewing death timing right after reset.
+    healthRegenBoost_ = 0.0f;
 }
 
 // Clamp value to range
@@ -704,15 +718,19 @@ void GotchiStats::dumpAllStats() const {
 // Tick-based updates - called every GOTCHI_TICK_RATE seconds
 // ticks is the number of ticks that have passed
 // sleeping: true if gotchi is sleeping (applies faster recovery)
-void GotchiStats::tick(float ticks, bool sleeping) {
+// pauseHealthAndSleep: true while exploring the hexboard -- see header
+void GotchiStats::tick(float ticks, bool sleeping, bool pauseHealthAndSleep) {
     // Age increases with each tick (time passing)
     addStat(SecondaryStat::AGE, ticks);
 
     // Core vital stats drain/gain -- see the tunable constants block at the
-    // top of this file.
+    // top of this file. SLEEP_DEBT is skipped entirely while on the
+    // hexboard (pauseHealthAndSleep).
     addStat(SecondaryStat::FOOD_LEVEL, TICK_HUNGER_RATE * ticks);
     addStat(SecondaryStat::HYDRATION, TICK_THIRST_RATE * ticks);
-    addStat(SecondaryStat::SLEEP_DEBT, TICK_SLEEP_DEBT_RATE * ticks);
+    if (!pauseHealthAndSleep) {
+        addStat(SecondaryStat::SLEEP_DEBT, TICK_SLEEP_DEBT_RATE * ticks);
+    }
     addStat(SecondaryStat::ENERGY, TICK_ENERGY_DRAIN * ticks);
     addStat(SecondaryStat::CLEANLINESS, TICK_CLEANLINESS_RATE * ticks);
 
@@ -724,13 +742,24 @@ void GotchiStats::tick(float ticks, bool sleeping) {
     if (sleeping) {
         // Faster recovery when sleeping
         addStat(SecondaryStat::ENERGY, SLEEP_ENERGY_RECOVERY * ticks);
-        addStat(SecondaryStat::SLEEP_DEBT, SLEEP_SLEEP_DEBT_RECOVERY * ticks);
+        if (!pauseHealthAndSleep) {
+            addStat(SecondaryStat::SLEEP_DEBT, SLEEP_SLEEP_DEBT_RECOVERY * ticks);
+        }
         addStat(EmotionalStat::HAPPINESS, SLEEP_HAPPINESS_RECOVERY * ticks);
     } else {
-        // Base recovery when awake
+        // Base recovery when awake, plus whatever's left of the temporary
+        // care-action regen boost (see boostHealthRegen()), which decays
+        // back toward 0 every tick. Health itself doesn't move on the
+        // hexboard either, but the boost still decays in the background so
+        // it doesn't linger and skew things once you're back.
         addStat(SecondaryStat::ENERGY, AWAKE_ENERGY_RECOVERY * ticks);
-        addStat(SecondaryStat::FITALITY, AWAKE_HEALTH_REGEN * ticks);
+        if (!pauseHealthAndSleep) {
+            addStat(SecondaryStat::FITALITY, (AWAKE_HEALTH_REGEN + healthRegenBoost_) * ticks);
+        }
     }
+
+    healthRegenBoost_ -= HEALTH_REGEN_BOOST_DECAY_PER_TICK * ticks;
+    if (healthRegenBoost_ < 0.0f) healthRegenBoost_ = 0.0f;
 
     // Clamp all stats to valid ranges (use the stat's built-in clamping via setStat)
     setStat(SecondaryStat::FOOD_LEVEL, getStat(SecondaryStat::FOOD_LEVEL));
@@ -742,15 +771,18 @@ void GotchiStats::tick(float ticks, bool sleeping) {
     setStat(EmotionalStat::EXCITEMENT, getStat(EmotionalStat::EXCITEMENT));
 
     // Health impacts from unmet needs -- see the tunable constants block at
-    // the top of this file. These stack if multiple needs are unmet at once.
-    float healthDrain = 0.0f;
-    if (getStat(SecondaryStat::FOOD_LEVEL) > HEALTH_HUNGER_THRESHOLD) healthDrain += HEALTH_HUNGER_PENALTY;
-    if (getStat(SecondaryStat::HYDRATION) > HEALTH_THIRST_THRESHOLD) healthDrain += HEALTH_THIRST_PENALTY;
-    if (getStat(SecondaryStat::SLEEP_DEBT) > HEALTH_SLEEP_DEBT_THRESHOLD) healthDrain += HEALTH_SLEEP_DEBT_PENALTY;
-    if (getStat(SecondaryStat::CLEANLINESS) > HEALTH_CLEANLINESS_THRESHOLD) healthDrain += HEALTH_CLEANLINESS_PENALTY;
-    if (getStat(EmotionalStat::HAPPINESS) < HEALTH_HAPPINESS_THRESHOLD) healthDrain += HEALTH_HAPPINESS_PENALTY;
+    // the top of this file. These stack if multiple needs are unmet at
+    // once. Skipped entirely on the hexboard, same as the regen above.
+    if (!pauseHealthAndSleep) {
+        float healthDrain = 0.0f;
+        if (getStat(SecondaryStat::FOOD_LEVEL) > HEALTH_HUNGER_THRESHOLD) healthDrain += HEALTH_HUNGER_PENALTY;
+        if (getStat(SecondaryStat::HYDRATION) > HEALTH_THIRST_THRESHOLD) healthDrain += HEALTH_THIRST_PENALTY;
+        if (getStat(SecondaryStat::SLEEP_DEBT) > HEALTH_SLEEP_DEBT_THRESHOLD) healthDrain += HEALTH_SLEEP_DEBT_PENALTY;
+        if (getStat(SecondaryStat::CLEANLINESS) > HEALTH_CLEANLINESS_THRESHOLD) healthDrain += HEALTH_CLEANLINESS_PENALTY;
+        if (getStat(EmotionalStat::HAPPINESS) < HEALTH_HAPPINESS_THRESHOLD) healthDrain += HEALTH_HAPPINESS_PENALTY;
 
-    addStat(SecondaryStat::FITALITY, -healthDrain * ticks);
+        addStat(SecondaryStat::FITALITY, -healthDrain * ticks);
+    }
 
     // Cap health at 100
     float currentHealth = getStat(SecondaryStat::FITALITY);
