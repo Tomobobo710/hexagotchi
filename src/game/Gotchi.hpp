@@ -24,7 +24,8 @@ class EventBus;
 class Gotchi : public SceneActor {
 public:
     // Constructor - vitals and mood are now passed from GameState (shared ownership)
-    Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef);
+    // GameState is passed for sleeping state synchronization
+    Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef, GameState* gameState = nullptr);
     ~Gotchi() = default;
 
     // Lifecycle
@@ -51,11 +52,9 @@ public:
     void setDead(bool dead);
     bool isDead() const;
 
-    // Tick timer access - shared across all Gotchi instances
-    static float getTickTimer() { return tickTimer_; }
-    static void setTickTimer(float t) { tickTimer_ = t; }
-    static float getLastUpdate() { return lastUpdate_; }
-    static void setLastUpdate(float t) { lastUpdate_ = t; }
+    // Set the shared GameState for synchronization
+    void setGameState(GameState* state) { gameState_ = state; }
+
 
     // Interaction
     void interact();  // Player interaction
@@ -150,13 +149,11 @@ private:
     bool dead_;
     bool debugMode_;
 
+    // Shared GameState reference for synchronization
+    GameState* gameState_ = nullptr;
+
     // Wander control
     bool wanderEnabled_;
-
-    // Timing - STATIC so all Gotchi instances share the same tick state
-    // This ensures consistent timing when switching between scenes
-    static float tickTimer_;
-    static float lastUpdate_;
 
     // Movement
     Vector2 targetPosition_;

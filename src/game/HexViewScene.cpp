@@ -69,7 +69,7 @@ void HexViewScene::init() {
     // Use shared vitals and mood from GameState if available, otherwise fallback to defaults
     GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
     GotchiMood& mood = gameState_ ? gameState_->mood : defaultMood_;
-    gotchi = new Gotchi(gotchiPos, stats, mood);
+    gotchi = new Gotchi(gotchiPos, stats, mood, gameState_);
     gotchi->setHexSize(hexSize_);
     gotchi->init();
     gotchi->loadAnimationFrames("gotchis/001");

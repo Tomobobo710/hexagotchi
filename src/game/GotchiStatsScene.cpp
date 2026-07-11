@@ -65,7 +65,7 @@ void GotchiStatsScene::init() {
     GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
     GotchiMood& mood = gameState_ ? gameState_->mood : defaultMood_;
 
-    gotchi = new Gotchi({360.0f, 360.0f}, stats, mood);
+    gotchi = new Gotchi({360.0f, 360.0f}, stats, mood, gameState_);
     gotchi->setTag("gotchi");
     gotchi->setWanderEnabled(false);   // Stop floating in idle state
     addActor(gotchi);

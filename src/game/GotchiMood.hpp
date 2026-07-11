@@ -136,6 +136,9 @@ public:
     void setCurrentMood(GotchiMoodType mood);
     void updateMood(float deltaTime, const class GotchiStats& stats);
 
+    // Full update - called every tick (combines updateMood and processMoodOverlays)
+    void update(float deltaTime, const class GotchiStats& stats);
+
     // Mood utilities
     std::string getMoodName() const;
     Color getMoodTint() const;
