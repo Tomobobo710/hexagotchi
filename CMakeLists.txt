@@ -42,6 +42,7 @@ if(RBUILD_DESKTOP)
         "src/game/HexViewScene.cpp"
         "src/game/Hotbar.cpp"
         "src/game/InputTestScene.cpp"
+        "src/game/KidsVisitScene.cpp"
         "src/game/MergeController.cpp"
         "src/game/MergeScene.cpp"
         "src/game/Model3DTestScene.cpp"
@@ -343,6 +344,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/engine/SceneCamera.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneInputHandler.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/SceneManager.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/GotchiDialogBox.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/TileType.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ControlsOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Gotchi.cpp
@@ -352,7 +354,9 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/HexBoard.cpp
         ${CMAKE_SOURCE_DIR}/src/game/HexViewScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Hotbar.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/HexItemOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/InputTestScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/KidsVisitScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/MergeController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PauseMenuOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/PizzaParlorScene.cpp
@@ -365,10 +369,13 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/GotchiSim.cpp
         ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp
         ${CMAKE_SOURCE_DIR}/src/game/DeathSequencer.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/DeathScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ScenarioDirector.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/TutorialController.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TherapistOfficeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SpriteTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/TitleScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/TomSceneActor.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ToyAnimationScene.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/CityWindowEffect.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/MoonEffect.cpp
@@ -382,6 +389,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/effects/JetMesh.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/UnlitShader.cpp
         ${CMAKE_SOURCE_DIR}/src/effects/TomagotchiToyMesh.cpp
+        ${CMAKE_SOURCE_DIR}/src/effects/TitleScrollShader.cpp
         ${CMAKE_SOURCE_DIR}/src/game/MergeScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/Model3DTestScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/DriversController.cpp

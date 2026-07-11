@@ -3,6 +3,7 @@
 
 #include "Scene.hpp"
 #include "Button.hpp"
+#include "TitleScrollShader.hpp"
 // SaveManager.h - DISABLED: Save system shut off for game jam
 // #include "SaveManager.h"
 #include <string>
@@ -29,6 +30,9 @@ private:
     // Button* mainMenuSaveButton_ = nullptr;  // Save button for main menu
     // std::vector<Button*> slotButtons_;      // Slot summary/load buttons
     // std::vector<Button*> actionButtons_;    // Save/Delete/Back buttons
+
+    // Background shader effect
+    TitleScrollShader* titleShader_ = nullptr;
 
     // Use the global SaveManager from main.cpp to ensure one source of truth
     // SaveManager& saveManager_;
