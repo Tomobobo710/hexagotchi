@@ -13,7 +13,6 @@
 //
 // Build/run: see tools/pack_assets.sh
 
-#include "raylib.h"
 #define RRES_IMPLEMENTATION
 #include "rres.h"
 
@@ -23,6 +22,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <fstream>
+#include <streambuf>
 
 // Cross-platform directory walking:
 // - POSIX (Linux/macOS/Cygwin): use dirent.h
@@ -154,18 +155,28 @@ int main(int argc, char** argv) {
         // Store the raw *.png file bytes verbatim (no decode). PNG is already
         // compressed; decoding to RGBA here is what bloated the pack and OOM'd
         // web. The loader decodes on demand via LoadImageFromMemory.
-        int fileSize = 0;
-        unsigned char* fileData = LoadFileData(fullPath.c_str(), &fileSize);
-        if (fileData == nullptr || fileSize <= 0) {
+        // Use standard C++ file I/O instead of raylib to avoid X11 dependencies
+        std::ifstream file(fullPath, std::ios::binary | std::ios::ate);
+        if (!file) {
             fprintf(stderr, "Skipping (failed to load): %s\n", fullPath.c_str());
-            if (fileData) UnloadFileData(fileData);
+            continue;
+        }
+        std::streamsize fileSize = file.tellg();
+        file.seekg(0, std::ios::beg);
+        if (fileSize <= 0) {
+            fprintf(stderr, "Skipping (empty file): %s\n", fullPath.c_str());
+            continue;
+        }
+        std::vector<unsigned char> fileData(fileSize);
+        if (!file.read(reinterpret_cast<char*>(fileData.data()), fileSize)) {
+            fprintf(stderr, "Skipping (read failed): %s\n", fullPath.c_str());
             continue;
         }
 
         std::string key = ToRelativeKey(fullPath, assetsDir);
 
         unsigned int bufSize = 0;
-        unsigned char* buffer = BuildRawChunkBuffer(fileData, (unsigned int)fileSize, &bufSize);
+        unsigned char* buffer = BuildRawChunkBuffer(fileData.data(), (unsigned int)fileSize, &bufSize);
 
         rresResourceChunkInfo chunkInfo = {0};
         chunkInfo.type[0] = 'R'; chunkInfo.type[1] = 'A'; chunkInfo.type[2] = 'W'; chunkInfo.type[3] = 'D';
@@ -183,9 +194,8 @@ int main(int argc, char** argv) {
         fwrite(buffer, 1, bufSize, rresFile);
 
         RRES_FREE(buffer);
-        UnloadFileData(fileData);
 
-        printf("  packed: %s (id=%u) %d bytes (png)\n", key.c_str(), chunkInfo.id, fileSize);
+        printf("  packed: %s (id=%u) %d bytes (png)\n", key.c_str(), chunkInfo.id, (int)fileSize);
         packed++;
     }
 

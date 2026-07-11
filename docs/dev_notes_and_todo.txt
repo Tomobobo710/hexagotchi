@@ -17,6 +17,8 @@ alter the map generation so the biomes are bigger and more interesting
 the box under the current mood is empty, should anyting be rendered there? probably just get rid of it and only show current mood
 clean up weird text showing at the top of most windows
 if you click back before the tutorial plays then it breaks everything (hexboard)
+the bars for food and stuff - wherever they count up they should visually count down (dont need to change the logic and risk that)
+hexboard load performance
 
 GOTCHI TEXT
 remove running, all good, time, ticks, and stat summary from gotchi screen
@@ -34,3 +36,5 @@ some kind of bg shader thing like toe jam and earl for the title screen
 
 DONE
 change give a break to Merge
+
+

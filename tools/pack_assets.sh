@@ -16,12 +16,12 @@ if [ -f /c/devkitPro/msys2/usr/bin/g++.exe ]; then
     SYS="-isystem $G/include/c++ -isystem $G/include/c++/x86_64-pc-cygwin -isystem $G/include/c++/backward -isystem $G/include -isystem /c/devkitPro/msys2/usr/include"
     LD="-L raylib/src -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm"
 else
-    # Linux: use system g++
+    # Linux: use system g++ - no raylib/glfw needed for asset packing
     GPP=g++
     SYS=""
-    LD="-L raylib/src -L glfw/build/src -lraylib -lglfw3 -lGL -ldl -lm"
+    LD=""
 fi
-INC="-I raylib/src -I rres/src"
+INC="-I rres/src"
 
 BIN=build/devtools/pack_assets.exe
 OBJ=build/devtools/pack_assets.o
