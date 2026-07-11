@@ -22,6 +22,12 @@ private:
     void onCareAction(const Event& e);
     void onMergeCompleted(const Event& e);
 
+    // Tick the vitals every GOTCHI_TICK_RATE seconds
+    void tickVitals(float dt);
+
+    // Update mood every frame (mood overlays need precise timing)
+    void updateMood(float dt);
+
     // Constants (from plan)
     static constexpr float SLEEP_DRAIN_RATE       = 0.02f;  // per second of care time; ~50s of care -> forced merge
     static constexpr float AFFECTION_GAIN         = 0.05f;  // per warmth action
@@ -50,6 +56,10 @@ private:
 
     // Track if we've already emitted PetCollapsed (only once)
     bool collapsedEmitted_ = false;
+
+    // Tick timer for vitals/mood updates (separate from other metronomes)
+    static constexpr float GOTCHI_TICK_RATE = 10.0f;  // Base tick rate in seconds
+    float vitalsTickTimer_ = 0.0f;
 };
 
 #endif // GOTCHI_SIM_HPP

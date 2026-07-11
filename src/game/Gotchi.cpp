@@ -4,6 +4,7 @@
 #include "HexPathFinder.hpp"
 #include "Item.hpp"
 #include "EventBus.h"
+#include "GameState.h"
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -15,7 +16,8 @@ const float GOTCHI_MOVE_SPEED = 50.0f;
 const float GOTCHI_WANDER_SPEED = 20.0f;
 const float GOTCHI_TICK_RATE = 10.0f;  // Base tick rate in seconds
 
-Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
+
+Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef, GameState* gameState)
     : SceneActor(position, GOTCHI_WIDTH, GOTCHI_HEIGHT),
       stats_(statsRef),
       mood_(moodRef),
@@ -24,8 +26,6 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
       dead_(false),
       debugMode_(false),
       wanderEnabled_(true),  // Default to enabled for compatibility
-      tickTimer_(0.0f),
-      lastUpdate_(0.0f),
       wanderTimer_(0.0f),
       currentAction_("idle"),
       actionTimer_(0.0f),
@@ -37,7 +37,8 @@ Gotchi::Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef)
       hasTarget_(false),
       targetQ_(0),
       targetR_(0),
-      world_(nullptr) {
+      world_(nullptr),
+      gameState_(gameState) {
     // Set physics properties
     setGravityEnabled(false);
     setFriction(0.95f);
@@ -94,45 +95,15 @@ void Gotchi::update(float deltaTime) {
     TraceLog(LOG_DEBUG, "GOTCHI_UPDATE following=%d idx=%d pos=(%.1f,%.1f)",
              followingPath_ ? 1 : 0, pathIndex_, position.x, position.y);
 
-    // Update timing
-    tickTimer_ += deltaTime;
-    lastUpdate_ += deltaTime;
-
     // Update SceneActor base class (physics, etc.)
     SceneActor::update(deltaTime);
 
-    // Tick-based updates (every GOTCHI_TICK_RATE seconds)
-    if (tickTimer_ >= GOTCHI_TICK_RATE) {
-        float ticks = tickTimer_ / GOTCHI_TICK_RATE;
-        tickTimer_ -= (ticks * GOTCHI_TICK_RATE);
-
-        // Update stats over time
-        updateStats(ticks);
-
-        // Update mood based on stats
-        mood_.updateMood(deltaTime, stats_);
-
-        // Process mood overlays
-        mood_.processMoodOverlays(deltaTime);
-
-        // Update action timer
-        actionTimer_ -= deltaTime;
-        if (actionTimer_ <= 0) {
-            // Action complete, return to idle
-            if (!sleeping_ && currentAction_ != "idle") {
-                setAction("idle");
-            }
-        }
-
-        if (debugMode_) {
-            // Debug output every 5 ticks
-            if (static_cast<int>(lastUpdate_) % 5 == 0) {
-                std::cout << "[Gotchi] Tick " << static_cast<int>(lastUpdate_) / 5
-                          << " | Mood: " << mood_.getMoodName()
-                          << " | Hunger: " << stats_.getHunger()
-                          << " | Energy: " << stats_.getEnergy()
-                          << "\n";
-            }
+    // Update action timer (not part of the tick simulation anymore)
+    actionTimer_ -= deltaTime;
+    if (actionTimer_ <= 0) {
+        // Action complete, return to idle
+        if (!sleeping_ && currentAction_ != "idle") {
+            setAction("idle");
         }
     }
 
@@ -349,6 +320,10 @@ bool Gotchi::isActive() const {
 
 void Gotchi::setSleeping(bool sleeping) {
     sleeping_ = sleeping;
+    // Sync sleeping state to GameState for shared simulation
+    if (gameState_) {
+        gameState_->sleeping = sleeping;
+    }
     if (sleeping) {
         setAction("sleep");
         setFriction(0.99f);  // Don't move while sleeping
@@ -465,9 +440,8 @@ void Gotchi::heal() {
 void Gotchi::sleep() {
     if (dead_) return;
 
-    sleeping_ = true;
+    setSleeping(true);
     setAction("sleep");
-    setFriction(0.99f);
 
     mood_.addMoodOverlay(GotchiMoodType::MOOD_06_SLEEPY, 0.0f);  // Clear existing
     mood_.addMoodOverlay(GotchiMoodType::MOOD_13_CALM, 30.0f);
@@ -478,8 +452,7 @@ void Gotchi::sleep() {
 }
 
 void Gotchi::wake() {
-    sleeping_ = false;
-    setFriction(0.95f);
+    setSleeping(false);
 
     mood_.clearMoodOverlays();
     mood_.addMoodOverlay(GotchiMoodType::MOOD_00_HAPPY, 10.0f);

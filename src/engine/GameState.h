@@ -39,6 +39,7 @@ struct GameState {
     } needs;
 
     float sleep        = 1.0f;    // Metronome: one-way drain, forces merge at 0
+    bool  sleeping     = false;   // Gotchi is sleeping (applies faster recovery in tick)
     bool  deathEnabled = false;   // Flips at climax; before this, cannot die
 
     // ---- Hidden branch drivers (NEVER shown to player as numbers) ----
