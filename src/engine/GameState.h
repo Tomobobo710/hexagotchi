@@ -76,6 +76,11 @@ struct GameState {
     // through the controls. Set/cleared by the scenes, read by GotchiSim.
     bool  statsFrozen      = false;
 
+    // Gotchi hex position for persistence across scene transitions
+    int   gotchiHexQ = 0;  // Current hex Q coordinate for gotchi
+    int   gotchiHexR = 0;  // Current hex R coordinate for gotchi
+    std::string gotchiBiome = "grass";  // Current biome for background selection
+
     // ---- Extensible narrative bag: choices, seen-flags, arbitrary story vars ----
     std::unordered_map<std::string, Value> flags;
 

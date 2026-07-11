@@ -1,6 +1,36 @@
 todo list
 
-change give a break to Merge
-some kind of blueprint style grid shader for detailed stat screen background
+GENERAL
 play different animations when in different moods
 play different animations after receiving different actions
+DPI awareness -- its possible for the shader and gotchi to be offset on different resolutions / windows UI sizes
+do something visually to the button while its on cooldown for gotchi screen
+make the cooldown longer on gotchi screen by at least a few seconds
+add cooldowns to the items on the bar in hex world
+move some data to the detail screen like the mood backer stuff, and remove mood from detail screen
+some kind of bg behind the tamagotchi intro screen (maybe the school yard?)
+some kind of something on the screen of the tamagotchi in the intro screen
+add title music and real world music
+add sound effect playing for different moods / actions
+clean up the tiles so less roads and castles and shit are in there, and more open space
+alter the map generation so the biomes are bigger and more interesting
+the box under the current mood is empty, should anyting be rendered there? probably just get rid of it and only show current mood
+clean up weird text showing at the top of most windows
+if you click back before the tutorial plays then it breaks everything (hexboard)
+
+GOTCHI TEXT
+remove running, all good, time, ticks, and stat summary from gotchi screen
+
+GAMEPLAY
+different biomes affect the gotchi in different ways
+does mood currently ever change?
+
+MAYBE
+just hide the detailed vitals screen entirely?
+some kind of blueprint style grid shader for detailed stat screen background
+
+IN PROGRESS
+some kind of bg shader thing like toe jam and earl for the title screen
+
+DONE
+change give a break to Merge

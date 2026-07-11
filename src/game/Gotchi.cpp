@@ -885,6 +885,17 @@ HexCoords Gotchi::getCurrentHex() const {
     return HexCoords::fromPixel(position, hexSize_);
 }
 
+void Gotchi::setHexPosition(int q, int r) {
+    // Convert hex coordinates to pixel position
+    HexCoords hexCoords(q, r);
+    position = hexCoords.toPixel(hexSize_);
+    // Clear any active path to prevent conflicts
+    currentPath_.clear();
+    pathIndex_ = 0;
+    followingPath_ = false;
+    setAction("idle");
+}
+
 void Gotchi::setPath(const std::vector<HexCoords>& path) {
     currentPath_ = path;
     pathIndex_ = 0;

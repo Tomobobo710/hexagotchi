@@ -83,6 +83,11 @@ private:
     // Background texture for gotchi scene
     Texture2D background_ = {0};  // Gotchi background image
 
+    // Biome-based backgrounds
+    std::map<std::string, Texture2D> biomeBackgrounds_;
+    std::string currentBiome_;
+    bool needsBackgroundUpdate_ = true;
+
     // Action shader overlay
     Shader actionShader_ = {0};
     Texture2D whitePixel_ = {0};  // 1x1 white texture for DrawTexturePro UVs
@@ -108,6 +113,14 @@ private:
 
     // Explore button callback -- switches to the hexboard scene
     void onExploreButtonClicked();
+
+    // Background management
+    void loadBiomeBackgrounds();
+    void updateBackgroundForHex(int q, int r);
+
+    // Explore button logic
+    void addExploreButton();
+    void updateExploreButtonVisibility();
 
     // Back button on hexboard - handled in HexViewScene
     // This is just a placeholder to note the navigation relationship

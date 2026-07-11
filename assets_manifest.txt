@@ -1,4 +1,5 @@
 backgrounds/apartmentbg.png
+backgrounds/deathbg.png
 backgrounds/officebg.png
 backgrounds/parlorbg.png
 backgrounds/schoolbg.png
