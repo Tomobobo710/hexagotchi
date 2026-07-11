@@ -1,6 +1,7 @@
 backgrounds/apartmentbg.png
 backgrounds/deathbg.png
 backgrounds/officebg.png
+backgrounds/parkinglotbg.png
 backgrounds/parlorbg.png
 backgrounds/schoolbg.png
 backgrounds/therapistbg.png
@@ -849,3 +850,9 @@ single_tiles/swamp/swamp_042.png
 single_tiles/swamp/swamp_043.png
 single_tiles/swamp/swamp_044.png
 single_tiles/swamp/swamp_045.png
+tools/ball.png
+tools/crown.png
+tools/duck.png
+tools/food.png
+tools/gem.png
+tools/water.png
