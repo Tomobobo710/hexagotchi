@@ -653,3 +653,59 @@ void GotchiStats::dumpAllStats() const {
 
     std::cout << "\n=========================\n";
 }
+
+// Tick-based updates - called every GOTCHI_TICK_RATE seconds
+// ticks is the number of ticks that have passed
+// sleeping: true if gotchi is sleeping (applies faster recovery)
+void GotchiStats::tick(float ticks, bool sleeping) {
+    // Age increases with each tick (time passing)
+    addStat(SecondaryStat::AGE, ticks);
+
+    // Core vital stats drain/gain
+    addStat(SecondaryStat::FOOD_LEVEL, 5.0f * ticks);     // Hunger increases
+    addStat(SecondaryStat::HYDRATION, 3.0f * ticks);     // Thirst increases
+    addStat(SecondaryStat::SLEEP_DEBT, 2.0f * ticks);    // Sleep debt increases
+    addStat(SecondaryStat::ENERGY, -3.0f * ticks);       // Energy drains
+    addStat(SecondaryStat::CLEANLINESS, -2.0f * ticks);  // Gets dirty slowly
+
+    // Emotional stats decay
+    addStat(EmotionalStat::HAPPINESS, -1.0f * ticks);
+    addStat(EmotionalStat::EXCITEMENT, -0.5f * ticks);
+
+    // Natural recovery - faster when sleeping
+    if (sleeping) {
+        // Faster recovery when sleeping
+        addStat(SecondaryStat::ENERGY, 5.0f * ticks);
+        addStat(SecondaryStat::SLEEP_DEBT, -8.0f * ticks);
+        addStat(EmotionalStat::HAPPINESS, 1.0f * ticks);
+    } else {
+        // Base recovery when awake
+        addStat(SecondaryStat::ENERGY, 0.5f * ticks);
+        addStat(SecondaryStat::FITALITY, 0.2f * ticks);
+    }
+
+    // Clamp all stats to valid ranges (use the stat's built-in clamping via setStat)
+    setStat(SecondaryStat::FOOD_LEVEL, getStat(SecondaryStat::FOOD_LEVEL));
+    setStat(SecondaryStat::HYDRATION, getStat(SecondaryStat::HYDRATION));
+    setStat(SecondaryStat::SLEEP_DEBT, getStat(SecondaryStat::SLEEP_DEBT));
+    setStat(SecondaryStat::ENERGY, getStat(SecondaryStat::ENERGY));
+    setStat(SecondaryStat::CLEANLINESS, getStat(SecondaryStat::CLEANLINESS));
+    setStat(EmotionalStat::HAPPINESS, getStat(EmotionalStat::HAPPINESS));
+    setStat(EmotionalStat::EXCITEMENT, getStat(EmotionalStat::EXCITEMENT));
+
+    // Health impacts from unmet needs
+    float healthDrain = 0.0f;
+    if (getStat(SecondaryStat::FOOD_LEVEL) > 80) healthDrain += 2.0f;
+    if (getStat(SecondaryStat::HYDRATION) > 80) healthDrain += 2.0f;
+    if (getStat(SecondaryStat::SLEEP_DEBT) > 80) healthDrain += 1.5f;
+    if (getStat(SecondaryStat::CLEANLINESS) > 70) healthDrain += 1.0f;
+    if (getStat(EmotionalStat::HAPPINESS) < 20) healthDrain += 1.0f;
+
+    addStat(SecondaryStat::FITALITY, -healthDrain * ticks);
+
+    // Cap health at 100
+    float currentHealth = getStat(SecondaryStat::FITALITY);
+    if (currentHealth > 100.0f) {
+        setStat(SecondaryStat::FITALITY, 100.0f);
+    }
+}

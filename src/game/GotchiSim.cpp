@@ -1,5 +1,8 @@
 #include "GotchiSim.hpp"
 #include "EventBus.h"
+#include "GotchiStats.hpp"
+#include "GotchiMood.hpp"
+#include "GameConstants.hpp"
 
 GotchiSim::GotchiSim(EventBus& bus, GameState& state)
     : bus_(bus), state_(state) {
@@ -22,33 +25,63 @@ GotchiSim::~GotchiSim() {
     }
 }
 
+void GotchiSim::tickVitals(float dt) {
+    // Accumulate time for vitals tick
+    vitalsTickTimer_ += dt;
+
+    // Check if we've accumulated enough time for a tick
+    if (vitalsTickTimer_ >= GOTCHI_TICK_RATE) {
+        float ticks = vitalsTickTimer_ / GOTCHI_TICK_RATE;
+        vitalsTickTimer_ -= (ticks * GOTCHI_TICK_RATE);
+
+        // Update stats over time (pass sleeping state for recovery rates)
+        state_.vitals.tick(ticks, state_.sleeping);
+    }
+}
+
+// Separate method for mood updates (runs every frame, outside vitals tick gate)
+void GotchiSim::updateMood(float dt) {
+    // Mood updates must run every frame for overlay timing to work correctly
+    state_.mood.update(dt, state_.vitals);
+}
+
 void GotchiSim::update(float dt) {
-    // 1. Sleep metronome: drain while seenReality is true and mode != Story
-    if (state_.seenReality && state_.mode != Mode::Story) {
-        state_.sleep -= SLEEP_DRAIN_RATE * dt;
-        if (state_.sleep < 0.0f) {
-            state_.sleep = 0.0f;
+    // Skip vitals tick when in Story mode (simulator is paused) or while
+    // the tutorial/collapse gate has frozen stats.
+    if (state_.mode != Mode::Story && !state_.statsFrozen) {
+        // 1. Sleep metronome: drain while seenReality is true
+        if (state_.seenReality) {
+            state_.sleep -= SLEEP_DRAIN_RATE * dt;
+            if (state_.sleep < 0.0f) {
+                state_.sleep = 0.0f;
+            }
         }
-    }
 
-    // 4. Grime: rises with neglect each frame (clamped <= 1)
-    state_.grime += GRIME_CREEP_RATE * dt;
-    if (state_.grime > 1.0f) {
-        state_.grime = 1.0f;
-    }
+        // Tick vitals every GOTCHI_TICK_RATE seconds
+        tickVitals(dt);
 
-    // 5. Collapse / survival: only while deathEnabled is true
-    if (state_.deathEnabled && !state_.collapsed) {
-        // Check if any visible need is at/under COLLAPSE_NEED_THRESHOLD
-        if (state_.needs.hunger <= COLLAPSE_NEED_THRESHOLD ||
-            state_.needs.hygiene <= COLLAPSE_NEED_THRESHOLD ||
-            state_.needs.affection <= COLLAPSE_NEED_THRESHOLD ||
-            state_.needs.energy <= COLLAPSE_NEED_THRESHOLD) {
-            state_.collapsed = true;
-            state_.drivers.survival = 0.0f;
-            if (!collapsedEmitted_) {
-                bus_.emit(Event::petCollapsed());
-                collapsedEmitted_ = true;
+        // Update mood every frame (overlay timing needs precise dt)
+        updateMood(dt);
+
+        // 4. Grime: rises with neglect each frame (clamped <= 1)
+        state_.grime += GRIME_CREEP_RATE * dt;
+        if (state_.grime > 1.0f) {
+            state_.grime = 1.0f;
+        }
+
+        // 5. Collapse / survival: only while deathEnabled is true
+        if (state_.deathEnabled && !state_.collapsed) {
+            // Check if any visible need is at/under COLLAPSE_NEED_THRESHOLD
+            if (state_.needs.hunger <= COLLAPSE_NEED_THRESHOLD ||
+                state_.needs.hygiene <= COLLAPSE_NEED_THRESHOLD ||
+                state_.needs.affection <= COLLAPSE_NEED_THRESHOLD ||
+                state_.needs.energy <= COLLAPSE_NEED_THRESHOLD) {
+                state_.collapsed = true;
+                state_.drivers.survival = 0.0f;
+                if (!collapsedEmitted_) {
+                    bus_.emit(Event::petCollapsed());
+                    collapsedEmitted_ = true;
+                }
             }
         }
     }

@@ -39,6 +39,7 @@ struct GameState {
     } needs;
 
     float sleep        = 1.0f;    // Metronome: one-way drain, forces merge at 0
+    bool  sleeping     = false;   // Gotchi is sleeping (applies faster recovery in tick)
     bool  deathEnabled = false;   // Flips at climax; before this, cannot die
 
     // ---- Hidden branch drivers (NEVER shown to player as numbers) ----
@@ -68,6 +69,12 @@ struct GameState {
     // this is the ONLY way it unlocks. Cleared by MergeController when the
     // player actually merges. See GotchiScene::applySleepCollapseGate().
     bool  sleepCollapsed   = false;
+
+    // True while the tutorial is actively teaching (or the sleep-collapse
+    // gate is holding); freezes vitals/mood ticking in GotchiSim so the
+    // player isn't watching needs drain while they're still being walked
+    // through the controls. Set/cleared by the scenes, read by GotchiSim.
+    bool  statsFrozen      = false;
 
     // ---- Extensible narrative bag: choices, seen-flags, arbitrary story vars ----
     std::unordered_map<std::string, Value> flags;

@@ -44,130 +44,331 @@ static bool isHygieneAction(int actionCode) {
 
 // Gotchi pixel scale - now in GameConstants.hpp for shared use across scenes
 
+// ============================================================================
+// Action Overlay Fragment Shaders  —  drop-in replacement
+// ============================================================================
+// Replaces ACTION_OVERLAY_FS_DESKTOP and ACTION_OVERLAY_FS_WEB in GotchiScene.cpp.
+//
+// Same uniform interface as before (uMode / uProgress / uTime / uResolution),
+// so NO C++ changes are needed — this is a pure swap of the two string literals.
+//
+// NOTE ON VERSIONS: I kept your existing pairing here — desktop = #version 330,
+// web = #version 100 (varying / gl_FragColor). This matches what's currently in
+// your file. Your other projects use "#version 300 es" for web; if hexagotchi's
+// raylib web target is actually GLES3, tell me and I'll re-emit the web copy as
+// 300 es (in/out + `out vec4 finalColor`). Left as-is to avoid breaking the build.
+//
+// The shared body uses only GLSL-ES-1.00-safe constructs: constant-bound loops,
+// no reversed-edge smoothstep, no dynamic array indexing, no dFdx/textureLod.
+// ============================================================================
+
 // Desktop shader - #version 330
 static const char* ACTION_OVERLAY_FS_DESKTOP = R"(#version 330
+    in vec2 fragTexCoord;
+    in vec4 fragColor;
+    out vec4 finalColor;
 
-in vec2 fragTexCoord;
-in vec4 fragColor;
-out vec4 finalColor;
+    uniform int   uMode;       // 0=Wash, 1=Groom, 2=Feed, 3=Pet, 4=Water
+    uniform float uProgress;   // 0..1 over effect duration
+    uniform float uTime;       // seconds
+    uniform vec2  uResolution; // dest rect size (for aspect-correct UVs)
 
-uniform int uMode;        // 0=Wash, 1=Groom, 2=Feed, 3=Pet, 4=Water
-uniform float uProgress;  // 0..1 over effect duration
-uniform float uTime;      // seconds for animation
-uniform vec2 uResolution; // quad size for aspect-correct UVs
+    float hash21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float hash11(float n){ return fract(sin(n * 17.13) * 43758.5453); }
 
-// Simple hash for noise
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    // 1.0 at x==c, falls off within +/- w
+    float band(float x, float c, float w){ return 1.0 - smoothstep(0.0, w, abs(x - c)); }
 
-void main() {
-    // Flip Y because fragTexCoord has Y=0 at bottom in OpenGL/WebGL
-    vec2 uv = fragTexCoord;
-    uv.y = 1.0 - uv.y;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
+    // 1.0 inside radius r, soft edge of width `soft`
+    float blob(vec2 p, float r, float soft){ return 1.0 - smoothstep(r - soft, r, length(p)); }
 
-    // Scale UVs by aspect ratio to make effects cover the rect properly
-    // This stretches the effect to fill the destination rectangle
-    uv.x *= aspect;
-
-    float p = clamp(uProgress, 0.0, 1.0);
-    float ease = sin(p * 3.14159265);   // 0 -> 1 -> 0 across the action
-
-    vec3  col  = vec3(0.0);
-    float mask = 0.0;                    // 0 = fully transparent (sprite shows through)
-
-    if (uMode == 0) {                    // Wash: horizontal scrub lines
-        float lines = step(0.75, sin(uv.y * 24.0 + uTime * 6.0) * 0.5 + 0.5);
-        col = vec3(0.75, 0.9, 1.0); mask = lines * 0.7;
-    } else if (uMode == 1) {             // Groom: twinkling sparkles
-        vec2 g = floor(uv * 12.0);
-        float tw = sin(uTime * 4.0 + hash(g) * 6.2831) * 0.5 + 0.5;
-        mask = step(0.9, hash(g)) * tw; col = vec3(1.0, 0.95, 0.6);
-    } else if (uMode == 2) {             // Feed: falling crumbs
-        // Similar to Water mode - use smoothstep for soft transitions
-        vec2 gp = uv * vec2(14.0, 18.0);
-        float y = fract(gp.y + uTime * 4.0);  // animated Y position
-        float streak = smoothstep(0.0, 0.1, y) * smoothstep(0.40, 0.10, y);
-        float colId = floor(gp.x);
-        float hashVal = hash(vec2(colId, uTime * 0.5));
-        mask = streak * step(0.5, hashVal);
-        col = vec3(0.85, 0.6, 0.3);
-    } else if (uMode == 3) {             // Pet: warm expanding ring
-        float d = distance(uv, vec2(0.5));
-        mask = smoothstep(0.06, 0.0, abs(d - fract(uTime * 0.5) * 0.5)) * 0.8;
-        col = vec3(1.0, 0.7, 0.65);
-    } else if (uMode == 4) {             // Water: blue droplet streaks
-        float colId = floor(uv.x * 10.0);
-        float speed = 0.6 + hash(vec2(colId, 0.0)) * 0.8;
-        float y = fract(uv.y + uTime * speed * 0.5 + hash(vec2(colId, 3.0)));
-        float streak = smoothstep(0.0, 0.08, y) * smoothstep(0.30, 0.10, y);
-        mask = streak * step(0.5, hash(vec2(colId, 7.0))); col = vec3(0.4, 0.7, 1.0);
+    // 4-point twinkle glint centered at origin, arm length ~ s
+    float sparkle(vec2 p, float s){
+        p /= s;
+        float ax = abs(p.x), ay = abs(p.y);
+        float h = (1.0 - smoothstep(0.0, 1.0, ax)) * (1.0 - smoothstep(0.0, 0.14, ay));
+        float v = (1.0 - smoothstep(0.0, 1.0, ay)) * (1.0 - smoothstep(0.0, 0.14, ax));
+        float core = 1.0 - smoothstep(0.0, 0.28, length(p));
+        return clamp(h + v + core, 0.0, 1.0);
     }
 
-    finalColor = vec4(col, mask * ease * 0.85);
-}
+    // Classic heart curve: (x^2 + y^2 - 1)^3 - x^2 y^3.  < 0 inside, point down.
+    float heartField(vec2 p){
+        float x = p.x, y = p.y;
+        float a = x*x + y*y - 1.0;
+        return a*a*a - x*x*y*y*y;
+    }
+
+    // One column-stream of falling food pellets (used twice for a layered look).
+    float feedStream(vec2 sv, float t, float N, float R, float phase,
+                    float spdScale, float rad, float soft, float thr){
+        float colId = floor(sv.x * N);
+        float lane  = (fract(sv.x * N) - 0.5) / N;          // suv-space x offset
+        float spd   = (0.5 + hash11(colId) * 0.7) * spdScale;
+        float yy    = fract(sv.y * R + t * spd + hash11(colId + phase));
+        float dy    = (yy - 0.5) / R;
+        float pellet = 1.0 - smoothstep(rad - soft, rad, sqrt(lane*lane + dy*dy));
+        float on    = step(thr, hash11(colId + 2.0 + phase));
+        return pellet * on;
+    }
+
+    void main() {
+        vec2  uv = fragTexCoord; uv.y = 1.0 - uv.y;          // Y up
+        float aspect = uResolution.x / max(uResolution.y, 1.0);
+        vec2  suv = uv;    suv.x *= aspect;                  // aspect-corrected, for fields
+        vec2  q   = uv - 0.5; q.x *= aspect;                 // centered & isotropic, for radial
+
+        float p    = clamp(uProgress, 0.0, 1.0);
+        float ease = sin(p * 3.14159265);                    // 0 -> 1 -> 0
+
+        vec3  col  = vec3(0.0);
+        float mask = 0.0;
+
+        if (uMode == 0) {                    // WASH — drifting soap suds + sheen
+            float m = 0.0;
+            for (int i = 0; i < 3; i++){
+                float fi  = float(i);
+                float scl = 6.0 + fi * 3.0;
+                vec2  gp  = suv * scl;
+                gp.y     -= uTime * (0.6 + fi * 0.25);       // bubbles rise
+                vec2  cell = floor(gp);
+                vec2  f    = fract(gp) - 0.5;
+                float rnd  = hash21(cell + fi * 31.0);
+                float r    = 0.16 + 0.16 * rnd;
+                float d    = length(f);
+                float body = (1.0 - smoothstep(r - 0.05, r, d)) * 0.45;
+                float rim  = band(d, r - 0.03, 0.03) * 0.6;
+                m = max(m, body + rim);
+            }
+            float sweep = band(uv.x, p * 1.2 - 0.1, 0.10) * 0.5;
+            m    = max(m, sweep);
+            col  = mix(vec3(0.72, 0.88, 1.0), vec3(1.0), m);
+            mask = clamp(m, 0.0, 1.0) * 0.8;
+
+        } else if (uMode == 1) {             // GROOM — twinkling glints + shine wipe
+            float m   = 0.0;
+            vec2  gp  = suv * 5.0;
+            vec2  cell = floor(gp);
+            vec2  f    = fract(gp) - 0.5;
+            float rnd  = hash21(cell);
+            float on   = step(0.6, rnd);
+            float ph   = hash21(cell + 7.0) * 6.2831;
+            float tw   = sin(uTime * 3.0 + ph) * 0.5 + 0.5;
+            float sz   = 0.22 + 0.14 * hash21(cell + 3.0);
+            m += sparkle(f, sz) * tw * on;
+            float diag  = (uv.x + uv.y) * 0.5;
+            float shine = band(diag, p * 1.4 - 0.2, 0.06) * 0.6;
+            m += shine;
+            col  = vec3(1.0, 0.95, 0.62);
+            mask = clamp(m, 0.0, 1.0) * 0.85;
+
+        } else if (uMode == 2) {             // FEED — layered falling pellets + confined warm glow
+            float m = 0.0;
+            // two layered pellet streams: main + a smaller/faster one for depth
+            m = max(m, feedStream(suv, uTime, 13.0, 4.5,  5.0, 1.0, 0.020, 0.012, 0.22));
+            m = max(m, feedStream(suv, uTime, 16.0, 6.5, 19.0, 1.4, 0.015, 0.010, 0.37));
+            float crumb = m;
+            // confined warm glow at bottom-center — NOT a full-width fill
+            float glow = (1.0 - smoothstep(0.0, 0.30, length(q - vec2(0.0, -0.34)))) * 0.18;
+            float warm = max(crumb, glow * 0.6);   // glow leans warm/cream, not muddy brown
+            m += glow;
+            col  = mix(vec3(0.85, 0.55, 0.28), vec3(1.0, 0.85, 0.5), warm);
+            mask = clamp(m, 0.0, 1.0) * 0.85;
+
+        } else if (uMode == 3) {             // PET — rising hearts + warm pulse
+            float m  = 0.0;
+            float pr = fract(uTime * 0.4);
+            m += band(length(q), pr * 0.55, 0.04) * (1.0 - pr) * 0.4;   // radial pulse
+            for (int i = 0; i < 5; i++){
+                float fi   = float(i);
+                float seed = hash11(fi + 1.0);
+                float t    = fract(uTime * 0.32 + seed);
+                float hx   = (seed - 0.5) * 0.45 + sin((t + seed) * 6.2831) * 0.05;
+                float hy   = -0.32 + t * 0.62;
+                float scl  = 5.0 + seed * 2.5;
+                vec2  hp   = (q - vec2(hx, hy)) * scl;
+                float hf   = heartField(hp);
+                float heart = 1.0 - smoothstep(-0.05, 0.06, hf);        // 1 inside
+                float fade  = smoothstep(0.0, 0.15, t) * (1.0 - smoothstep(0.7, 1.0, t));
+                m = max(m, heart * fade);
+            }
+            col  = vec3(1.0, 0.55, 0.62);
+            mask = clamp(m, 0.0, 1.0) * 0.85;
+
+        } else if (uMode == 4) {             // WATER — droplets w/ heads + base ripple
+            float m     = 0.0;
+            float N     = 8.0;
+            float colId = floor(suv.x * N);
+            float lane  = fract(suv.x * N) - 0.5;
+            float spd   = 0.6 + hash11(colId) * 0.7;
+            float yy    = fract(suv.y + uTime * spd * 0.55 + hash11(colId + 4.0));
+            float on    = step(0.35, hash11(colId + 1.0));
+            float head  = blob(vec2(lane, (yy - 0.5) * 1.5), 0.12, 0.10);
+            float tail  = band(lane, 0.0, 0.05)
+                        * (1.0 - smoothstep(0.5, 0.72, yy)) * smoothstep(0.5, 0.55, yy);
+            m += (head + tail * 0.5) * on;
+            float rp = fract(uTime * 0.7);
+            m += band(length(q - vec2(0.0, -0.4)), rp * 0.4, 0.025) * (1.0 - rp)
+            * (1.0 - smoothstep(0.0, 0.35, uv.y)) * 0.5;
+            col  = vec3(0.45, 0.72, 1.0);
+            mask = clamp(m, 0.0, 1.0) * 0.8;
+        }
+
+        finalColor = vec4(col, mask * ease * 0.85);
+    }
 )";
 
-// Web shader - #version 300 es
-// Identical body to desktop, only header differs
+// Web shader - #version 100  (identical body to desktop; only header + output differ)
 static const char* ACTION_OVERLAY_FS_WEB = R"(#version 100
     precision mediump float;
 
-    varying vec2 fragTexCoord;   // was: in
-    varying vec4 fragColor;      // was: in
-    // (removed: out vec4 finalColor;)
+    varying vec2 fragTexCoord;
+    varying vec4 fragColor;
 
-    uniform int uMode;
+    uniform int   uMode;
     uniform float uProgress;
     uniform float uTime;
-    uniform vec2 uResolution;
+    uniform vec2  uResolution;
 
-    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float hash21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float hash11(float n){ return fract(sin(n * 17.13) * 43758.5453); }
+    float band(float x, float c, float w){ return 1.0 - smoothstep(0.0, w, abs(x - c)); }
+    float blob(vec2 p, float r, float soft){ return 1.0 - smoothstep(r - soft, r, length(p)); }
+
+    float sparkle(vec2 p, float s){
+        p /= s;
+        float ax = abs(p.x), ay = abs(p.y);
+        float h = (1.0 - smoothstep(0.0, 1.0, ax)) * (1.0 - smoothstep(0.0, 0.14, ay));
+        float v = (1.0 - smoothstep(0.0, 1.0, ay)) * (1.0 - smoothstep(0.0, 0.14, ax));
+        float core = 1.0 - smoothstep(0.0, 0.28, length(p));
+        return clamp(h + v + core, 0.0, 1.0);
+    }
+
+    float heartField(vec2 p){
+        float x = p.x, y = p.y;
+        float a = x*x + y*y - 1.0;
+        return a*a*a - x*x*y*y*y;
+    }
+
+    // One column-stream of falling food pellets (used twice for a layered look).
+    float feedStream(vec2 sv, float t, float N, float R, float phase,
+                    float spdScale, float rad, float soft, float thr){
+        float colId = floor(sv.x * N);
+        float lane  = (fract(sv.x * N) - 0.5) / N;          // suv-space x offset
+        float spd   = (0.5 + hash11(colId) * 0.7) * spdScale;
+        float yy    = fract(sv.y * R + t * spd + hash11(colId + phase));
+        float dy    = (yy - 0.5) / R;
+        float pellet = 1.0 - smoothstep(rad - soft, rad, sqrt(lane*lane + dy*dy));
+        float on    = step(thr, hash11(colId + 2.0 + phase));
+        return pellet * on;
+    }
 
     void main() {
-        vec2 uv = fragTexCoord;
-        uv.y = 1.0 - uv.y;
+        vec2  uv = fragTexCoord; uv.y = 1.0 - uv.y;
         float aspect = uResolution.x / max(uResolution.y, 1.0);
+        vec2  suv = uv;    suv.x *= aspect;
+        vec2  q   = uv - 0.5; q.x *= aspect;
 
-        // Scale UVs by aspect ratio to make effects cover the rect properly
-        uv.x *= aspect;
-
-        float p = clamp(uProgress, 0.0, 1.0);
+        float p    = clamp(uProgress, 0.0, 1.0);
         float ease = sin(p * 3.14159265);
 
         vec3  col  = vec3(0.0);
         float mask = 0.0;
 
-        if (uMode == 0) {
-            float lines = step(0.75, sin(uv.y * 24.0 + uTime * 6.0) * 0.5 + 0.5);
-            col = vec3(0.75, 0.9, 1.0); mask = lines * 0.7;
-        } else if (uMode == 1) {
-            vec2 g = floor(uv * 12.0);
-            float tw = sin(uTime * 4.0 + hash(g) * 6.2831) * 0.5 + 0.5;
-            mask = step(0.9, hash(g)) * tw; col = vec3(1.0, 0.95, 0.6);
-        } else if (uMode == 2) {
-            // Similar to Water mode - use smoothstep for soft transitions
-            vec2 gp = uv * vec2(14.0, 18.0);
-            float y = fract(gp.y + uTime * 4.0);  // animated Y position
-            float streak = smoothstep(0.0, 0.1, y) * smoothstep(0.40, 0.10, y);
-            float colId = floor(gp.x);
-            float hashVal = hash(vec2(colId, uTime * 0.5));
-            mask = streak * step(0.5, hashVal);
-            col = vec3(0.85, 0.6, 0.3);
-        } else if (uMode == 3) {
-            float d = distance(uv, vec2(0.5));
-            mask = smoothstep(0.06, 0.0, abs(d - fract(uTime * 0.5) * 0.5)) * 0.8;
-            col = vec3(1.0, 0.7, 0.65);
-        } else if (uMode == 4) {
-            float colId = floor(uv.x * 10.0);
-            float speed = 0.6 + hash(vec2(colId, 0.0)) * 0.8;
-            float y = fract(uv.y + uTime * speed * 0.5 + hash(vec2(colId, 3.0)));
-            float streak = smoothstep(0.0, 0.08, y) * smoothstep(0.30, 0.10, y);
-            mask = streak * step(0.5, hash(vec2(colId, 7.0))); col = vec3(0.4, 0.7, 1.0);
+        if (uMode == 0) {                    // WASH
+            float m = 0.0;
+            for (int i = 0; i < 3; i++){
+                float fi  = float(i);
+                float scl = 6.0 + fi * 3.0;
+                vec2  gp  = suv * scl;
+                gp.y     -= uTime * (0.6 + fi * 0.25);
+                vec2  cell = floor(gp);
+                vec2  f    = fract(gp) - 0.5;
+                float rnd  = hash21(cell + fi * 31.0);
+                float r    = 0.16 + 0.16 * rnd;
+                float d    = length(f);
+                float body = (1.0 - smoothstep(r - 0.05, r, d)) * 0.45;
+                float rim  = band(d, r - 0.03, 0.03) * 0.6;
+                m = max(m, body + rim);
+            }
+            float sweep = band(uv.x, p * 1.2 - 0.1, 0.10) * 0.5;
+            m    = max(m, sweep);
+            col  = mix(vec3(0.72, 0.88, 1.0), vec3(1.0), m);
+            mask = clamp(m, 0.0, 1.0) * 0.8;
+
+        } else if (uMode == 1) {             // GROOM
+            float m   = 0.0;
+            vec2  gp  = suv * 5.0;
+            vec2  cell = floor(gp);
+            vec2  f    = fract(gp) - 0.5;
+            float rnd  = hash21(cell);
+            float on   = step(0.6, rnd);
+            float ph   = hash21(cell + 7.0) * 6.2831;
+            float tw   = sin(uTime * 3.0 + ph) * 0.5 + 0.5;
+            float sz   = 0.22 + 0.14 * hash21(cell + 3.0);
+            m += sparkle(f, sz) * tw * on;
+            float diag  = (uv.x + uv.y) * 0.5;
+            float shine = band(diag, p * 1.4 - 0.2, 0.06) * 0.6;
+            m += shine;
+            col  = vec3(1.0, 0.95, 0.62);
+            mask = clamp(m, 0.0, 1.0) * 0.85;
+
+        } else if (uMode == 2) {             // FEED — layered falling pellets + confined warm glow
+            float m = 0.0;
+            // two layered pellet streams: main + a smaller/faster one for depth
+            m = max(m, feedStream(suv, uTime, 13.0, 4.5,  5.0, 1.0, 0.020, 0.012, 0.22));
+            m = max(m, feedStream(suv, uTime, 16.0, 6.5, 19.0, 1.4, 0.015, 0.010, 0.37));
+            float crumb = m;
+            // confined warm glow at bottom-center — NOT a full-width fill
+            float glow = (1.0 - smoothstep(0.0, 0.30, length(q - vec2(0.0, -0.34)))) * 0.18;
+            float warm = max(crumb, glow * 0.6);   // glow leans warm/cream, not muddy brown
+            m += glow;
+            col  = mix(vec3(0.85, 0.55, 0.28), vec3(1.0, 0.85, 0.5), warm);
+            mask = clamp(m, 0.0, 1.0) * 0.85;
+
+        } else if (uMode == 3) {             // PET
+            float m  = 0.0;
+            float pr = fract(uTime * 0.4);
+            m += band(length(q), pr * 0.55, 0.04) * (1.0 - pr) * 0.4;
+            for (int i = 0; i < 5; i++){
+                float fi   = float(i);
+                float seed = hash11(fi + 1.0);
+                float t    = fract(uTime * 0.32 + seed);
+                float hx   = (seed - 0.5) * 0.45 + sin((t + seed) * 6.2831) * 0.05;
+                float hy   = -0.32 + t * 0.62;
+                float scl  = 5.0 + seed * 2.5;
+                vec2  hp   = (q - vec2(hx, hy)) * scl;
+                float hf   = heartField(hp);
+                float heart = 1.0 - smoothstep(-0.05, 0.06, hf);
+                float fade  = smoothstep(0.0, 0.15, t) * (1.0 - smoothstep(0.7, 1.0, t));
+                m = max(m, heart * fade);
+            }
+            col  = vec3(1.0, 0.55, 0.62);
+            mask = clamp(m, 0.0, 1.0) * 0.85;
+
+        } else if (uMode == 4) {             // WATER
+            float m     = 0.0;
+            float N     = 8.0;
+            float colId = floor(suv.x * N);
+            float lane  = fract(suv.x * N) - 0.5;
+            float spd   = 0.6 + hash11(colId) * 0.7;
+            float yy    = fract(suv.y + uTime * spd * 0.55 + hash11(colId + 4.0));
+            float on    = step(0.35, hash11(colId + 1.0));
+            float head  = blob(vec2(lane, (yy - 0.5) * 1.5), 0.12, 0.10);
+            float tail  = band(lane, 0.0, 0.05)
+                        * (1.0 - smoothstep(0.5, 0.72, yy)) * smoothstep(0.5, 0.55, yy);
+            m += (head + tail * 0.5) * on;
+            float rp = fract(uTime * 0.7);
+            m += band(length(q - vec2(0.0, -0.4)), rp * 0.4, 0.025) * (1.0 - rp)
+            * (1.0 - smoothstep(0.0, 0.35, uv.y)) * 0.5;
+            col  = vec3(0.45, 0.72, 1.0);
+            mask = clamp(m, 0.0, 1.0) * 0.8;
         }
 
-        gl_FragColor = vec4(col, mask * ease * 0.85);   // was: finalColor
+        gl_FragColor = vec4(col, mask * ease * 0.85);
     }
 )";
+
 
 GotchiScene::GotchiScene()
     : Scene(720.0f, 720.0f, {40, 40, 60, 255}) {
@@ -186,7 +387,7 @@ void GotchiScene::init() {
     GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
     GotchiMood& mood = gameState_ ? gameState_->mood : defaultMood_;
 
-    gotchi = new Gotchi({360.0f, 360.0f}, stats, mood);
+    gotchi = new Gotchi({360.0f, 360.0f}, stats, mood, gameState_);
     gotchi->setTag("gotchi");
     addActor(gotchi);
 
@@ -347,6 +548,13 @@ void GotchiScene::update(float deltaTime) {
     // Detect the sleep-hits-0 collapse BEFORE freezing/updating the gotchi
     // this frame, so the freeze takes effect the same frame sleep bottoms out.
     applySleepCollapseGate();
+
+    // GotchiSim sets state_.collapsed when a vital need bottoms out (only
+    // once deathEnabled). That's our one death condition -- route it into
+    // Gotchi::isDead() so the existing DeathScene trigger below fires.
+    if (gotchi && gameState_ && gameState_->collapsed && !gotchi->isDead()) {
+        gotchi->setDead(true);
+    }
 
     // Freeze vitals while the tutorial is actively teaching, or once the
     // gotchi has collapsed from exhaustion -- see Gotchi::setStatsFrozen()

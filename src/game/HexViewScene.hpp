@@ -14,6 +14,7 @@
 class Hotbar;
 class EventBus;
 class Item;
+class GameState;
 
 class HexViewScene : public Scene {
 public:
@@ -29,6 +30,9 @@ public:
 
     // Set the tutorial controller reference for button locking + step draw/advance
     void setTutorialController(TutorialController* tc) { tutorialController_ = tc; }
+
+    // Set the shared game state for vitals and mood
+    void setGameState(GameState* state) { gameState_ = state; }
 
 private:
     // Pause functionality
@@ -52,6 +56,9 @@ private:
 
     // World config (stored after init)
     float hexSize_;
+
+    // Shared game state (owned by main.cpp)
+    GameState* gameState_ = nullptr;
 
     // Fallback vitals and mood for Gotchi (used if no gameState available)
     GotchiStats defaultStats_;

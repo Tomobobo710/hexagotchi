@@ -1,0 +1,6 @@
+todo list
+
+change give a break to Merge
+some kind of blueprint style grid shader for detailed stat screen background
+play different animations when in different moods
+play different animations after receiving different actions

@@ -285,6 +285,12 @@ void GotchiMood::processMoodOverlays(float deltaTime) {
     }
 }
 
+// Full update - called every tick (combines updateMood and processMoodOverlays)
+void GotchiMood::update(float deltaTime, const GotchiStats& stats) {
+    updateMood(deltaTime, stats);
+    processMoodOverlays(deltaTime);
+}
+
 void GotchiMood::setDebugMoodIndex(int index) {
     if (index >= 0 && index <= 99) {
         // Convert index to mood enum value

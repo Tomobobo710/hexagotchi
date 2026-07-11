@@ -5,6 +5,7 @@
 #include "../engine/HexPathFinder.hpp"
 #include "../engine/Item.hpp"
 #include "../engine/SceneManager.hpp"
+#include "../engine/GameState.h"
 #include "EventBus.h"
 #include "PauseMenuOverlay.hpp"
 #include "Hotbar.hpp"
@@ -64,7 +65,11 @@ void HexViewScene::init() {
     // Place it at the center hex (q=16, r=9) by converting to pixel coordinates
     HexCoords startHex(16, 9);
     Vector2 gotchiPos = startHex.toPixel(hexSize_);
-    gotchi = new Gotchi(gotchiPos, defaultStats_, defaultMood_);
+
+    // Use shared vitals and mood from GameState if available, otherwise fallback to defaults
+    GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
+    GotchiMood& mood = gameState_ ? gameState_->mood : defaultMood_;
+    gotchi = new Gotchi(gotchiPos, stats, mood, gameState_);
     gotchi->setHexSize(hexSize_);
     gotchi->init();
     gotchi->loadAnimationFrames("gotchis/001");
@@ -194,6 +199,13 @@ void HexViewScene::draw() {
 }
 
 void HexViewScene::update(float deltaTime) {
+    // GotchiSim sets state_.collapsed when a vital need bottoms out (only
+    // once deathEnabled). That's our one death condition -- route it into
+    // Gotchi::isDead() so the death trigger below fires.
+    if (gotchi && gameState_ && gameState_->collapsed && !gotchi->isDead()) {
+        gotchi->setDead(true);
+    }
+
     // Freeze vitals while the tutorial is actively teaching -- must happen
     // before Scene::update() since that's what drives gotchi->update() (added
     // via addActor()).

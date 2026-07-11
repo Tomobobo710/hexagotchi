@@ -24,7 +24,8 @@ class EventBus;
 class Gotchi : public SceneActor {
 public:
     // Constructor - vitals and mood are now passed from GameState (shared ownership)
-    Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef);
+    // GameState is passed for sleeping state synchronization
+    Gotchi(Vector2 position, GotchiStats& statsRef, GotchiMood& moodRef, GameState* gameState = nullptr);
     ~Gotchi() = default;
 
     // Lifecycle
@@ -51,6 +52,10 @@ public:
     void setDead(bool dead);
     bool isDead() const;
 
+    // Set the shared GameState for synchronization
+    void setGameState(GameState* state) { gameState_ = state; }
+
+
     // Interaction
     void interact();  // Player interaction
     void feed();      // Give food
@@ -71,10 +76,11 @@ public:
     // Freezes vital-stat drain/gain and mood updates while true (tutorial
     // hand-holding: the player shouldn't see hunger/energy/etc moving while
     // they're still being taught what the buttons do). Animation, movement,
-    // and the state machine keep running as normal -- only updateStats()/
-    // mood_.updateMood() are skipped.
-    void setStatsFrozen(bool frozen) { statsFrozen_ = frozen; }
-    bool isStatsFrozen() const { return statsFrozen_; }
+    // and the state machine keep running as normal. Vitals/mood ticking now
+    // lives in GotchiSim, so this just forwards to the shared GameState flag
+    // it reads every frame.
+    void setStatsFrozen(bool frozen) { if (gameState_) gameState_->statsFrozen = frozen; }
+    bool isStatsFrozen() const { return gameState_ && gameState_->statsFrozen; }
 
     // Path-based movement
     HexCoords getCurrentHex() const;
@@ -152,15 +158,11 @@ private:
     bool dead_;
     bool debugMode_;
 
+    // Shared GameState reference for synchronization
+    GameState* gameState_ = nullptr;
+
     // Wander control
     bool wanderEnabled_;
-
-    // See setStatsFrozen() above
-    bool statsFrozen_ = false;
-
-    // Timing
-    float tickTimer_;       // For tick-based updates
-    float lastUpdate_;      // Last update time
 
     // Movement
     Vector2 targetPosition_;

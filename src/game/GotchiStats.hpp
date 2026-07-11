@@ -173,6 +173,11 @@ public:
     void update(float deltaTime);
     void reset();
 
+    // Tick-based updates - called every GOTCHI_TICK_RATE seconds
+    // ticks is the number of ticks that have passed (may be fractional)
+    // sleeping: true if gotchi is sleeping (applies faster recovery)
+    void tick(float ticks, bool sleeping);
+
     // Stat accessors - using enums
     float getStat(SecondaryStat stat) const;
     float getStat(EmotionalStat stat) const;
