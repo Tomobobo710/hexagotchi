@@ -185,7 +185,7 @@ void KidsVisitScene::update(float deltaTime) {
             return;
         }
         if (dialog->isFinished()) {
-            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
+            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)))) {
                 advanceLine();
             }
         }

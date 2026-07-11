@@ -193,7 +193,7 @@ void PizzaParlorScene::init() {
           {}, {},
           PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
           PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
-        { CharacterId::Ronzer, "Ronzer! Ha -- Ronzer Ronzer.",
+        { CharacterId::Ronzer, "Ronzer! -- Ronzer Ronzer.",
           2, false, false, PortraitEmotion::Happy, "",
           {}, {},
           PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
@@ -230,7 +230,7 @@ void PizzaParlorScene::init() {
           {}, {},
           PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy,
           PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
-        { CharacterId::Mark, "Free pizza and a look inside another\nunit? Wouldn't miss it. Nice place.",
+        { CharacterId::Mark, "Free pizza? Wouldn't miss it.",
           5, false, false, PortraitEmotion::Happy, "",
           {}, {},
           PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
@@ -400,7 +400,7 @@ void PizzaParlorScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
+            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)))) {
                 advanceLine();
             }
         }
@@ -624,3 +624,4 @@ void PizzaParlorScene::drawBimmy(Vector2 pos) {
 void PizzaParlorScene::drawMark(Vector2 pos) {
     drawPose(markPoses[(int)markPoseEmotion], pos, /*flipX*/ true, 1.3f);
 }
+

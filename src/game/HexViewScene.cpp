@@ -443,7 +443,14 @@ void HexViewScene::update(float deltaTime) {
 
     // Check for left-click to select a hex destination (only if NOT dragging from hotbar)
     // and only if we're not clicking on the back button
-    if (!isDraggingFromHotbar && gotchi && ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    // During the tutorial, hex clicks are only honored while it's actively
+    // waiting on the "walk" action. Once that one valid move has fired (or on
+    // any non-walk tutorial step), tile clicks are blocked so the follow-up tap
+    // only advances the tutorial dialog -- the gotchi stays put. Outside the
+    // tutorial, clicks always move.
+    bool tutorialBlocksMove = tutorialController_ && tutorialController_->isActive()
+                              && !tutorialController_->isAwaitingAction("walk");
+    if (!tutorialBlocksMove && !isDraggingFromHotbar && gotchi && ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         // Don't process hex click if mouse is over the back button
         if (!(backButton_ && backButton_->isHovered())) {
             Vector2 mouseWorldPos = ih->getMouseWorldPosition();

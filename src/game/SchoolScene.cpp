@@ -64,7 +64,7 @@ void SchoolScene::init() {
         { CharacterId::Karen, "You're late.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
-        { CharacterId::Tom, "I'm FIVE minutes late, Karen.\nI drove the whole way here.",
+        { CharacterId::Tom, "I'm FIVE minutes late, Karen.\nI walked the whole way here.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
         { CharacterId::Karen, "The boys waited.\nBy themselves.\nAgain.",
@@ -97,7 +97,7 @@ void SchoolScene::init() {
         { CharacterId::Bimmy, "What does experiencing inflation mean?",
           3, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
-        { CharacterId::Tom, "It means Dad has forty dollars\nof teeth to deal with, sweetie.",
+        { CharacterId::Tom, "It means your Dad needs to extend his\ncredit limit, sweetie.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
 
@@ -132,7 +132,7 @@ void SchoolScene::init() {
         { CharacterId::Tom, "...Love you too, guys.\nGet the sour ones.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Happy },
-        { CharacterId::Narrator, "Tom drove the whole way here.\nHe waves until the car is out of sight.",
+        { CharacterId::Narrator, "Tom walked the whole way here.\nHe waves until the car is out of sight.",
           -1, false },
     });
 }
@@ -175,7 +175,7 @@ void SchoolScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
+            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)))) {
                 advanceLine();
             }
         }

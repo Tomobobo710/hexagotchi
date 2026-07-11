@@ -143,7 +143,7 @@ void DialogBox::draw() {
 
     // --- Text area ---
     float textX = getTextAreaX() + drawPos.x;
-    float textY = drawPos.y + padding + 10.0f;
+    float textY = drawPos.y + padding + 5.0f;
 
     Color textWithAlpha = textColor;
     textWithAlpha.a = alpha;
@@ -163,11 +163,12 @@ void DialogBox::draw() {
 
     if (false) {
     } else {
-        // "Press SPACE" prompt when finished
+        // "Press SPACE" prompt when finished (tap or space both advance)
         float blinkTime = (float)GetTime();
         if ((int)(blinkTime * 2) % 2 == 0) {
             Color promptColor = { 180, 180, 180, alpha };
-            DrawText("SPACE", (int)(drawPos.x + width - padding - MeasureText("SPACE", fontSize - 4)), (int)(drawPos.y + height - padding - (fontSize - 4)), fontSize - 4, promptColor);
+            const char* prompt = "TAP/SPACE";
+            DrawText(prompt, (int)(drawPos.x + width - padding - MeasureText(prompt, fontSize - 4)), (int)(drawPos.y + height - padding - (fontSize - 4)), fontSize - 4, promptColor);
         }
     }
 

@@ -162,7 +162,7 @@ void GotchiDialogBox::draw() {
     if (isFinished() && !suppressPrompt_) {
         float blinkTime = (float)GetTime();
         if ((int)(blinkTime * 2) % 2 == 0) {
-            const char* prompt = "Press SPACE to continue...";
+            const char* prompt = "TAP/Press SPACE to continue...";
             int promptSize = 14;
             Color promptColor = { 120, 100, 70, alpha };
             DrawText(prompt,
@@ -172,3 +172,4 @@ void GotchiDialogBox::draw() {
         }
     }
 }
+

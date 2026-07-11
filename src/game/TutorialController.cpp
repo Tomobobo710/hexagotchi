@@ -22,9 +22,9 @@ TutorialController::TutorialController(GameState& state)
     steps_ = {
         { "Hi! Welcome to HexLand!", "", "gotchi" },
         { "This is me, your gotchi -- I live here on the HexMap just outside.", "", "gotchi" },
-        { "Let's try the explore the HexMap first. Press SPACE to head out there.", "", "gotchi" },
+        { "Let's try the explore the HexMap first. TAP/Press SPACE to head out there.", "", "gotchi" },
 
-        { "This is the HexMap! Click any tile to send me walking there.", "walk", "hexboard" },
+        { "This is the HexMap! Tap on any other tile to send me walking there.", "walk", "hexboard" },
         { "Nice! You can drag food or water from the palette below onto a tile, and I'll go eat or drink it.", "", "hexboard" },
         { "That's the HexMap basics. Let's head back so I can show you my home screen.", "", "hexboard" },
 
@@ -83,6 +83,12 @@ bool TutorialController::isActionUnlocked(const std::string& actionId) const {
     return steps_[stepIndex_].actionId == actionId;
 }
 
+bool TutorialController::isAwaitingAction(const std::string& actionId) const {
+    if (!active_) return false;
+    if (stepIndex_ < 0 || stepIndex_ >= (int)steps_.size()) return false;
+    return steps_[stepIndex_].actionId == actionId && !currentActionDone_;
+}
+
 void TutorialController::advanceStep() {
     stepIndex_++;
     if (stepIndex_ >= (int)steps_.size()) {
@@ -107,7 +113,7 @@ void TutorialController::update(float deltaTime) {
 
     if (isFinished()) return;
 
-    bool acceptPressed = IsKeyPressed(KEY_SPACE);
+    bool acceptPressed = IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     if (!acceptPressed) return;
 
     if (!dialog_.isFinished()) {
@@ -127,4 +133,5 @@ void TutorialController::draw() {
     if (!active_) return;
     dialog_.draw();
 }
+
 

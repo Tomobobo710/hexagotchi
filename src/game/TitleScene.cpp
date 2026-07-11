@@ -299,7 +299,7 @@ void TitleScene::draw() {
     DrawText(title, (int)((GAME_W - titleWidth) / 2.0f), 100, 48, {200, 200, 255, 255});
 
     // Draw credit text under Start Game button
-    const char* credits = "      Game by\nTomobobo and Bazola";
+    const char* credits = "         A Game by\nTomobobo and Bazola";
     int creditsHeight = 20;
     float centerY = (float)GAME_H / 2.0f;
     float buttonHeight = 50.0f;
@@ -372,3 +372,4 @@ void TitleScene::cleanup() {
     // showingLoadOptions_ = false;
     // selectedSlot_ = -1;
 }
+

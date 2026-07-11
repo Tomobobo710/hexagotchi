@@ -178,7 +178,7 @@ void OfficeScene::init() {
           1, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
         // --- Injected: Larry punts to Loraine, she reads the REAL stats ------
-        { CharacterId::Larry, "Loraine. Walk me through it.\nIn plain English.",
+        { CharacterId::Larry, "Loraine. Walk me through it.\nIn corporate English.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Loraine, loraineStats1,
@@ -314,7 +314,7 @@ void OfficeScene::init() {
         { CharacterId::Tom, "Why does some snot-faced alien kid\nget to press buttons on ME all day?",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
-        { CharacterId::Tom, "I'm a grown man. I have a divorce.\nI have a KEY to an apartment.",
+        { CharacterId::Tom, "I'm a grown man. I've gone through divorce.\nI have my own apartment.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Larry, "And a book of business worth MILLIONS\nin engagement. Loraine -- his numbers.",
@@ -455,7 +455,7 @@ void OfficeScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
+            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)))) {
                 advanceLine();
             }
         }

@@ -81,6 +81,13 @@ public:
     // the tutorial is active, per the hard lock above.
     bool isActionUnlocked(const std::string& actionId) const;
 
+    // True while the current step REQUIRES the named action and it hasn't been
+    // performed yet -- i.e. the tutorial is still waiting on that one input.
+    // Goes false the instant reportAction() marks it done. Scenes use this to
+    // accept exactly one gated input (e.g. one hex click) and then stop
+    // accepting it, so the follow-up tap only advances the tutorial.
+    bool isAwaitingAction(const std::string& actionId) const;
+
     // True once every step has been shown and advanced past -- the scene
     // that owns the final step should switch away (e.g. into free play) when
     // this flips true, and the caller should mark the flag persisted via

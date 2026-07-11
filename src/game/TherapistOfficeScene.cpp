@@ -109,7 +109,7 @@ void TherapistOfficeScene::init() {
         { CharacterId::Judy, "It sounds like Ronzer makes you feel\nsmall. Let's sit with 'small.'",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
-        { CharacterId::Tom, "I don't feel small. I just don't GET it.\nWhat does a monster like that even offer?",
+        { CharacterId::Tom, "I don't feel small. I just don't GET it.\nWhat does a guy like that even offer?",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
         { CharacterId::Tom, "His whole deal is being popular with,\nlike, twelve-year-old boys. That's the demographic.",
@@ -217,7 +217,7 @@ void TherapistOfficeScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
+            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)))) {
                 advanceLine();
             }
         }

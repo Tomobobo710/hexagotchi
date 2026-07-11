@@ -151,10 +151,10 @@ void ApartmentScene::init() {
         { CharacterId::Mark, "Says your kids are too loud on weekends.\nHonestly? Fair complaint. Kids are loud.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
-        { CharacterId::Tom, "They're here TWO days a month, Mark.",
+        { CharacterId::Tom, "They're here TWO days a week, Mark.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
-        { CharacterId::Mark, "Anyway, I did fix your leaky faucet\nwhile I was in there. So. Win some.",
+        { CharacterId::Mark, "Anyway, I did fix your leaky faucet\nwhile I was in there. So. Win some, lose some.",
           1, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Mark, "Alright, I gotta run. Other units.",
@@ -385,7 +385,7 @@ void ApartmentScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE)))) {
+            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)))) {
                 advanceLine();
             }
         }
@@ -561,5 +561,6 @@ void ApartmentScene::drawApartment() {
     DrawRectangle(720, 100, 180, 160, windowFrame);
     DrawRectangle(730, 110, 160, 140, windowSky);
 }
+
 
 
