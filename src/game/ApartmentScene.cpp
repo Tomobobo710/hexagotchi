@@ -15,8 +15,9 @@ void ApartmentScene::init() {
     background = AssetPack::loadTexture("backgrounds/apartmentbg.png");
 
     for (int e = 0; e < 4; e++) {
-        tomPoses[e]  = CharacterRegistry::loadPose(CharacterId::Tom,  (PoseEmotion)e);
-        markPoses[e] = CharacterRegistry::loadPose(CharacterId::Mark, (PoseEmotion)e);
+        tomPoses[e]     = CharacterRegistry::loadPose(CharacterId::Tom,     (PoseEmotion)e);
+        markPoses[e]    = CharacterRegistry::loadPose(CharacterId::Mark,    (PoseEmotion)e);
+        lorainePoses[e] = CharacterRegistry::loadPose(CharacterId::Loraine, (PoseEmotion)e);
     }
 
     cityWindow = new CityWindowEffect();
@@ -35,6 +36,13 @@ void ApartmentScene::init() {
     mark->setTag("mark");
     mark->setVisible(false);
     addActor(mark);
+
+    // Loraine appears only in the good-ending coda (scenario 3). Position from
+    // the scene editor's layout.json (was floating before), scale 1.0.
+    loraine = new SceneActor({740.0f, 314.0f}, 50.0f, 76.0f);
+    loraine->setTag("loraine");
+    loraine->setVisible(false);
+    addActor(loraine);
 
     // --- Scenario 0: "The Heating Situation" ------------------------------
     // Tom's heat has been out for weeks; Mark the maintenance guy is at the
@@ -222,6 +230,115 @@ void ApartmentScene::init() {
         { CharacterId::Narrator, "Mark leaves the door open on his way out.\nThe shower is still full of gray water.",
           -1, false },
     });
+
+    // --- Scenario 2: BAD-ending coda -- "the morning after" ---------------
+    // Plays only on the BAD ending path (after the parking-lot scene where Mark
+    // got the girl). Quiet, decent, resolved-but-modest: Mark and Tom the day
+    // after Jimmy's party. Mark's dating Loraine now; Tom's genuinely okay with
+    // how the Karen/Ronzer thing blew up, and is tentatively moving on (a dating
+    // app match). Not despair -- life just goes on, small and alright. Ends by
+    // transitioning to the credits scene (wired in ScenarioDirector, TBD).
+    scenarios.push_back({
+        { CharacterId::Mark, "Hey man, thanks for inviting me to\nthe kids' party. It was fun.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "Yeah, crazy end to the night, huh?\nDid you and Loraine hit it off?",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "Sweet girl, that Loraine. We're\nsupposed to grab lunch tomorrow.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "And yeah, man -- crazy night. At least you can\nstop worrying about that Ronzer guy, right?",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "Yeah, what a creep. Honestly feels pretty\ngood knowing it all ended in a dumpster fire.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "I feel bad but... Karen kinda deserved that.\nShe's better off now either way.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "HA! See, I knew you could stop worrying\nabout her. She's got her own problems now.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "And so do you. You just gotta keep your chin up,\nman. Good stuff happens sometimes too.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "There's other fish in the sea, you know.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "Yeah. I matched with this girl on a dating app.\nWe're gonna meet up next week.",
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Happy },
+        { CharacterId::Tom, "I think I'm finally over Karen.\nThanks for the advice on that, man.",
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Happy },
+        { CharacterId::Mark, "Any time, man!",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Happy },
+    });
+
+    // --- Scenario 3: GOOD-ending coda -- Loraine comes home with Tom -------
+    // Plays only on the GOOD ending path (after the parking-lot scene where TOM
+    // was the hero and Loraine asked him out). She's here at his place now.
+    // Loraine sees exactly what the player built up in Tom -- a good heart, a
+    // guy who shows up for his kids every day. Warm, earned, a little goofy.
+    // Loraine is index 2 (pose fields: tom, mark, loraine). Ends -> credits.
+    scenarios.push_back({
+        { CharacterId::Loraine, "So this is it, huh?",
+          2, false, false, PortraitEmotion::Mid, "Loraine",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "Yeah, it's kind of a mess. You'll get\nused to the train passing by.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, "I LOVE messes, and I LOVE trains!",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "Huh. So... crazy night, huh?",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Loraine, "Yeah. I can't thank you enough for\nwhat you did back there. I can't believe that guy.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Loraine, "So that was your ex?",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "Yeah.. Can you believe she left me\nfor that lizard brain?",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, "Her loss. Were those your kids?",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "Bimmy and Jimmy, yep.\nThey're my world.",
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, "I LOVE kids.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Loraine, "You know, I've always kinda\nhad a crush on you.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "Really? Geez.\nI couldn't tell.",
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Loraine, "I've been looking for a guy with a good heart.\nThey're hard to come by these days.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "And you think I've got a good heart?",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Loraine, "You go out every day and do what you\nhave to do. You do it for your kids.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Loraine, "That's so sweet.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "Well -- we probably shouldn't\nlet Larry know about us.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Loraine, "Us? I LOVE us.\nTo hell with Larry.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+    });
 }
 
 void ApartmentScene::update(float deltaTime) {
@@ -289,7 +406,10 @@ void ApartmentScene::draw() {
     // after the fade (same as OfficeScene).
     if (endElapsed < 0.0f) {
         drawTom(tom->getPosition());
-        if (activeScenario >= 0) drawMark(mark->getPosition());
+        // Mark is in scenarios 0/1/2; Loraine only in the good-ending coda
+        // (scenario 3). Draw whichever belongs to the active scenario.
+        if (activeScenario == 3) drawLoraine(loraine->getPosition());
+        else if (activeScenario >= 0) drawMark(mark->getPosition());
     }
     EndMode2D();
 
@@ -310,6 +430,7 @@ void ApartmentScene::cleanup() {
     for (int i = 0; i < 4; i++) {
         if (tomPoses[i].id != 0) UnloadTexture(tomPoses[i]);
         if (markPoses[i].id != 0) UnloadTexture(markPoses[i]);
+        if (lorainePoses[i].id != 0) UnloadTexture(lorainePoses[i]);
     }
     scenarios.clear();
     activeScenario = -1;
@@ -340,8 +461,8 @@ void ApartmentScene::advanceLine() {
     if (activeScenario < 0) return;
 
     auto& seq = scenarios[activeScenario];
-    SceneActor* actorsByIndex[2] = {tom, mark};
-    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 2);
+    SceneActor* actorsByIndex[3] = {tom, mark, loraine};
+    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 3);
 
     lineIndex++;
     if (lineIndex >= (int)seq.size()) {
@@ -359,9 +480,10 @@ void ApartmentScene::playLine(const ApartmentLine& line) {
 
     tomPoseEmotion = line.tomPoseEmotion;
     markPoseEmotion = line.markPoseEmotion;
+    lorainePoseEmotion = line.lorainePoseEmotion;
 
-    SceneActor* actorsByIndex[2] = {tom, mark};
-    triggerActorMoves(line.movesAtStart, actorsByIndex, 2);
+    SceneActor* actorsByIndex[3] = {tom, mark, loraine};
+    triggerActorMoves(line.movesAtStart, actorsByIndex, 3);
 }
 
 void ApartmentScene::endScenario() {
@@ -394,6 +516,7 @@ bool ApartmentScene::cameraTargetFor(int actorIndex, Vector2& out) const {
     SceneActor* target = nullptr;
     if (actorIndex == 0) target = tom;
     else if (actorIndex == 1) target = mark;
+    else if (actorIndex == 2) target = loraine;
     if (!target) return false;
 
     Vector2 p = target->getPosition();
@@ -420,6 +543,10 @@ void ApartmentScene::drawTom(Vector2 pos) {
 
 void ApartmentScene::drawMark(Vector2 pos) {
     drawApartmentPose(markPoses[(int)markPoseEmotion], pos, /*flipX*/ false, 1.3f);  // at the door, faces left
+}
+
+void ApartmentScene::drawLoraine(Vector2 pos) {
+    drawApartmentPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ false, 1.0f);  // on the right, faces left toward Tom
 }
 
 void ApartmentScene::drawApartment() {

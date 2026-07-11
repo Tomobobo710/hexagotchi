@@ -16,7 +16,10 @@
 struct PizzaLine {
     CharacterId speaker;
     std::string text;
-    int focusActor;   // 0 = Tom, 1 = Karen, 2 = Ronzer, -1 = none
+    // Scene actor index the camera favors, or -1 for none. Index scheme:
+    // 0=Tom, 1=Karen, 2=Ronzer, 3=Jimmy, 4=Bimmy, 5=Mark. (0-2 preserved from
+    // the original scene so Scenario 0's focus targets still line up.)
+    int focusActor;
     bool shake;        // punch-in beat: small camera shake when this line shows
 
     // Camera style for this line's focus shot. false (default) = smooth
@@ -44,11 +47,21 @@ struct PizzaLine {
     // Separate from the portrait `emotion` above (portrait = dialog-box
     // headshot; these = full-body poses). Each persists until a later line
     // changes it, so set only the ones that CHANGE on a line. Indexed like
-    // focusActor: [0]=Tom, [1]=Karen, [2]=Ronzer. Last fields so existing
-    // brace-init lines are unaffected. Default Mid.
+    // focusActor: [0]=Tom, [1]=Karen, [2]=Ronzer, [3]=Jimmy, [4]=Bimmy,
+    // [5]=Mark. Kept immediately after movesAtEnd so the original Scenario 0
+    // brace-inits (which end at ronzerPoseEmotion) are unaffected. Default Mid.
     PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
     PoseEmotion karenPoseEmotion = PoseEmotion::Mid;
     PoseEmotion ronzerPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion jimmyPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion bimmyPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion markPoseEmotion = PoseEmotion::Mid;
+
+    // Body-text color for this line. LAST field so no brace-init is disturbed.
+    // Default white. Persists until changed, so a line that sets it (e.g. the
+    // orange "???" phone-text insert) must be followed by one resetting it to
+    // white. playLine() applies it every line so there's no cross-line leak.
+    Color textColor = {255, 255, 255, 255};
 };
 
 // Recurring "check in on the gotchi's world" hangout location. Most visits
@@ -89,9 +102,15 @@ public:
     static constexpr float END_FADE_DURATION = 1.5f;
 
 private:
+    // Actor index scheme (used by focusActor / actorsByIndex / cameraTargetFor):
+    // 0=Tom, 1=Karen, 2=Ronzer, 3=Jimmy, 4=Bimmy, 5=Mark. 0-2 kept from the
+    // original scene so Scenario 0 is untouched; 3-5 added for the birthday.
     SceneActor* tom    = nullptr;
     SceneActor* karen  = nullptr;
     SceneActor* ronzer = nullptr;
+    SceneActor* jimmy  = nullptr;
+    SceneActor* bimmy  = nullptr;
+    SceneActor* mark   = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
@@ -104,6 +123,9 @@ private:
     Texture2D tomPoses[4] = {};
     Texture2D karenPoses[4] = {};
     Texture2D ronzerPoses[4] = {};
+    Texture2D jimmyPoses[4] = {};
+    Texture2D bimmyPoses[4] = {};
+    Texture2D markPoses[4] = {};
 
     // Which pose emotion each on-screen actor is currently drawn with. Set
     // per-line in playLine() from PizzaLine's *PoseEmotion fields, persists
@@ -111,6 +133,9 @@ private:
     PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
     PoseEmotion karenPoseEmotion = PoseEmotion::Mid;
     PoseEmotion ronzerPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion jimmyPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion bimmyPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion markPoseEmotion = PoseEmotion::Mid;
 
     // --- Ambient behavior ---
     float ambientTimer = 0.0f;
@@ -144,6 +169,9 @@ private:
     void drawTom(Vector2 pos);
     void drawKaren(Vector2 pos);
     void drawRonzer(Vector2 pos);
+    void drawJimmy(Vector2 pos);
+    void drawBimmy(Vector2 pos);
+    void drawMark(Vector2 pos);
 
     // A sunset sun glimpsed through the transparent glass cutout in the
     // parlor's front door (parlorbg.png) -- see SunEffect.hpp.

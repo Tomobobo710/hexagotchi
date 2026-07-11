@@ -1,5 +1,6 @@
 #include "ScenarioDirector.hpp"
 #include "GameState.h"
+#include "HappinessCheckpoints.hpp"
 
 Sequence ScenarioDirector::SelectSequence(const GameState& state) {
     // Selection is keyed off mergeCount -- how many merges have COMPLETED.
@@ -48,6 +49,35 @@ Sequence ScenarioDirector::SelectSequence(const GameState& state) {
             { "school", 0, false },
             { "apartment", 1, false },
             { "office", 2, false },
+        };
+    }
+
+    // --- 5th merge (==4): the FINALE -- one big sequence, no return trip ----
+    // This merge records happiness Checkpoint 3 (the final check) in
+    // MergeController::enterMerge() BEFORE StoryBeatStarted fires, so by the
+    // time we get here the whole ledger is complete and the ending gate can
+    // read it. There is NO 6th merge -- everything from here to the credits is
+    // one continuous sequence and never endcaps back to the gotchi side.
+    //
+    //   office        4  -- Scenario E: Larry's "how'd we do", final Loraine
+    //                       projection readout.
+    //   pizza_parlor  1  -- Jimmy's birthday party.
+    //   ending        0/1 -- parking-lot ending, GATED on the ledger:
+    //                       scenario 0 (GOOD) if all 3 checkpoints passed,
+    //                       scenario 1 (BAD) otherwise. Two independently
+    //                       written scenarios (Tom the hero vs Mark the hero).
+    //   apartment     3/2 -- coda: GOOD = Loraine comes home (scenario 3),
+    //                       BAD = "morning after" with Mark (scenario 2).
+    //   credits       0  -- terminal step: the sequencer parks here (no
+    //                       merge-out); the "PLAY AGAIN?" button restarts.
+    if (state.mergeCount == 4) {
+        bool allHappy = happyCheckpointsPassed(state) == 3;
+        return {
+            { "office", 4, false },
+            { "pizza_parlor", 1, false },
+            { "ending", allHappy ? 0 : 1, false },
+            { "apartment", allHappy ? 3 : 2, false },
+            { "credits", 0, false, /*isTerminal*/ true },
         };
     }
 

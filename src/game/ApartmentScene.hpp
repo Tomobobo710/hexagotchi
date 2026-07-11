@@ -14,7 +14,7 @@
 struct ApartmentLine {
     CharacterId speaker;
     std::string text;
-    int focusActor;   // 0 = Tom, 1 = Mark, -1 = none
+    int focusActor;   // 0 = Tom, 1 = Mark, 2 = Loraine, -1 = none
     bool shake;
 
     // false (default) = smooth followPosition ease (normal look); true =
@@ -35,8 +35,10 @@ struct ApartmentLine {
     // Per-actor POSE emotion for the on-screen figures this line. Separate
     // from the portrait `emotion`. Persists until a later line changes it, so
     // set only what changes. Last fields so existing brace-init is unaffected.
+    // Loraine (index 2) only appears in the good-ending coda (Scenario 3).
     PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
     PoseEmotion markPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion lorainePoseEmotion = PoseEmotion::Mid;
 };
 
 // Tom's apartment -- the recurring "check in on the gotchi's world" home
@@ -65,20 +67,25 @@ public:
     static constexpr float END_FADE_DURATION = 1.5f;
 
 private:
+    // Index scheme: 0=Tom, 1=Mark, 2=Loraine. Mark and Loraine never share a
+    // scene -- Mark is in scenarios 0/1/2, Loraine only in the good-ending
+    // coda (scenario 3).
     SceneActor* tom = nullptr;
     SceneActor* mark = nullptr;
+    SceneActor* loraine = nullptr;
     Texture2D background = {0};
     CityWindowEffect* cityWindow = nullptr;
 
     // Full-body pose art, indexed by PoseEmotion [0]=sad [1]=mid [2]=happy
-    // [3]=scared. Loaded via CharacterRegistry (see init()). Mark only has a
-    // Mid pose; the rest fall back to it.
+    // [3]=scared. Loaded via CharacterRegistry (see init()).
     Texture2D tomPoses[4] = {};
     Texture2D markPoses[4] = {};
+    Texture2D lorainePoses[4] = {};
 
     // Which pose emotion each on-screen actor is currently drawn with.
     PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
     PoseEmotion markPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion lorainePoseEmotion = PoseEmotion::Mid;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
@@ -105,6 +112,7 @@ private:
 
     void drawTom(Vector2 pos);
     void drawMark(Vector2 pos);
+    void drawLoraine(Vector2 pos);
     void drawApartment();
 };
 

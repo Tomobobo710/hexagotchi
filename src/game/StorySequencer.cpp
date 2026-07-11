@@ -54,6 +54,24 @@ void StorySequencer::update(float dt) {
         const SequenceStep& step = sequence_[activeStepIndex_];
         Scene* scene = scenes_.getScene(step.sceneName);
         if (scene) scene->triggerStoryEvent(step.scenarioId);
+
+        // Terminal step (the credits): enter the scene, then STOP the
+        // sequencer entirely -- no PlayingStep poll, no merge-out, no
+        // StoryBeatCompleted. The game parks on this scene; the scene owns the
+        // only way forward. We do NOT touch MergeController here (no
+        // StoryBeatCompleted), so it stays in its post-merge state -- fine,
+        // because the terminal scene resets everything on "Play Again".
+        if (step.isTerminal) {
+            if (DEBUG_LOG) {
+                std::cout << "[StorySequencer] Terminal step entered; parking sequencer." << std::endl;
+            }
+            phase_ = Phase::Idle;
+            activeStepIndex_ = -1;
+            sequenceInProgress_ = false;
+            sequence_.clear();
+            return;
+        }
+
         phase_ = Phase::PlayingStep;
         return;
     }

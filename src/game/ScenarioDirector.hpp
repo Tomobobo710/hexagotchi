@@ -26,6 +26,12 @@ struct SequenceStep {
     // and emits DeathEnabled once this step's dialog finishes (see
     // StorySequencer). At most one step per sequence should set this.
     bool isClimax = false;
+    // True if this is the FINAL scene of the game (the credits). The sequencer
+    // enters it and then STOPS -- no merge-out, no StoryBeatCompleted -- so the
+    // game parks on this scene rather than returning to the gotchi side. The
+    // scene itself owns the only way forward (e.g. a "Play Again?" button that
+    // resets and restarts). Must be the last step of its sequence.
+    bool isTerminal = false;
 };
 
 using Sequence = std::vector<SequenceStep>;

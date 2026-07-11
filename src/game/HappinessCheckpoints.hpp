@@ -43,10 +43,13 @@
 
 namespace HappinessCheckpoint {
 
-// The single measurement. Live Happiness (0..100) at/above this = "was happy".
-// 50 = clearly on the good side of the scale, not merely "not sad" (the gotchi
-// scene only flags Sad below ~30). Tune here; every checkpoint shares it.
-constexpr float HAPPY_THRESHOLD = 50.0f;
+// The single measurement: was the gotchi's live MOOD literally "Happy" at merge
+// time? Not a stat threshold -- the gotchi mood system (GotchiMood::updateMood)
+// resolves to MOOD_00_HAPPY only when ALL FOUR care needs (hunger, thirst,
+// hygiene, happiness) are at/above 75% good; otherwise it's whichever need is
+// worst. So "mood == Happy" IS the holistic "all needs met" verdict the player
+// sees on screen. Mood is updated every frame outside the vitals tick gate
+// (GotchiSim), so it's current at merge time.
 
 constexpr int COUNT = 3;
 
@@ -58,13 +61,13 @@ inline std::string flagKey(int index) {
 
 } // namespace HappinessCheckpoint
 
-// Snapshot "was the gotchi happy right now?" into checkpoint `index` (1..3).
-// Reads live Happiness off GameState's shared vitals; stores the resulting bool
-// under the checkpoint's flag. Safe no-op on a bad index.
+// Snapshot "was the gotchi's mood Happy right now?" into checkpoint `index`
+// (1..3). Reads the live mood off GameState; stores the resulting bool under
+// the checkpoint's flag. Safe no-op on a bad index.
 inline void recordHappinessCheckpoint(GameState& state, int index) {
     if (index < 1 || index > HappinessCheckpoint::COUNT) return;
     bool wasHappy =
-        state.vitals.getHappiness() >= HappinessCheckpoint::HAPPY_THRESHOLD;
+        state.mood.getCurrentMood() == GotchiMoodType::MOOD_00_HAPPY;
     state.setFlag(HappinessCheckpoint::flagKey(index), wasHappy);
 }
 

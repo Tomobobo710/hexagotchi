@@ -87,12 +87,15 @@ void MergeController::enterMerge(bool forced) {
     // enter-time it still reads the count BEFORE this merge:
     //   1st merge -> mergeCount == 0 (also !seenReality) -> check 1
     //   3rd merge -> mergeCount == 2                      -> check 2
-    // Check 3 fires at a later hardcoded merge count once that beat exists:
-    //   else if (state_.mergeCount == M) recordHappinessCheckpoint(state_, 3);
+    //   5th merge -> mergeCount == 4                      -> check 3 (final)
+    // Check 3 is the FINAL check -- it's the one the ending gate reads
+    // alongside 1 and 2 (see HappinessCheckpoints.hpp / happyCheckpointsPassed).
     if (state_.mergeCount == 0) {
         recordHappinessCheckpoint(state_, 1);   // Check 1 -- the first merge
     } else if (state_.mergeCount == 2) {
         recordHappinessCheckpoint(state_, 2);   // Check 2 -- the third merge
+    } else if (state_.mergeCount == 4) {
+        recordHappinessCheckpoint(state_, 3);   // Check 3 -- the fifth merge (final)
     }
 
     // 3.3 First-merge timing bucket (computed only on first merge)

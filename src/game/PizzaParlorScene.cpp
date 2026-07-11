@@ -17,13 +17,32 @@ static const char* POKEMON_QUIPS[] = {
 };
 static const float POKEMON_QUIP_DURATION = 1.8f;
 
-// Spawn/idle positions from the scene editor's layout.json. Tom starts off the
-// left edge and walks in; Karen and Ronzer are static at their table. flipX is
-// hardcoded per-actor in the draw fns (Tom faces right, the other two left).
+// --- Scenario 0 (the ex-wife-needling beat) positions ------------------------
+// Tom starts off the left edge and walks in; Karen and Ronzer are static at
+// their table. flipX is hardcoded per-actor in the draw fns.
 static const Vector2 TOM_SPAWN    = {-134.0f, 322.0f};
 static const Vector2 TOM_WALK_TO  = { 205.0f, 317.0f};
 static const Vector2 KAREN_POS    = { 700.0f, 298.0f};
 static const Vector2 RONZER_POS   = { 850.0f, 343.0f};
+
+// --- Scenario 1 (Jimmy's birthday) positions, from layout.json ---------------
+// Tom enters from far off the left and moves through waypoints; Ronzer and Mark
+// have their own walks; the kids and Karen are static. Kids at 0.7 scale.
+static const Vector2 BDAY_TOM_SPAWN  = {-241.0f, 329.0f};
+static const Vector2 BDAY_TOM_WP1    = { 151.0f, 337.0f};
+static const Vector2 BDAY_TOM_WP2    = { 345.0f, 290.0f};
+static const Vector2 BDAY_TOM_WP3    = {-489.0f, 352.0f};   // exits left
+static const Vector2 BDAY_JIMMY_POS  = { 499.0f, 420.0f};
+static const Vector2 BDAY_BIMMY_POS  = { 959.0f, 450.0f};
+static const Vector2 BDAY_KAREN_POS  = { 569.0f, 291.0f};
+static const Vector2 BDAY_RONZER_POS = { 732.0f, 311.0f};
+static const Vector2 BDAY_RONZER_WP  = {-429.0f, 340.0f};   // exits left
+static const Vector2 BDAY_MARK_SPAWN = {-127.0f, 857.0f};
+static const Vector2 BDAY_MARK_WP    = { 106.0f, 322.0f};   // walks in
+static const float BDAY_KID_SCALE = 0.7f;
+
+// The orange "???" phone-text insert color (message body + name plate feel).
+static const Color PHONE_ORANGE = {235, 150, 40, 255};
 
 PizzaParlorScene::PizzaParlorScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {225, 120, 60, 255}), dialog(sharedDialog) {
@@ -53,6 +72,24 @@ void PizzaParlorScene::init() {
     ronzer->setVisible(false);
     addActor(ronzer);
 
+    // Birthday-scenario cast (Scenario 1). Spawned at their layout.json spots;
+    // Scenario 0 never focuses or draws them (activeScenario-gated draw + focus
+    // targets 0-2 only), so they sit harmlessly off to the side there.
+    jimmy = new SceneActor(BDAY_JIMMY_POS, 30.0f, 40.0f);
+    jimmy->setTag("jimmy");
+    jimmy->setVisible(false);
+    addActor(jimmy);
+
+    bimmy = new SceneActor(BDAY_BIMMY_POS, 30.0f, 40.0f);
+    bimmy->setTag("bimmy");
+    bimmy->setVisible(false);
+    addActor(bimmy);
+
+    mark = new SceneActor(BDAY_MARK_SPAWN, 50.0f, 76.0f);
+    mark->setTag("mark");
+    mark->setVisible(false);
+    addActor(mark);
+
     nextQuipTime = 3.0f + (float)(rand() % 400) / 100.0f;
 
     background = AssetPack::loadTexture("backgrounds/parlorbg.png");
@@ -63,6 +100,9 @@ void PizzaParlorScene::init() {
         tomPoses[e]    = CharacterRegistry::loadPose(CharacterId::Tom,    (PoseEmotion)e);
         karenPoses[e]  = CharacterRegistry::loadPose(CharacterId::Karen,  (PoseEmotion)e);
         ronzerPoses[e] = CharacterRegistry::loadPose(CharacterId::Ronzer, (PoseEmotion)e);
+        jimmyPoses[e]  = CharacterRegistry::loadPose(CharacterId::Jimmy,  (PoseEmotion)e);
+        bimmyPoses[e]  = CharacterRegistry::loadPose(CharacterId::Bimmy,  (PoseEmotion)e);
+        markPoses[e]   = CharacterRegistry::loadPose(CharacterId::Mark,   (PoseEmotion)e);
     }
 
     // --- Scenario 0: the ex-wife needling Tom while Ronzer heckles from the sideline ---
@@ -112,6 +152,168 @@ void PizzaParlorScene::init() {
         { CharacterId::Tom,    "It's always been for the kids.",
           0, true, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
+    });
+
+    // --- Scenario 1: Jimmy's birthday party ------------------------------
+    // The big one. Tom arrives late and walks through waypoints; the whole
+    // family's here (Jimmy + Bimmy the kids, Karen, Ronzer), Mark shows up
+    // uninvited-feeling, and Karen gets a wrong-number-feeling "???" text (the
+    // orange phone insert -- it's the alien player, though nobody knows that).
+    // Ronzer excuses himself and leaves; Karen needles Tom about money; Tom
+    // deflects and slips out. Index scheme: 0=Tom 1=Karen 2=Ronzer 3=Jimmy
+    // 4=Bimmy 5=Mark. Pose-emotion fields are all six, in that order.
+    // Static cast is snapped to birthday spots on the first line via fast moves.
+    scenarios.push_back({
+        // Open: Tom hustles in from far left to waypoint 1. Snap the static
+        // cast (Karen, kids) to their birthday positions instantly here too.
+        { CharacterId::Tom, "Sorry I'm late..",
+          0, false, false, PortraitEmotion::Sad, "",
+          /*movesAtStart*/ {
+              ActorMove{0, {BDAY_TOM_WP1}, 260.0f},
+              ActorMove{1, {BDAY_KAREN_POS}, 4000.0f},
+              ActorMove{2, {BDAY_RONZER_POS}, 4000.0f},
+              ActorMove{3, {BDAY_JIMMY_POS}, 4000.0f},
+              ActorMove{4, {BDAY_BIMMY_POS}, 4000.0f},
+          }, {},
+          PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Jimmy, "Dad, you made it!",
+          3, false, false, PortraitEmotion::Happy, "Jimmy (the birthday boy)",
+          {}, {},
+          PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        // Tom moves in closer, to waypoint 2.
+        { CharacterId::Tom, "Wouldn't miss it for the world, Jimmy.",
+          0, false, false, PortraitEmotion::Happy, "",
+          /*movesAtStart*/ { ActorMove{0, {BDAY_TOM_WP2}, 200.0f} }, {},
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Karen, "You're twenty minutes late\nto your own son's party, Tom.",
+          1, false, false, PortraitEmotion::Sad, "",
+          {}, {},
+          PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Ronzer, "Ronzer! Ha -- Ronzer Ronzer.",
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Bimmy, "I wish it was MY birthday..",
+          4, false, false, PortraitEmotion::Sad, "",
+          {}, {},
+          PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "Hey -- yours is next month, buddy.\nWe'll do something great, I promise.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Bimmy, "...Okay. Promise?",
+          4, false, false, PortraitEmotion::Mid, "",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "Promise.",
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Happy, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+
+        // Mark walks in from off-screen, uninvited energy.
+        { CharacterId::Mark, "Hey, everybody! Great to finally\nmeet the rest of Tom.",
+          5, false, false, PortraitEmotion::Happy, "",
+          /*movesAtStart*/ { ActorMove{5, {BDAY_MARK_WP}, 240.0f} }, {},
+          PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "Mark? You... actually came.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "Free pizza and a look inside another\nunit? Wouldn't miss it. Nice place.",
+          5, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+
+        // Tom asks Jimmy about his gifts -- the console rundown.
+        { CharacterId::Tom, "So, birthday boy -- what'd you get?",
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Jimmy, "A NEW CONSOLE! And Skull Kart 9,\nand Blaster Legends, and Farm Wizard!",
+          3, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Jimmy, "AND the one with the guy!\nThe guy who does the FLIP!",
+          3, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Bimmy, "And they got another controller\nfor ME too!",
+          4, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "That's -- wow. That's a lot of\nvideo games, guys.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy,
+          PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+
+        // Karen's phone buzzes -- the "???" orange text insert.
+        { CharacterId::Ronzer, "Ronzer? ...Ronzer.",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Phone, "Am I even at the right place?",
+          -1, false, false, PortraitEmotion::Mid, "???",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid,
+          PHONE_ORANGE },
+
+        // Ronzer excuses himself and leaves.
+        { CharacterId::Ronzer, "Ronzer. Ronzer Ronzer.",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Karen, "Okay honey, come back soon!",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {},
+          PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Ronzer, "Ronzer...",
+          2, false, false, PortraitEmotion::Mid, "",
+          /*movesAtStart*/ { ActorMove{2, {BDAY_RONZER_WP}, 300.0f} }, {},
+          PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid,
+          PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+
+        // Karen turns on Tom about money. He deflects and slips out.
+        { CharacterId::Karen, "So. Did you actually have the money\nto get Jimmy anything this year?",
+          1, false, false, PortraitEmotion::Sad, "",
+          {}, {},
+          PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Mid,
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "Of course I did. It's -- it's outside.\nOn the back of my bike. Big box.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {},
+          PoseEmotion::Scared, PoseEmotion::Sad, PoseEmotion::Mid,
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Karen, "On your bike.",
+          1, true, false, PortraitEmotion::Sad, "",
+          {}, {},
+          PoseEmotion::Scared, PoseEmotion::Sad, PoseEmotion::Mid,
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "I'll -- let me just go grab it.\nRight now. Be right back.",
+          0, false, false, PortraitEmotion::Sad, "",
+          /*movesAtStart*/ { ActorMove{0, {BDAY_TOM_WP3}, 240.0f} }, {},
+          PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Mid,
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
     });
 }
 
@@ -214,12 +416,19 @@ void PizzaParlorScene::draw() {
 
     // Once the scenario is ending (black fade ramping), stop drawing actors so
     // none show under/after the fade -- the scene reads as fully cleared before
-    // it hands off.
+    // it hands off. Tom/Karen/Ronzer draw always (ambient + both scenarios);
+    // the birthday-only cast (Jimmy/Bimmy/Mark) only during Scenario 1 so they
+    // don't appear as stray sprites in ambient or Scenario 0.
     bool ending = endElapsed >= 0.0f;
     if (!ending) {
         drawTom(tom->getPosition());
         drawKaren(karen->getPosition());
         drawRonzer(ronzer->getPosition());
+        if (activeScenario == 1) {
+            drawJimmy(jimmy->getPosition());
+            drawBimmy(bimmy->getPosition());
+            drawMark(mark->getPosition());
+        }
     }
     EndMode2D();
 
@@ -256,6 +465,9 @@ void PizzaParlorScene::cleanup() {
         if (tomPoses[e].id != 0)    UnloadTexture(tomPoses[e]);
         if (karenPoses[e].id != 0)  UnloadTexture(karenPoses[e]);
         if (ronzerPoses[e].id != 0) UnloadTexture(ronzerPoses[e]);
+        if (jimmyPoses[e].id != 0)  UnloadTexture(jimmyPoses[e]);
+        if (bimmyPoses[e].id != 0)  UnloadTexture(bimmyPoses[e]);
+        if (markPoses[e].id != 0)   UnloadTexture(markPoses[e]);
     }
 
     // init() re-runs on every re-entry to this scene (SceneManager re-inits
@@ -293,8 +505,8 @@ void PizzaParlorScene::advanceLine() {
     if (activeScenario < 0) return;
 
     auto& seq = scenarios[activeScenario];
-    SceneActor* actorsByIndex[3] = {tom, karen, ronzer};
-    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 3);
+    SceneActor* actorsByIndex[6] = {tom, karen, ronzer, jimmy, bimmy, mark};
+    triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 6);
 
     lineIndex++;
     if (lineIndex >= (int)seq.size()) {
@@ -307,6 +519,9 @@ void PizzaParlorScene::advanceLine() {
 void PizzaParlorScene::playLine(const PizzaLine& line) {
     dialog->setCharacter(line.speaker, line.emotion, line.firstTimeName);
     dialog->setText(line.text);
+    // Per-line body-text color (default white). Applied every line so the
+    // orange "???" phone insert doesn't leak into the following lines.
+    dialog->setTextColor(line.textColor);
     dialog->show();
     focusCameraOn(line.focusActor, line.shake, line.cutCamera);
 
@@ -315,9 +530,12 @@ void PizzaParlorScene::playLine(const PizzaLine& line) {
     tomPoseEmotion = line.tomPoseEmotion;
     karenPoseEmotion = line.karenPoseEmotion;
     ronzerPoseEmotion = line.ronzerPoseEmotion;
+    jimmyPoseEmotion = line.jimmyPoseEmotion;
+    bimmyPoseEmotion = line.bimmyPoseEmotion;
+    markPoseEmotion = line.markPoseEmotion;
 
-    SceneActor* actorsByIndex[3] = {tom, karen, ronzer};
-    triggerActorMoves(line.movesAtStart, actorsByIndex, 3);
+    SceneActor* actorsByIndex[6] = {tom, karen, ronzer, jimmy, bimmy, mark};
+    triggerActorMoves(line.movesAtStart, actorsByIndex, 6);
 }
 
 void PizzaParlorScene::endScenario() {
@@ -337,13 +555,17 @@ void PizzaParlorScene::endScenario() {
 // OfficeScene: zoom 2, aim {p.x+160, p.y+240}.
 bool PizzaParlorScene::cameraTargetFor(int actorIndex, Vector2& out) const {
     SceneActor* target = nullptr;
+    float aimY = 240.0f;  // adults (Tom/Karen/Ronzer/Mark)
     if (actorIndex == 0) target = tom;
     else if (actorIndex == 1) target = karen;
     else if (actorIndex == 2) target = ronzer;
+    else if (actorIndex == 3) { target = jimmy; aimY = 240.0f * BDAY_KID_SCALE; }
+    else if (actorIndex == 4) { target = bimmy; aimY = 240.0f * BDAY_KID_SCALE; }
+    else if (actorIndex == 5) target = mark;
     if (!target) return false;
 
     Vector2 p = target->getPosition();
-    out = { p.x + 160.0f, p.y + 240.0f };
+    out = { p.x + 160.0f, p.y + aimY };
     return true;
 }
 
@@ -386,4 +608,19 @@ void PizzaParlorScene::drawKaren(Vector2 pos) {
 
 void PizzaParlorScene::drawRonzer(Vector2 pos) {
     drawPose(ronzerPoses[(int)ronzerPoseEmotion], pos, /*flipX*/ false, 1.0f);  // faces left
+}
+
+// --- Birthday-scenario cast (Scenario 1 only) -----------------------------
+// Scales/flips from layout.json: kids at 0.7 facing left toward Tom; Mark at
+// 1.3 facing left (flipX true), matching how he's drawn in ApartmentScene.
+void PizzaParlorScene::drawJimmy(Vector2 pos) {
+    drawPose(jimmyPoses[(int)jimmyPoseEmotion], pos, /*flipX*/ false, BDAY_KID_SCALE);
+}
+
+void PizzaParlorScene::drawBimmy(Vector2 pos) {
+    drawPose(bimmyPoses[(int)bimmyPoseEmotion], pos, /*flipX*/ false, BDAY_KID_SCALE);
+}
+
+void PizzaParlorScene::drawMark(Vector2 pos) {
+    drawPose(markPoses[(int)markPoseEmotion], pos, /*flipX*/ true, 1.3f);
 }

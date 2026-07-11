@@ -86,6 +86,39 @@ void OfficeScene::init() {
         statPct(v.getStat(SocialStat::FRIENDS)));
     std::string loraineStats4 = buf;
 
+    // --- Projection-tagged stat lines for Scenario E (index 4) -------------
+    // Same live vitals, but each readout ends with a corporate projection
+    // verdict driven by the REAL value: on the good side of the metric ->
+    // "The projection is looking good for this quarter."; below target ->
+    // "We didn't quite meet target here." A stat "meets target" at >= 50 --
+    // shares the happiness-check midpoint, so a well-kept Tom reads as green.
+    auto projTag = [](bool met) -> const char* {
+        return met ? "The projection is looking\ngood for this quarter."
+                   : "We didn't quite meet\ntarget here.";
+    };
+
+    // E-Line 1: Engagement (Happiness) + Vitality (Health).
+    std::snprintf(buf, sizeof(buf),
+        "Engagement's at %d%%. Vitality, %d%%.\n%s",
+        statPct(v.getHappiness()), statPct(v.getHealth()),
+        projTag(v.getHappiness() >= 50.0f && v.getHealth() >= 50.0f));
+    std::string loraineProj1 = buf;
+
+    // E-Line 2: Bandwidth (Energy) + Fuel (100 - Hunger).
+    std::snprintf(buf, sizeof(buf),
+        "Bandwidth, %d%%. Fuel Reserves, %d%%.\n%s",
+        statPct(v.getEnergy()), statPct(100.0f - v.getHunger()),
+        projTag(v.getEnergy() >= 50.0f && (100.0f - v.getHunger()) >= 50.0f));
+    std::string loraineProj2 = buf;
+
+    // E-Line 3: Presentation (Hygiene) + the anxiety Risk Indicator (inverted
+    // -- LOW anxiety meets target).
+    std::snprintf(buf, sizeof(buf),
+        "Presentation, %d%%. Risk Indicator, %d%%.\n%s",
+        statPct(v.getHygiene()), statPct(v.getStat(EmotionalStat::ANXIETY)),
+        projTag(v.getHygiene() >= 50.0f && v.getStat(EmotionalStat::ANXIETY) < 50.0f));
+    std::string loraineProj3 = buf;
+
     // --- Scenario 0 (Scenario A): the first merge into Tom's world ---------
     // Player merges in, Tom's already standing there feeling sick from it,
     // Larry strides up to greet him. Camera is smooth (followPosition) by
@@ -321,6 +354,63 @@ void OfficeScene::init() {
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
         { CharacterId::Larry, "Nothing! Do NOTHING harder! Go out there\nand get PAMPERED, champ! Engagement!",
           1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+    });
+
+    // --- Scenario 4 (Scenario E): the final office check-in ----------------
+    // Used by the merge-5 sequence (the last happiness checkpoint). Larry asks
+    // how the day went; Tom says he's doing his best; Larry quips and calls
+    // Loraine in for the numbers. She reads three projection-tagged stat lines
+    // (each ending in a "looking good this quarter" / "didn't quite meet
+    // target" verdict off the REAL vitals). Larry does his usual oblivious
+    // spin, Tom laments, scene. Same actor layout as A/B/D.
+    scenarios.push_back({
+        { CharacterId::Larry, "Tom! There he is. How'd we do today?",
+          1, false, false, PortraitEmotion::Happy, "",
+          /*movesAtStart*/ {
+              ActorMove{0, {{371.0f, 309.0f}}, 900.0f},
+              ActorMove{1, {{581.0f, 304.0f}}, 900.0f},
+          }, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "I'm... doing my best, Larry.\nHonestly. I'm trying.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Larry, "Your best! I love it. You know what\nthey say -- best is just good, squared.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Tom, "That's not a saying, Larry.\nThat's not... math.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Larry, "It's a MINDSET. Loraine! Bring me\nthe end-of-cycle numbers on Tom.",
+          1, false, false, PortraitEmotion::Mid, "",
+          /*movesAtStart*/ {
+              ActorMove{2, {{206.0f, 342.0f}}, 320.0f},
+          }, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Loraine, "Already pulled them, sir.",
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, loraineProj1,
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, loraineProj2,
+          2, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Loraine, loraineProj3,
+          2, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
+        { CharacterId::Larry, "See that? Numbers on a page.\nThat's a life, Tom. That's a LEGACY.",
+          1, true, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Sad },
+        { CharacterId::Tom, "It's a spreadsheet of whether\na child was entertained by me.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Sad },
+        { CharacterId::Larry, "And what a beautiful spreadsheet it is!\nKeep it UP, champ. We believe in you.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+        { CharacterId::Tom, "...I don't know how much longer\nI can keep smiling for the glass.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Sad },
+        { CharacterId::Loraine, "That's the spirit, technically.",
+          2, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
     });
 }
