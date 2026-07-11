@@ -48,7 +48,15 @@ $(DESKTOP_OUT)/obj/%.o: src/%.cpp
 # with pixelated image-rendering), NOT raylib's vendored minshell.html --
 # minshell.html has no centering/scaling CSS at all, which is why the canvas
 # renders tiny/offset if that ever gets used here by mistake.
-web: build/assets.rres $(RL)/libraylib.web.a
+# NOTE: depends on force-assets (phony), NOT build/assets.rres directly. make
+# decides build/assets.rres is "up to date" purely by mtime, but a git
+# merge/checkout can land renamed art (e.g. idle_two -> blink) with an mtime
+# OLDER than an existing build/assets.rres -- make then skips the repack and the
+# web bundle preloads a pack whose CRC32 keys no longer match what the code asks
+# for, so every gotchi sprite silently misses. force-assets always repacks, so a
+# lying timestamp can never ship a stale pack. (Desktop's CMake path already
+# force-repacks unconditionally, which is why only web hit this.)
+web: force-assets $(RL)/libraylib.web.a
 	mkdir -p $(WEB_OUT)
 	$(EMCC) $(SRCS) $(RL)/libraylib.web.a -o $(WEB_OUT)/index.html $(WEBINCLUDES) $(WEBLINK) --shell-file web/shell.html --preload-file build/assets.rres@assets.rres
 
@@ -81,6 +89,13 @@ $(SCENE_EDITOR_BIN): tools/scene_editor.cpp
 # as a prerequisite, so adding a PNG makes this rule out of date.
 ASSET_FILES = $(shell find assets -type f)
 build/assets.rres: tools/pack_assets.sh tools/pack_assets.cpp $(ASSET_FILES)
+	tools/pack_assets.sh assets build/assets.rres
+
+# force-assets always repacks, regardless of mtimes -- see the web: rule above
+# for why the mtime-based build/assets.rres dependency isn't trustworthy after a
+# git merge/checkout that renames art.
+.PHONY: force-assets
+force-assets:
 	tools/pack_assets.sh assets build/assets.rres
 
 $(SCENE_EDITOR_OUT)/assets.rres: build/assets.rres

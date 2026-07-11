@@ -101,23 +101,25 @@ static std::string ToRelativeKey(const std::string& fullPath, const std::string&
     return rel;
 }
 
-// Builds one continuous IMGE chunk data buffer: propCount, props[], raw pixels.
-// Mirrors rres_create_file.c's LoadDataBuffer() exactly.
-static unsigned char* BuildImageChunkBuffer(const Image& img, unsigned int rawSize, unsigned int* outBufSize) {
-    unsigned int propCount = 4;
-    unsigned int bufSize = (propCount + 1) * sizeof(unsigned int) + rawSize;
+// Builds one continuous RAWD chunk data buffer: propCount(=1), props[0]=byte
+// count, then the raw file bytes. We store the original *.png bytes verbatim --
+// PNG is already compressed, so this keeps the pack ~PNG-sized (~10MB) instead
+// of exploding to raw RGBA (~46MB). The loader decodes each PNG on demand via
+// LoadImageFromMemory, exactly like a normal LoadTexture, so nothing sits
+// decoded in memory except the textures actually in use. (The old approach
+// decoded to R8G8B8A8 at pack time and stored raw pixels, which both bloated
+// the file AND forced the whole pack's worth of pixels into the wasm heap on
+// web -> Aborted(OOM).) rres data type: RRES_DATA_RAW / FourCC "RAWD".
+static unsigned char* BuildRawChunkBuffer(const unsigned char* fileData, unsigned int fileSize, unsigned int* outBufSize) {
+    unsigned int propCount = 1;
+    unsigned int bufSize = (propCount + 1) * sizeof(unsigned int) + fileSize;
     unsigned char* buffer = (unsigned char*)RRES_CALLOC(bufSize, 1);
 
-    unsigned int props[4] = {
-        (unsigned int)img.width,
-        (unsigned int)img.height,
-        (unsigned int)img.format,
-        (unsigned int)img.mipmaps
-    };
+    unsigned int props[1] = { fileSize };
 
     memcpy(buffer, &propCount, sizeof(unsigned int));
     memcpy(buffer + sizeof(unsigned int), props, propCount * sizeof(unsigned int));
-    memcpy(buffer + (propCount + 1) * sizeof(unsigned int), img.data, rawSize);
+    memcpy(buffer + (propCount + 1) * sizeof(unsigned int), fileData, fileSize);
 
     *outBufSize = bufSize;
     return buffer;
@@ -149,25 +151,26 @@ int main(int argc, char** argv) {
 
     int packed = 0;
     for (const std::string& fullPath : pngs) {
-        Image img = LoadImage(fullPath.c_str());
-        if (img.data == nullptr) {
+        // Store the raw *.png file bytes verbatim (no decode). PNG is already
+        // compressed; decoding to RGBA here is what bloated the pack and OOM'd
+        // web. The loader decodes on demand via LoadImageFromMemory.
+        int fileSize = 0;
+        unsigned char* fileData = LoadFileData(fullPath.c_str(), &fileSize);
+        if (fileData == nullptr || fileSize <= 0) {
             fprintf(stderr, "Skipping (failed to load): %s\n", fullPath.c_str());
+            if (fileData) UnloadFileData(fileData);
             continue;
         }
 
-        // Convert to RGBA format (8 bits per channel) for compatibility with AssetPack
-        ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
-
-        unsigned int rawSize = (unsigned int)GetPixelDataSize(img.width, img.height, img.format);
         std::string key = ToRelativeKey(fullPath, assetsDir);
 
         unsigned int bufSize = 0;
-        unsigned char* buffer = BuildImageChunkBuffer(img, rawSize, &bufSize);
+        unsigned char* buffer = BuildRawChunkBuffer(fileData, (unsigned int)fileSize, &bufSize);
 
         rresResourceChunkInfo chunkInfo = {0};
-        chunkInfo.type[0] = 'I'; chunkInfo.type[1] = 'M'; chunkInfo.type[2] = 'G'; chunkInfo.type[3] = 'E';
+        chunkInfo.type[0] = 'R'; chunkInfo.type[1] = 'A'; chunkInfo.type[2] = 'W'; chunkInfo.type[3] = 'D';
         chunkInfo.id = rresComputeCRC32((unsigned char*)key.c_str(), (int)key.size());
-        chunkInfo.compType = RRES_COMP_NONE;
+        chunkInfo.compType = RRES_COMP_NONE;   // PNG already compressed; leave as-is
         chunkInfo.cipherType = RRES_CIPHER_NONE;
         chunkInfo.flags = 0;
         chunkInfo.baseSize = bufSize;
@@ -180,9 +183,9 @@ int main(int argc, char** argv) {
         fwrite(buffer, 1, bufSize, rresFile);
 
         RRES_FREE(buffer);
-        UnloadImage(img);
+        UnloadFileData(fileData);
 
-        printf("  packed: %s (id=%u)\n", key.c_str(), chunkInfo.id);
+        printf("  packed: %s (id=%u) %d bytes (png)\n", key.c_str(), chunkInfo.id, fileSize);
         packed++;
     }
 

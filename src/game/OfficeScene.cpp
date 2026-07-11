@@ -13,7 +13,6 @@
 // would either stay glued to screen-center or drift approximately as the 2D
 // camera pans/zooms during dialogue instead of staying pixel-locked to a
 // fixed spot in the room.
-static const Vector2 PORTAL_WORLD_2D = {60.0f, 460.0f};
 // Reference 3D camera framing -- a normal, undistorted view of the model at
 // its native ~1-3 unit scale (NOT solved from the 2D camera's raw zoom
 // value: the model's 3D units and the 2D scene's pixel units are entirely
@@ -42,27 +41,26 @@ void OfficeScene::init() {
     portal = new PortalEffect();
     portal->init();
     portal->setDebugCamDist(PORTAL_CAM_DIST);
+    portal->setDebugFovy(PORTAL_BASE_FOVY_DEG);
     portal->setObjectScale(0.6f);
-    // objectPosition/fovy are recomputed every frame in draw() from
-    // PORTAL_WORLD_2D and the live 2D camera (exact projection sync, not an
-    // initial placement) -- see the comment there.
+    // Fixed 3D placement, set once here + in draw(); no longer synced to the
+    // 2D camera (see draw()). PORTAL_WORLD_2D is unused now.
 
-    // Tom is standing at open (far-left, up high) where the scene editor
-    // placed him; the scenario zooms in on him here, then walks him to
-    // (451, 480). Larry starts off the bottom-right edge and walks up to Tom.
-    tom = new SceneActor({113.0f, 349.0f}, 48.0f, 64.0f);
+    // Positions from the scene editor's layout.json. Tom stands at open
+    // (left), the scenario zooms on him then walks him to (546,450). Larry
+    // starts off the bottom-right and walks up to Tom. Loraine waits off the
+    // bottom until Larry calls her, then walks up to Tom's left.
+    tom = new SceneActor({90.0f, 306.0f}, 48.0f, 64.0f);
     tom->setTag("tom");
     tom->setVisible(false);
     addActor(tom);
 
-    larry = new SceneActor({1050.0f, 818.0f}, 50.0f, 76.0f);
+    larry = new SceneActor({1175.0f, 861.0f}, 50.0f, 76.0f);
     larry->setTag("larry");
     larry->setVisible(false);
     addActor(larry);
 
-    // Loraine (Larry's secretary) waits off the bottom edge until Larry calls
-    // her in, then walks up to the left of Tom (Tom lands at x=417).
-    loraine = new SceneActor({300.0f, 818.0f}, 50.0f, 76.0f);
+    loraine = new SceneActor({170.0f, 919.0f}, 50.0f, 76.0f);
     loraine->setTag("loraine");
     loraine->setVisible(false);
     addActor(loraine);
@@ -81,8 +79,8 @@ void OfficeScene::init() {
         { CharacterId::Larry, "Tom A. Gotchi!\nJust the man I was looking for!",
           1, false, false, PortraitEmotion::Mid, "Larry (Tom's boss)",
           /*movesAtStart*/ {
-              ActorMove{0, {{417.0f, 441.0f}}, 140.0f},
-              ActorMove{1, {{669.0f, 441.0f}}, 220.0f},
+              ActorMove{0, {{371.0f, 309.0f}}, 140.0f},
+              ActorMove{1, {{581.0f, 304.0f}}, 260.0f},
           }, {}, PoseEmotion::Sad, PoseEmotion::Mid },
 
         { CharacterId::Larry, "How was the merge?\nDid you remember the three E's?",
@@ -101,40 +99,41 @@ void OfficeScene::init() {
 
         // Larry bellows for his secretary; fire her walk-in the instant he
         // starts yelling so she strides up from the bottom to Tom's left
-        // (x=340, left of Tom at 417) while he's still shouting.
+        // while he's still shouting.
         { CharacterId::Larry, "LORAAAINE!!!!",
-          1, false, false, PortraitEmotion::Happy, "",
+          1, true, false, PortraitEmotion::Happy, "",
           /*movesAtStart*/ {
-              ActorMove{2, {{340.0f, 441.0f}}, 240.0f},
+              ActorMove{2, {{206.0f, 342.0f}}, 280.0f},
           }, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Loraine, "Yes sir?",
           2, false, false, PortraitEmotion::Mid, "Loraine (the secretary)",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy },
 
         // --- Larry asks for Tom's merge metrics; Loraine reads the stats ----
         { CharacterId::Larry, "Loraine, pull up the numbers\non Tom's latest merge.",
           1, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Loraine, "[PLAYER STAT MESSAGE]",
           2, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
 
         // --- Comedy beat: lands on Tom coming in 15 minutes earlier ---------
         { CharacterId::Larry, "Mm. The numbers don't lie, Tom.\nAnd the numbers are... a choice.",
-          1, false, false, PortraitEmotion::Happy, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
+          1, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Tom, "I'll do better next time. I just need to get a good night's sleep.",
           0, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Larry, "And that's the beauty of accountability!\nWe grow together.",
           1, false, false, PortraitEmotion::Happy, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Larry, "Loraine, put Tom down for the\nEarly Bird Optimization Initiative.",
           1, false, false, PortraitEmotion::Happy, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Tom, "The what?",
           0, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy },
+        // Loraine drops from Happy to Mid as she delivers the bad news.
         { CharacterId::Loraine, "It means you come in fifteen minutes\nearlier. Every day.",
           2, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
@@ -158,8 +157,8 @@ void OfficeScene::init() {
         { CharacterId::Tom, "Sorry! Sorry. I'm so sorry.\nI'm two minutes late, I know.",
           0, false, false, PortraitEmotion::Sad, "",
           /*movesAtStart*/ {
-              ActorMove{0, {{417.0f, 441.0f}}, 600.0f},
-              ActorMove{1, {{669.0f, 441.0f}}, 600.0f},
+              ActorMove{0, {{371.0f, 309.0f}}, 900.0f},
+              ActorMove{1, {{581.0f, 304.0f}}, 900.0f},
           }, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Larry, "Two minutes, Tom.\nDo you know what two minutes IS?",
           1, false, false, PortraitEmotion::Happy, "",
@@ -230,14 +229,15 @@ void OfficeScene::update(float deltaTime) {
         // the first move. Camera is left alone; the scenario's first line
         // zooms in on him itself.
         tomWobbleTimer += deltaTime * 3.0f;
-        tom->setPosition({113.0f, 349.0f + sinf(tomWobbleTimer) * 4.0f});
+        tom->setPosition({90.0f, 306.0f + sinf(tomWobbleTimer) * 4.0f});
     }
 
     // Keep the camera locked on the speaking actor's LIVE position every
     // frame, so it tracks them smoothly as they moveTo()-walk into place
     // rather than easing once to where they stood when the line started.
     // Skipped in wide view (debug) so the numpad-0 override isn't fought.
-    if (activeScenario >= 0 && currentFocusActor >= 0 && !getCamera()->isWideViewEnabled()) {
+    if (activeScenario >= 0 && currentFocusActor >= 0
+        && !getCamera()->isShaking() && !getCamera()->isWideViewEnabled()) {
         Vector2 t;
         if (cameraTargetFor(currentFocusActor, t)) {
             getCamera()->followPosition(t, 8.0f);
@@ -274,54 +274,31 @@ void OfficeScene::draw() {
     // the actors, since the actor draws come after this. Needs its own 3D
     // mode (can't share the 2D camera), so the 2D pass is split around it.
     //
-    // PortalEffect's 3D camera is otherwise completely independent of this
-    // scene's 2D SceneCamera. To keep the portal pixel-locked to
-    // PORTAL_WORLD_2D as the 2D camera pans/zooms during dialogue (rather
-    // than approximately drifting), this derives the EXACT 3D placement/fovy
-    // that reproduces the 2D camera's own projection at the portal's depth,
-    // relative to PORTAL_CAM_DIST/PORTAL_BASE_FOVY_DEG's own natural
-    // pixels-per-3D-unit baseline (NOT the 2D camera's raw zoom value --
-    // the model's 3D units and the 2D scene's pixel units are unrelated
-    // scales, so equating them directly collapses fovy to ~180 degrees):
-    //
-    //   2D:  screenPos = (worldPos2D - target) * zoom2D + {W/2, H/2}
-    //   3D:  screenPos = objectPosition.xy * pixelsPerWorldUnit3D + {W/2, H/2}
-    //        (camera at Z=camDist looking at Z=0, object sitting at
-    //        Z=-camDist, i.e. exactly on the focal plane)
-    //   where pixelsPerWorldUnit3D = (H/2) / (camDist * tan(fovy/2))
-    //
-    // pixelsPerWorldUnit3D is scaled by zoom2D relative to its baseline value
-    // at PORTAL_BASE_FOVY_DEG (zoom2D == 1.0 reproduces that exact framing),
-    // fovy is solved to hit that scaled value, and objectPosition.xy is
-    // solved from the 2D screen position given that same value -- so the
-    // portal's on-screen size and position both track the 2D camera exactly.
+    // Fixed placement -- it just sits in its 3D spot with its own camera,
+    // fully independent of the 2D SceneCamera (same as ApartmentScene's
+    // CityWindowEffect). It no longer tracks the 2D camera's pan/zoom, so it
+    // will slide with the view like any set-dressing during camera moves
+    // rather than staying pixel-locked; that's a deliberate trade so the 2D
+    // camera behaves normally instead of feeding a per-frame projection sync.
     if (portal) {
-        float halfHeightWorldBase = PORTAL_CAM_DIST * tanf(PORTAL_BASE_FOVY_DEG * 0.5f * DEG2RAD);
-        float basePixelsPerWorldUnit3D = ((float)GAME_H / 2.0f) / halfHeightWorldBase;
-
-        float zoom2D = getCamera()->getZoom();
-        float pixelsPerWorldUnit3D = basePixelsPerWorldUnit3D * zoom2D;
-        float halfHeightWorld = ((float)GAME_H / 2.0f) / pixelsPerWorldUnit3D;
-        float fovyDeg = 2.0f * atanf(halfHeightWorld / PORTAL_CAM_DIST) * RAD2DEG;
-        portal->setDebugFovy(fovyDeg);
-        portal->setDebugCamDist(PORTAL_CAM_DIST);
-
-        Vector2 screenPos = getCamera()->worldToScreen(PORTAL_WORLD_2D);
-        float objX =  (screenPos.x - (float)GAME_W / 2.0f) / pixelsPerWorldUnit3D;
-        float objY = -(screenPos.y - (float)GAME_H / 2.0f) / pixelsPerWorldUnit3D;
-        portal->setObjectPosition({objX, objY, -PORTAL_CAM_DIST});
-
+        portal->setObjectPosition({-4.0f, -3.5f, -2.5f});
         portal->drawBackground();
     }
 
-    // Actors last, on top of the portal.
+    // Actors last, on top of the portal. Once the scenario is ending (the
+    // black fade is ramping), stop drawing every actor so none of them show
+    // under/after the fade -- the scene reads as fully cleared before it
+    // hands off.
+    bool ending = endElapsed >= 0.0f;
     BeginMode2D(cam);
-    drawTom(tom->getPosition());
-    if (activeScenario >= 0) drawLarry(larry->getPosition());
-    // Loraine starts off the bottom edge (y=818, below the 720 screen) and is
-    // only walked in on the "LORAAAINE!!!!" beat, so drawing her whenever the
-    // scenario is live is fine -- she's simply off-screen until she strides up.
-    if (activeScenario >= 0) drawLoraine(loraine->getPosition());
+    if (!ending) {
+        drawTom(tom->getPosition());
+        if (activeScenario >= 0) drawLarry(larry->getPosition());
+        // Loraine starts off the bottom edge and is only walked in on the
+        // "LORAAAINE!!!!" beat, so drawing her whenever the scenario is live is
+        // fine -- she's simply off-screen until she strides up.
+        if (activeScenario >= 0) drawLoraine(loraine->getPosition());
+    }
     EndMode2D();
 
     if (getEntrySceneName() == "scene_select") {
@@ -445,14 +422,10 @@ bool OfficeScene::cameraTargetFor(int actorIndex, Vector2& out) const {
     if (!target) return false;
 
     Vector2 p = target->getPosition();
-    // Aim near the TOP of the drawn pose (head height), so when the camera
-    // centers here the body fills the frame downward and stays in the upper
-    // area -- above the dialog box along the bottom edge -- instead of the
-    // feet landing at screen-center and the figure hiding behind the box.
-    // Pose is 192px tall drawn (256 native x 0.75). At tight zoom the whole
-    // body won't fit; aim at the upper torso so the head/face and torso sit
-    // in the visible area above the dialog box.
-    out = { p.x + 64.0f, p.y + 80.0f };
+    // Same recipe as ApartmentScene: poses draw at ~full native size, so aim
+    // well right and low into the body to frame the torso (not the head) and
+    // keep the figure off the frame edge.
+    out = { p.x + 160.0f, p.y + 240.0f };
     return true;
 }
 
@@ -466,7 +439,7 @@ void OfficeScene::focusCameraOn(int actorIndex, bool shake, bool cut) {
         // follow takes over from here to track the actor as they walk.
         if (cut) getCamera()->setPosition(t.x, t.y);
         else getCamera()->followPosition(t, 8.0f);
-        getCamera()->zoomTo(4.0f, 0.5f);
+        getCamera()->zoomTo(2.0f, 0.5f);
     }
 
     if (shake) {
@@ -485,21 +458,24 @@ void OfficeScene::drawOffice() {
 // game aligned -- an actor's (x,y) from the editor JSON drops straight into
 // its SceneActor construction with no anchor translation. flipX mirrors
 // horizontally (negative source width), same as the editor's flipX toggle.
-static void drawPose(Texture2D pose, Vector2 pos, bool flipX) {
+// Per-actor scale (from the scene editor's layout.json), same as
+// ApartmentScene -- pose top-left at pos, native size * scale, flipX via
+// negative source width.
+static void drawPose(Texture2D pose, Vector2 pos, bool flipX, float scale) {
     if (pose.id == 0) return;
     Rectangle src = { 0.0f, 0.0f, (flipX ? -1.0f : 1.0f) * (float)pose.width, (float)pose.height };
-    Rectangle dest = { pos.x, pos.y, pose.width * OfficeScene::POSE_SCALE, pose.height * OfficeScene::POSE_SCALE };
+    Rectangle dest = { pos.x, pos.y, pose.width * scale, pose.height * scale };
     DrawTexturePro(pose, src, dest, {0.0f, 0.0f}, 0.0f, WHITE);
 }
 
 void OfficeScene::drawTom(Vector2 pos) {
-    drawPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true);   // faces right
+    drawPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true, 1.0f);   // faces right
 }
 
 void OfficeScene::drawLarry(Vector2 pos) {
-    drawPose(larryPoses[(int)larryPoseEmotion], pos, /*flipX*/ false);  // faces left
+    drawPose(larryPoses[(int)larryPoseEmotion], pos, /*flipX*/ false, 1.0f);  // faces left
 }
 
 void OfficeScene::drawLoraine(Vector2 pos) {
-    drawPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ true);  // to Tom's left, faces right toward him
+    drawPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ true, 1.0f);  // to Tom's left, faces right toward him
 }

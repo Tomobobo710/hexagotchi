@@ -34,7 +34,11 @@ const int INPUT_DEFAULT_INTERACT = KEY_E;
 const int INPUT_DEFAULT_PAUSE = KEY_P;
 const int INPUT_DEFAULT_ACCEPT = KEY_ENTER;
 const int INPUT_DEFAULT_CANCEL = KEY_ESCAPE;
-const int INPUT_DEFAULT_SKIP = KEY_SPACE;
+// Skip = S (skip the whole scenario). NOT Space -- Space/Enter/click advance a
+// single dialog line. The story scenes check INPUT_ACTION_SKIP *before* the
+// advance path, so binding this to Space made every Space press nuke the whole
+// scene instead of advancing one line.
+const int INPUT_DEFAULT_SKIP = KEY_S;
 
 class SceneInputHandler {
 public:

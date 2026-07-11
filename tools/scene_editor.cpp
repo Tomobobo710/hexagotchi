@@ -60,8 +60,22 @@ static Texture2D LoadPackedTexture(const std::string& key) {
     rresResourceChunk chunk = rresLoadResourceChunk(PACK_PATH, id);
     if (chunk.data.raw == nullptr) return Texture2D{0};
 
-    Image img = LoadImageFromResource(chunk);
+    // Chunks are RAWD-type: the original PNG file bytes stored verbatim (see
+    // tools/pack_assets.cpp). Pull the bytes out and decode the PNG on demand.
+    // MUST match src/engine/AssetPack.cpp -- this tool has its own standalone
+    // copy of the load path, so any change to the pack format has to be
+    // mirrored here too (this got missed once and broke every thumbnail).
+    unsigned int dataSize = 0;
+    unsigned char* pngBytes = (unsigned char*)LoadDataFromResource(chunk, &dataSize);
     rresUnloadResourceChunk(chunk);
+
+    if (pngBytes == nullptr || dataSize == 0) {
+        if (pngBytes) UnloadFileData(pngBytes);
+        return Texture2D{0};
+    }
+
+    Image img = LoadImageFromMemory(".png", pngBytes, (int)dataSize);
+    UnloadFileData(pngBytes);
     if (img.data == nullptr) return Texture2D{0};
 
     Texture2D tex = LoadTextureFromImage(img);
@@ -429,6 +443,10 @@ int main(int argc, char** argv) {
     Vector2 dragOffset = {0, 0};
     int nextTagId = 1;
 
+    // Index of the selected actor's waypoint currently being dragged, or -1.
+    // Grabbed by clicking its ghost sprite; moved just like an actor.
+    int draggingWaypoint = -1;
+
     // When true, the next canvas click adds a waypoint to the selected
     // actor instead of placing/selecting/dragging an actor -- toggled by
     // the "Add Waypoint" button in the property panel, cleared after one
@@ -513,47 +531,76 @@ int main(int argc, char** argv) {
 
             Vector2 mouseWorld = GetScreenToWorld2D(mouseScreen, cam);
 
-            // --- Place a waypoint on the selected actor ---
-            if (placingWaypoint && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                if (selectedActorIndex >= 0 && selectedActorIndex < (int)actors.size()) {
-                    PlacedActor& a = actors[selectedActorIndex];
-                    if ((int)a.waypoints.size() < MAX_WAYPOINTS) {
-                        a.waypoints.push_back(mouseWorld);
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                // Priority order for a canvas left-click:
+                //   1. place a waypoint (if armed)
+                //   2. place a new actor (if an asset is armed)
+                //   3. grab the selected actor's waypoint ghost (to drag it)
+                //   4. select/grab an actor
+                if (placingWaypoint) {
+                    if (selectedActorIndex >= 0 && selectedActorIndex < (int)actors.size()
+                        && (int)actors[selectedActorIndex].waypoints.size() < MAX_WAYPOINTS) {
+                        actors[selectedActorIndex].waypoints.push_back(mouseWorld);
                     }
+                    placingWaypoint = false; // one placement per click
                 }
-                placingWaypoint = false; // one placement per click, same as asset placement
-            }
-            // --- Place a new actor from the selected asset ---
-            else if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && selectedAssetManifestIndex >= 0) {
-                PlacedActor a;
-                a.assetKey = manifest[selectedAssetManifestIndex];
-                a.texture = assetThumbs[selectedAssetManifestIndex];
-                a.position = mouseWorld;
-                char buf[64];
-                snprintf(buf, sizeof(buf), "actor_%d", nextTagId++);
-                a.tag = buf;
-                actors.push_back(a);
-                selectedActorIndex = (int)actors.size() - 1;
-                selectedAssetManifestIndex = -1; // one placement per click, avoid accidental spam
-            }
-            // --- Select/drag an existing actor ---
-            else if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                selectedActorIndex = -1;
-                for (int i = (int)actors.size() - 1; i >= 0; i--) {
-                    PlacedActor& a = actors[i];
-                    float w = a.texture.width * a.scale;
-                    float h = a.texture.height * a.scale;
-                    Rectangle bounds = {a.position.x, a.position.y, w, h};
-                    if (CheckCollisionPointRec(mouseWorld, bounds)) {
-                        selectedActorIndex = i;
-                        draggingActor = true;
-                        dragOffset = {mouseWorld.x - a.position.x, mouseWorld.y - a.position.y};
-                        break;
+                else if (selectedAssetManifestIndex >= 0) {
+                    PlacedActor a;
+                    a.assetKey = manifest[selectedAssetManifestIndex];
+                    a.texture = assetThumbs[selectedAssetManifestIndex];
+                    a.position = mouseWorld;
+                    char buf[64];
+                    snprintf(buf, sizeof(buf), "actor_%d", nextTagId++);
+                    a.tag = buf;
+                    actors.push_back(a);
+                    selectedActorIndex = (int)actors.size() - 1;
+                    selectedAssetManifestIndex = -1; // one placement per click
+                }
+                else {
+                    // Try grabbing a waypoint of the selected actor first (so
+                    // clicking a ghost drags the waypoint, not an actor
+                    // beneath it), then fall back to selecting/grabbing actors.
+                    bool grabbed = false;
+                    if (selectedActorIndex >= 0 && selectedActorIndex < (int)actors.size()) {
+                        PlacedActor& sel = actors[selectedActorIndex];
+                        float w = sel.texture.width * sel.scale;
+                        float h = sel.texture.height * sel.scale;
+                        for (int wi = (int)sel.waypoints.size() - 1; wi >= 0; wi--) {
+                            Rectangle wpBounds = {sel.waypoints[wi].x, sel.waypoints[wi].y, w, h};
+                            if (CheckCollisionPointRec(mouseWorld, wpBounds)) {
+                                draggingWaypoint = wi;
+                                dragOffset = {mouseWorld.x - sel.waypoints[wi].x, mouseWorld.y - sel.waypoints[wi].y};
+                                grabbed = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!grabbed) {
+                        selectedActorIndex = -1;
+                        for (int i = (int)actors.size() - 1; i >= 0; i--) {
+                            PlacedActor& a = actors[i];
+                            Rectangle bounds = {a.position.x, a.position.y, a.texture.width * a.scale, a.texture.height * a.scale};
+                            if (CheckCollisionPointRec(mouseWorld, bounds)) {
+                                selectedActorIndex = i;
+                                draggingActor = true;
+                                dragOffset = {mouseWorld.x - a.position.x, mouseWorld.y - a.position.y};
+                                break;
+                            }
+                        }
                     }
                 }
             }
 
-            if (draggingActor && selectedActorIndex >= 0) {
+            // --- Continue an in-progress drag (waypoint takes precedence) ---
+            if (draggingWaypoint >= 0 && selectedActorIndex >= 0
+                && draggingWaypoint < (int)actors[selectedActorIndex].waypoints.size()) {
+                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                    actors[selectedActorIndex].waypoints[draggingWaypoint] =
+                        {mouseWorld.x - dragOffset.x, mouseWorld.y - dragOffset.y};
+                } else {
+                    draggingWaypoint = -1;
+                }
+            } else if (draggingActor && selectedActorIndex >= 0) {
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
                     actors[selectedActorIndex].position = {mouseWorld.x - dragOffset.x, mouseWorld.y - dragOffset.y};
                 } else {
@@ -619,18 +666,21 @@ int main(int argc, char** argv) {
             const PlacedActor& sel = actors[selectedActorIndex];
             float selW = sel.texture.width * sel.scale;
             float selH = sel.texture.height * sel.scale;
-            Vector2 prev = {sel.position.x + selW / 2.0f, sel.position.y + selH / 2.0f};
+            // Path line runs from the actor's top-left through each waypoint --
+            // a waypoint IS the actor's top-left position (that's what the
+            // engine's moveTo() sets it to), so no centering offset anywhere.
+            Vector2 prev = {sel.position.x, sel.position.y};
 
             for (size_t w = 0; w < sel.waypoints.size(); w++) {
                 Vector2 wp = sel.waypoints[w];
                 DrawLineEx(prev, wp, 2.0f / cam.zoom, Color{255, 220, 80, 200});
 
-                // Ghost sprite, centered on the waypoint -- same top-left
-                // convention as the real actor (position is top-left), so
-                // the ghost's top-left sits at wp - size/2 to center it.
+                // Ghost sprite drawn with its TOP-LEFT at the waypoint, exactly
+                // how the engine places the actor when it arrives there --
+                // WYSIWYG with the game, no half-size offset.
                 if (sel.texture.id != 0) {
                     Rectangle src = {0, 0, sel.flipX ? -(float)sel.texture.width : (float)sel.texture.width, (float)sel.texture.height};
-                    Rectangle dest = {wp.x - selW / 2.0f, wp.y - selH / 2.0f, selW, selH};
+                    Rectangle dest = {wp.x, wp.y, selW, selH};
                     DrawTexturePro(sel.texture, src, dest, {0, 0}, 0.0f, Color{255, 255, 255, 128});
                     DrawRectangleLinesEx(dest, 2.0f / cam.zoom, Color{255, 220, 80, 160});
                 }
@@ -641,7 +691,7 @@ int main(int argc, char** argv) {
                 int fontSize = (int)(28.0f / cam.zoom);
                 int labelW = MeasureText(label, fontSize);
                 float badgeR = 18.0f / cam.zoom;
-                Vector2 badgeCenter = {wp.x, wp.y - selH / 2.0f - badgeR - 4.0f / cam.zoom};
+                Vector2 badgeCenter = {wp.x, wp.y - badgeR - 4.0f / cam.zoom};
                 DrawCircleV(badgeCenter, badgeR, Color{60, 50, 10, 255});
                 DrawCircleV(badgeCenter, badgeR - (3.0f / cam.zoom), Color{255, 220, 80, 255});
                 DrawText(label, (int)(badgeCenter.x - labelW / 2.0f), (int)(badgeCenter.y - fontSize / 2.0f), fontSize, Color{40, 30, 0, 255});

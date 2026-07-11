@@ -168,8 +168,12 @@ void ApartmentScene::draw() {
     } else {
         drawApartment();
     }
-    drawTom(tom->getPosition());
-    if (activeScenario >= 0) drawMark(mark->getPosition());
+    // Stop drawing actors once the end fade is ramping, so none show under or
+    // after the fade (same as OfficeScene).
+    if (endElapsed < 0.0f) {
+        drawTom(tom->getPosition());
+        if (activeScenario >= 0) drawMark(mark->getPosition());
+    }
     EndMode2D();
 
     if (getEntrySceneName() == "scene_select") drawSceneDebugCameraReadout(cityWindow, 16, 16);

@@ -24,10 +24,25 @@ Texture2D loadTexture(const std::string& key) {
         return Texture2D{0};
     }
 
-    Image img = LoadImageFromResource(chunk);
+    // Chunks are RAWD-type: the original PNG file bytes stored verbatim (see
+    // tools/pack_assets.cpp). Pull the bytes out and decode the PNG on demand --
+    // this keeps only in-use textures decoded in memory, instead of the whole
+    // pack's worth of raw RGBA (which OOM'd the web build's heap).
+    unsigned int dataSize = 0;
+    unsigned char* pngBytes = (unsigned char*)LoadDataFromResource(chunk, &dataSize);
     rresUnloadResourceChunk(chunk);
 
+    if (pngBytes == nullptr || dataSize == 0) {
+        TraceLog(LOG_WARNING, "ASSETPACK decode fail (no data): key='%s'", key.c_str());
+        if (pngBytes) UnloadFileData(pngBytes);
+        return Texture2D{0};
+    }
+
+    Image img = LoadImageFromMemory(".png", pngBytes, (int)dataSize);
+    UnloadFileData(pngBytes);
+
     if (img.data == nullptr) {
+        TraceLog(LOG_WARNING, "ASSETPACK decode fail (bad png): key='%s'", key.c_str());
         return Texture2D{0};
     }
 

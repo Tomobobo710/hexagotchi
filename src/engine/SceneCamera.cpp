@@ -179,6 +179,14 @@ bool SceneCamera::isLookaheadEnabled() const { return lookaheadEnabled; }
 
 void SceneCamera::shake(float intensity, float duration) {
     shakeIntensity = intensity; shakeDuration = duration; shakeTimer = 0.0f;
+    // Park the follow at the current position so updateFollow() isn't lerping
+    // toward some other target while the shake runs -- otherwise it pulls the
+    // per-frame shake offset straight back out and no shake is visible (this
+    // bit OfficeScene, which re-issues followPosition every frame to track a
+    // walking actor). Callers wanting the camera to move AND shake should
+    // re-aim after the shake settles.
+    followTarget = nullptr;
+    targetPosition = position;
 }
 
 bool SceneCamera::isShaking() const { return shakeTimer < shakeDuration; }
@@ -323,8 +331,14 @@ void SceneCamera::clampToBoundary() {
     // revealing it. This is unconditional -- wide view overrides
     // position/zoom entirely after this runs (see update()), so it's
     // unaffected by either inset.
-    float hw = (GAME_W / zoom) * 0.5f + BOUNDARY_SAFETY_INSET_X;
-    float hh = (GAME_H / zoom) * 0.5f + BOUNDARY_SAFETY_INSET_Y;
+    // The safety margin scales with zoom, same as the visible half-extent it
+    // adds to -- otherwise a flat pixel inset (90px) is a tiny sliver when
+    // zoomed out but eats half the frame when zoomed in (at zoom 2 the visible
+    // half-height is only 180px, so a flat 90 inset would block the camera
+    // from ever reaching the lower half of a room). Dividing by zoom keeps the
+    // margin a consistent fraction of what's ACTUALLY in view at any zoom.
+    float hw = (GAME_W * 0.5f + BOUNDARY_SAFETY_INSET_X) / zoom;
+    float hh = (GAME_H * 0.5f + BOUNDARY_SAFETY_INSET_Y) / zoom;
 
     float loX = boundaryMinX + hw, hiX = boundaryMaxX - hw;
     if (loX <= hiX) { if (position.x < loX) position.x = loX; if (position.x > hiX) position.x = hiX; }
