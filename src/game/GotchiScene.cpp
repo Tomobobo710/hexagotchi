@@ -379,16 +379,24 @@ void GotchiScene::init() {
     // Center camera
     getCamera()->setBoundary(0, 0, 720.0f, 720.0f);
 
-    // Load gotchi background (default to grass_bg)
-    background_ = AssetPack::loadTexture("gotchi_backgrounds/grass_bg.png");
+    // Load biome backgrounds (will set current background based on gotchi's hex position)
+    loadBiomeBackgrounds();
 
     // Create Gotchi with shared vitals and mood from GameState
     // If gameState_ is not set (e.g., in tests), use fallback defaults
     GotchiStats& stats = gameState_ ? gameState_->vitals : defaultStats_;
     GotchiMood& mood = gameState_ ? gameState_->mood : defaultMood_;
 
-    gotchi = new Gotchi({360.0f, 360.0f}, stats, mood, gameState_);
+    // Get saved hex position from GameState, default to center (0, 0)
+    int gotchiQ = gameState_ ? gameState_->gotchiHexQ : 0;
+    int gotchiR = gameState_ ? gameState_->gotchiHexR : 0;
+
+    // Create gotchi at the saved hex position
+    HexCoords startHex(gotchiQ, gotchiR);
+    Vector2 gotchiPos = startHex.toPixel(128.0f);  // Use a reasonable hex size for gotchi scene
+    gotchi = new Gotchi(gotchiPos, stats, mood, gameState_);
     gotchi->setTag("gotchi");
+    gotchi->setHexSize(128.0f);
     addActor(gotchi);
 
     // Initialize the Gotchi (no longer resets vitals - they persist in GameState)
@@ -414,7 +422,7 @@ void GotchiScene::init() {
     float spriteWorldPx = gotchi->getHeight() * GOTCHI_WORLD_SCALE;      // 64 * 2 = 128px
     float targetPx      = GOTCHI_SCREEN_FRAC * (float)GAME_H;            // 0.60 * 720 = 432px
     float framingZoom   = targetPx / spriteWorldPx;                       // 3.375
-    getCamera()->setPosition(360.0f, 360.0f);                             // center on the gotchi
+    getCamera()->followActor(gotchi);                                     // camera follows the gotchi
     getCamera()->setZoom(framingZoom);
 
     TraceLog(LOG_INFO, "GOTCHI_FRAME sprPx=%.0f targetPx=%.0f wantZoom=%.3f setZoom=%.3f minZoom=%.3f",
@@ -565,16 +573,29 @@ void GotchiScene::update(float deltaTime) {
         gotchi->setStatsFrozen(tutorialFreeze || collapseFreeze);
         gotchi->update(deltaTime);
 
-        // One-shot: fire the death transition exactly once. switchScene()'s
-        // own currentSceneName guard isn't enough here since the fade takes
-        // time to actually leave this scene -- without deathTriggered_ this
-        // would re-call switchScene() every frame of the fade and reset its
-        // timer forever.
-        if (gotchi->isDead() && !deathTriggered_) {
-            deathTriggered_ = true;
-            if (getSceneManager()) {
-                static_cast<SceneManager*>(getSceneManager())->switchScene("death");
-            }
+        // Sync gotchi's current hex position to GameState
+        if (gameState_) {
+            HexCoords currentHex = gotchi->getCurrentHex();
+            gameState_->gotchiHexQ = currentHex.q;
+            gameState_->gotchiHexR = currentHex.r;
+        }
+    }
+
+    // Background update based on GameState biome
+    if (needsBackgroundUpdate_ && gameState_) {
+        updateBackgroundForHex(gameState_->gotchiHexQ, gameState_->gotchiHexR);
+        needsBackgroundUpdate_ = false;
+    }
+
+    // One-shot: fire the death transition exactly once. switchScene()'s
+    // own currentSceneName guard isn't enough here since the fade takes
+    // time to actually leave this scene -- without deathTriggered_ this
+    // would re-call switchScene() every frame of the fade and reset its
+    // timer forever.
+    if (gotchi->isDead() && !deathTriggered_) {
+        deathTriggered_ = true;
+        if (getSceneManager()) {
+            static_cast<SceneManager*>(getSceneManager())->switchScene("death");
         }
     }
 
@@ -1079,6 +1100,60 @@ void GotchiScene::applyTutorialLocks() {
 
         if (tutorialController_) {
             btn->setEnabled(tutorialController_->isActionUnlocked(label));
+        }
+    }
+}
+
+// ============================================================================
+// Background Management
+// ============================================================================
+
+void GotchiScene::loadBiomeBackgrounds() {
+    // Biome names matching the TileType biomes
+    const std::vector<std::string> biomes = {
+        "ocean", "sand", "grass", "dirt", "swamp", "ice", "lava"
+    };
+
+    for (const auto& biome : biomes) {
+        std::string path = "gotchi_backgrounds/" + biome + "_bg.png";
+        Texture2D tex = AssetPack::loadTexture(path);
+        if (tex.id != 0) {
+            biomeBackgrounds_[biome] = tex;
+            TraceLog(LOG_INFO, "GOTCHI_BG loaded: %s", path.c_str());
+        } else {
+            TraceLog(LOG_WARNING, "GOTCHI_BG failed to load: %s", path.c_str());
+        }
+    }
+
+    // Set background based on gotchiBiome from GameState
+    std::string biome = gameState_ ? gameState_->gotchiBiome : "grass";
+    if (biomeBackgrounds_.count(biome)) {
+        if (background_.id != 0) {
+            UnloadTexture(background_);
+        }
+        background_ = biomeBackgrounds_.at(biome);
+        currentBiome_ = biome;
+    } else {
+        // Fallback to grass if biome not found
+        if (background_.id != 0) {
+            UnloadTexture(background_);
+        }
+        background_ = biomeBackgrounds_.count("grass") ? biomeBackgrounds_.at("grass") : AssetPack::loadTexture("gotchi_backgrounds/grass_bg.png");
+        currentBiome_ = "grass";
+    }
+}
+
+void GotchiScene::updateBackgroundForHex(int q, int r) {
+    // Look up biome from GameState (updated when leaving HexViewScene)
+    if (gameState_) {
+        std::string biome = gameState_->gotchiBiome;
+        if (biome != currentBiome_ && biomeBackgrounds_.count(biome)) {
+            TraceLog(LOG_INFO, "GOTCHI_BG changing from %s to %s", currentBiome_.c_str(), biome.c_str());
+            if (background_.id != 0) {
+                UnloadTexture(background_);
+            }
+            background_ = biomeBackgrounds_.at(biome);
+            currentBiome_ = biome;
         }
     }
 }

@@ -517,6 +517,9 @@ void to_json(nlohmann::json& j, const GameState& s) {
     j["collapsed"] = s.collapsed;
     j["engagedCareSide"] = s.engagedCareSide;
     j["engagedStorySide"] = s.engagedStorySide;
+    j["gotchiHexQ"] = s.gotchiHexQ;
+    j["gotchiHexR"] = s.gotchiHexR;
+    j["gotchiBiome"] = s.gotchiBiome;
 
     // Serialize vitals and mood (shared state)
     j["vitals"] = s.vitals;
@@ -578,6 +581,9 @@ void from_json(const nlohmann::json& j, GameState& s) {
     s.collapsed = j.value("collapsed", false);
     s.engagedCareSide = j.value("engagedCareSide", false);
     s.engagedStorySide = j.value("engagedStorySide", false);
+    s.gotchiHexQ = j.value("gotchiHexQ", 0);
+    s.gotchiHexR = j.value("gotchiHexR", 0);
+    s.gotchiBiome = j.value("gotchiBiome", std::string("grass"));
 
     // Vitals and mood: read if present, otherwise they're default-initialized
     if (j.contains("vitals")) {

@@ -379,6 +379,15 @@ void HexViewScene::update(float deltaTime) {
         }
     }
 
+    // Update biome in GameState when gotchi completes path movement
+    if (gotchi && gameState_ && !gotchi->isFollowingPath()) {
+        HexCoords currentHex = gotchi->getCurrentHex();
+        // Only update if position changed
+        if (currentHex.q != gameState_->gotchiHexQ || currentHex.r != gameState_->gotchiHexR) {
+            gameState_->gotchiBiome = world->getBiomeAt(gotchi->getPosition().x, gotchi->getPosition().y);
+        }
+    }
+
     // Update back button
     if (backButton_) {
         backButton_->update(ih, deltaTime);
@@ -433,6 +442,15 @@ void HexViewScene::addBackButton() {
 }
 
 void HexViewScene::onBackButtonClicked() {
+    // Save gotchi's current hex position and biome to GameState before switching
+    if (gameState_ && gotchi) {
+        HexCoords currentHex = gotchi->getCurrentHex();
+        gameState_->gotchiHexQ = currentHex.q;
+        gameState_->gotchiHexR = currentHex.r;
+        // Get biome from world at current position
+        gameState_->gotchiBiome = world->getBiomeAt(gotchi->getPosition().x, gotchi->getPosition().y);
+    }
+
     // Switch back to gotchi scene
     if (getSceneManager()) {
         SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());

@@ -13,6 +13,7 @@
 // Include Item for item-based decision making
 #include "Item.hpp"
 
+// Include GameState for statsFrozen access (must be after GotchiStats/GotchiMood includes)
 #include "GameState.h"
 
 // Forward declarations
@@ -87,6 +88,10 @@ public:
     HexCoords getCurrentHex() const;
     void setPath(const std::vector<HexCoords>& path);
     void updatePathMovement(float deltaTime);
+    bool isFollowingPath() const { return followingPath_; }
+
+    // Set gotchi's position from hex coordinates
+    void setHexPosition(int q, int r);
 
     // State machine for autonomous behavior
     enum class GotchiState {

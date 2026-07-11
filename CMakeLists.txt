@@ -30,6 +30,7 @@ if(RBUILD_DESKTOP)
     file(GLOB GAME_SRCS
         "src/game/ControlsOverlay.cpp"
         "src/game/CharacterRegistry.cpp"
+        "src/game/DeathScene.cpp"
         "src/game/DriversController.cpp"
         "src/game/Gotchi.cpp"
         "src/game/GotchiMood.cpp"
@@ -56,6 +57,7 @@ if(RBUILD_DESKTOP)
         "src/game/ScenarioDirector.cpp"
         "src/game/TherapistOfficeScene.cpp"
         "src/game/TitleScene.cpp"
+        "src/game/TutorialController.cpp"
         "src/game/ToyAnimationScene.cpp"
     )
     file(GLOB EFFECTS_SRCS "src/effects/*.cpp")
