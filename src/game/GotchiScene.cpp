@@ -484,7 +484,7 @@ void GotchiScene::addButtons() {
     buttonFeedbackTimer_ = 0.0f;
 
     // Add action buttons at the bottom
-    // Seven buttons: Wash, Groom, Feed, Pet, Water, Merge, Explore
+    // Seven buttons: Explore, Wash, Groom, Feed, Pet, Water, Merge
     float buttonWidth = 80.0f;
     float buttonHeight = 32.0f;
     float totalWidth = 7 * buttonWidth + 6 * 10.0f;  // 7 buttons + 6 gaps
@@ -493,11 +493,11 @@ void GotchiScene::addButtons() {
 
     std::string mergeLabel = mergeController_ ? mergeController_->mergeButtonLabel() : "Merge";
 
-    std::vector<std::string> labels = {"Wash", "Groom", "Feed", "Pet", "Water", mergeLabel, "EXPLORE"};
+    std::vector<std::string> labels = {"EXPLORE", "Wash", "Groom", "Feed", "Pet", "Water", mergeLabel};
     for (size_t i = 0; i < labels.size(); i++) {
         float x = startX + i * (buttonWidth + 10.0f);
-        // The 6th button (index 5) is the merge button
-        addButton(labels[i], x, y, (i == 5));
+        // The last button (index 6) is the merge button
+        addButton(labels[i], x, y, (i == 6));
     }
 
     // Add "Detailed Vitals" button at bottom center
@@ -586,10 +586,10 @@ void GotchiScene::update(float deltaTime) {
     if (mergeController_) {
         const char* currentLabel = mergeController_->mergeButtonLabel();
         // Check if the merge button label needs to be updated
-        if (buttons.size() > 5) {
-            std::string currentButtonLabel = buttons[5]->getLabel();
+        if (buttons.size() > 6) {
+            std::string currentButtonLabel = buttons[6]->getLabel();
             if (currentButtonLabel != currentLabel) {
-                buttons[5]->setLabel(currentLabel);
+                buttons[6]->setLabel(currentLabel);
             }
         }
     }

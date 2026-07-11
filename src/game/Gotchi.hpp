@@ -13,8 +13,9 @@
 // Include Item for item-based decision making
 #include "Item.hpp"
 
+#include "GameState.h"
+
 // Forward declarations
-class GameState;
 class HexWorld;
 class EventBus;
 
