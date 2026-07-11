@@ -3,6 +3,13 @@ backgrounds/officebg.png
 backgrounds/parlorbg.png
 backgrounds/schoolbg.png
 backgrounds/therapistbg.png
+gotchi_backgrounds/dirt_bg.png
+gotchi_backgrounds/grass_bg.png
+gotchi_backgrounds/ice_bg.png
+gotchi_backgrounds/lava_bg.png
+gotchi_backgrounds/ocean_bg.png
+gotchi_backgrounds/sand_bg.png
+gotchi_backgrounds/swamp_bg.png
 gotchis/001/armswap_01.png
 gotchis/001/armswap_02.png
 gotchis/001/armswap_03.png

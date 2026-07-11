@@ -59,6 +59,9 @@ private:
     std::map<std::string, float> buttonCooldowns_;
     float buttonFeedbackTimer_ = 0.0f;
 
+    // Background texture for gotchi scene
+    Texture2D background_ = {0};  // Gotchi background image
+
     // Action shader overlay
     Shader actionShader_ = {0};
     Texture2D whitePixel_ = {0};  // 1x1 white texture for DrawTexturePro UVs
