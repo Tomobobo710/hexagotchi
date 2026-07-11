@@ -294,6 +294,13 @@ void TitleScene::draw() {
     int titleWidth = MeasureText(title, 48);
     DrawText(title, (int)((GAME_W - titleWidth) / 2.0f), 100, 48, {200, 200, 255, 255});
 
+    // Draw credit text under Start Game button
+    const char* credits = "Game by\nTomobobo and Bazola";
+    int creditsHeight = 20;
+    float centerY = (float)GAME_H / 2.0f;
+    float buttonHeight = 50.0f;
+    DrawText(credits, (int)((GAME_W - MeasureText(credits, 20)) / 2.0f), (int)(centerY + buttonHeight/2 + 30), 20, {180, 180, 220, 200});
+
     // DISABLED: Save system shut off for game jam
     // if (showingLoadOptions_) {
     //     // Draw slot selection UI
