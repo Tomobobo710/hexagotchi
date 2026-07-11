@@ -17,6 +17,14 @@ static const char* POKEMON_QUIPS[] = {
 };
 static const float POKEMON_QUIP_DURATION = 1.8f;
 
+// Spawn/idle positions from the scene editor's layout.json. Tom starts off the
+// left edge and walks in; Karen and Ronzer are static at their table. flipX is
+// hardcoded per-actor in the draw fns (Tom faces right, the other two left).
+static const Vector2 TOM_SPAWN    = {-134.0f, 322.0f};
+static const Vector2 TOM_WALK_TO  = { 205.0f, 317.0f};
+static const Vector2 KAREN_POS    = { 700.0f, 298.0f};
+static const Vector2 RONZER_POS   = { 850.0f, 343.0f};
+
 PizzaParlorScene::PizzaParlorScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {225, 120, 60, 255}), dialog(sharedDialog) {
 }
@@ -27,69 +35,83 @@ void PizzaParlorScene::init() {
     sunEffect = new SunEffect();
     addEffect(sunEffect);
 
-    // Actors are invisible bounds/position holders -- drawTom/drawWife/
-    // drawPokemon render the actual silhouettes on top, keyed by tag (same
-    // pattern BossScene uses for its boss shape).
-    tom = new SceneActor({160.0f, 380.0f}, 48.0f, 64.0f);
+    // Actors are invisible bounds/position holders -- drawTom/drawKaren/
+    // drawRonzer render the poses on top, keyed by tag. Position is the pose's
+    // TOP-LEFT (editor convention), same as OfficeScene/ApartmentScene.
+    tom = new SceneActor(TOM_SPAWN, 48.0f, 64.0f);
     tom->setTag("tom");
     tom->setVisible(false);
     addActor(tom);
 
-    wife = new SceneActor({520.0f, 360.0f}, 48.0f, 72.0f);
-    wife->setTag("wife");
-    wife->setVisible(false);
-    addActor(wife);
+    karen = new SceneActor(KAREN_POS, 48.0f, 72.0f);
+    karen->setTag("karen");
+    karen->setVisible(false);
+    addActor(karen);
 
-    pokemon = new SceneActor({620.0f, 400.0f}, 40.0f, 40.0f);
-    pokemon->setTag("pokemon");
-    pokemon->setVisible(false);
-    addActor(pokemon);
+    ronzer = new SceneActor(RONZER_POS, 40.0f, 40.0f);
+    ronzer->setTag("ronzer");
+    ronzer->setVisible(false);
+    addActor(ronzer);
 
     nextQuipTime = 3.0f + (float)(rand() % 400) / 100.0f;
 
     background = AssetPack::loadTexture("backgrounds/parlorbg.png");
 
-    // Full-body pose art, [actor][emotion].
-    poses[0][0] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Sad);
-    poses[0][1] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Mid);
-    poses[0][2] = CharacterRegistry::loadPose(CharacterId::Tom, PoseEmotion::Happy);
-    poses[1][0] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Sad);
-    poses[1][1] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Mid);
-    poses[1][2] = CharacterRegistry::loadPose(CharacterId::Karen, PoseEmotion::Happy);
-    poses[2][0] = CharacterRegistry::loadPose(CharacterId::Ronzer, PoseEmotion::Sad);
-    poses[2][1] = CharacterRegistry::loadPose(CharacterId::Ronzer, PoseEmotion::Mid);
-    poses[2][2] = CharacterRegistry::loadPose(CharacterId::Ronzer, PoseEmotion::Happy);
+    // Full-body pose art, all 4 emotions per actor (incl. Scared), indexed by
+    // PoseEmotion.
+    for (int e = 0; e < 4; e++) {
+        tomPoses[e]    = CharacterRegistry::loadPose(CharacterId::Tom,    (PoseEmotion)e);
+        karenPoses[e]  = CharacterRegistry::loadPose(CharacterId::Karen,  (PoseEmotion)e);
+        ronzerPoses[e] = CharacterRegistry::loadPose(CharacterId::Ronzer, (PoseEmotion)e);
+    }
 
-    // --- Scenario 0: the wife needling Tom while the Pokemon heckles from the sideline ---
+    // --- Scenario 0: the ex-wife needling Tom while Ronzer heckles from the sideline ---
+    // Tom walks in from off the left edge on his first line; Karen and Ronzer
+    // are already seated. Camera smooth by default; cutCamera=true for beats.
     scenarios.push_back({
         { CharacterId::Tom,    "Oh -- hey. I didn't know you two ate here too.",
-          0, false, PortraitEmotion::Mid },
+          0, false, false, PortraitEmotion::Mid, "Tom Gatchi",
+          /*movesAtStart*/ { ActorMove{0, {TOM_WALK_TO}, 160.0f} }, {},
+          PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Karen,  "We come here every Tuesday, Tom. We've come here every\nTuesday for six weeks.",
-          1, false, PortraitEmotion::Mid, "Karen (Tom's ex-wife)" },
+          1, false, false, PortraitEmotion::Mid, "Karen (Tom's ex-wife)",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Ronzer, "Ronzer.",
-          2, false, PortraitEmotion::Happy, "Ronzer (her new boyfriend)" },
+          2, false, false, PortraitEmotion::Happy, "Ronzer (her new boyfriend)",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Tom,    "Right. Tuesdays. I knew that.",
-          0, false, PortraitEmotion::Sad },
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Karen,  "Did you get my email about Jimmy's recital?",
-          1, false, PortraitEmotion::Mid },
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Tom,    "I -- yeah, I'm looking into it. Work's been --",
-          0, false, PortraitEmotion::Sad },
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Karen,  "You're a digital pet, Tom. What work.",
-          1, true, PortraitEmotion::Sad },
+          1, true, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Ronzer, "RONZER RONZER RONZER.",
-          2, false, PortraitEmotion::Happy },
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Tom,    "...I have a job. I make kids happy...",
-          0, false, PortraitEmotion::Sad },
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Karen,  "Ronzer got a promotion at the gym he doesn't even work at.\nThey just gave it to him.",
-          1, false, PortraitEmotion::Happy },
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Ronzer, "Ronzer.",
-          2, false, PortraitEmotion::Happy },
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Tom,    "That's not -- that isn't how promotions --",
-          0, false, PortraitEmotion::Sad },
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Karen,  "Get the pizza to go next time, Tom. It's for the kids.",
-          1, false, PortraitEmotion::Sad },
+          1, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Tom,    "It's always been for the kids.",
-          0, false, PortraitEmotion::Sad },
+          0, true, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
     });
 }
 
@@ -104,14 +126,10 @@ void PizzaParlorScene::update(float deltaTime) {
     if (sunEffect && getEntrySceneName() == "scene_select") {
         updateSceneDebugCamera(sunEffect, getCamera(), deltaTime);
 
-        // Dial-in controls, now targeting the pine tree's position -- I/K: Y,
-        // J/L: X, U/O: Z. Temporary, for finding the right placement to bake
-        // into the scene as a fixed value once dialed in (same workflow
-        // TherapistWindowEffect's roadOrigin/treeOrigin/backdropOrigin went
-        // through, and sunOrigin already went through here -- see that
-        // scene's update()/draw()). Repurposed from sunOrigin now that the
-        // sun's position is baked. Gated to the scene_select debug hub so it
-        // doesn't eat I/J/K/L/U/O during real sequencer-driven playthroughs.
+        // Dial-in controls, targeting the pine tree's position -- I/K: Y,
+        // J/L: X, U/O: Z. Temporary, for finding placement to bake into the
+        // scene. Gated to the scene_select debug hub so it doesn't eat
+        // I/J/K/L/U/O during real sequencer-driven playthroughs.
         Vector3 origin = sunEffect->getTreeOrigin();
         float moveSpeed = 4.0f * deltaTime;
         if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
@@ -126,12 +144,12 @@ void PizzaParlorScene::update(float deltaTime) {
     if (activeScenario < 0) {
         // --- Ambient idle: gentle bob/sway per character, slow camera drift ---
         tomBobTimer += deltaTime * 2.0f;
-        wifeTapTimer += deltaTime * 3.0f;
-        pokemonHopTimer += deltaTime * 4.0f;
+        karenTapTimer += deltaTime * 3.0f;
+        ronzerHopTimer += deltaTime * 4.0f;
 
-        tom->setPosition({160.0f, 380.0f + sinf(tomBobTimer) * 4.0f});
-        wife->setPosition({520.0f, 360.0f + sinf(wifeTapTimer) * 2.0f});
-        pokemon->setPosition({620.0f, 400.0f - fabsf(sinf(pokemonHopTimer)) * 14.0f});
+        tom->setPosition({TOM_SPAWN.x, TOM_SPAWN.y + sinf(tomBobTimer) * 4.0f});
+        karen->setPosition({KAREN_POS.x, KAREN_POS.y + sinf(karenTapTimer) * 2.0f});
+        ronzer->setPosition({RONZER_POS.x, RONZER_POS.y - fabsf(sinf(ronzerHopTimer)) * 14.0f});
 
         // Ambient quip popup, shown via the shared DialogBox
         if (quipTimer > 0.0f) {
@@ -159,6 +177,18 @@ void PizzaParlorScene::update(float deltaTime) {
         }
     }
 
+    // Keep the camera locked on the speaking actor's LIVE position every frame,
+    // so it tracks them smoothly as they moveTo()-walk into place rather than
+    // easing once to where they stood when the line started. Skipped while
+    // shaking (so shake offset isn't lerped out) and in wide view (debug).
+    if (activeScenario >= 0 && currentFocusActor >= 0
+        && !getCamera()->isShaking() && !getCamera()->isWideViewEnabled()) {
+        Vector2 t;
+        if (cameraTargetFor(currentFocusActor, t)) {
+            getCamera()->followPosition(t, 8.0f);
+        }
+    }
+
     if (activeScenario >= 0 && dialog->isVisible()) {
         SceneInputHandler* ih = getInputHandler();
         // Check for skip action (jump to end of scenario)
@@ -181,9 +211,16 @@ void PizzaParlorScene::draw() {
     Camera2D cam = getCamera()->getRaylibCamera();
     BeginMode2D(cam);
     if (background.id != 0) DrawTexture(background, 0, 0, WHITE);
-    drawTom(tom->getPosition());
-    drawWife(wife->getPosition());
-    drawPokemon(pokemon->getPosition());
+
+    // Once the scenario is ending (black fade ramping), stop drawing actors so
+    // none show under/after the fade -- the scene reads as fully cleared before
+    // it hands off.
+    bool ending = endElapsed >= 0.0f;
+    if (!ending) {
+        drawTom(tom->getPosition());
+        drawKaren(karen->getPosition());
+        drawRonzer(ronzer->getPosition());
+    }
     EndMode2D();
 
     if (getEntrySceneName() == "scene_select") {
@@ -198,13 +235,11 @@ void PizzaParlorScene::draw() {
         }
     }
 
-    // Starts ramping immediately when endScenario() fires (endElapsed jumps
-    // to 0.0f right then) and climbs continuously to fully opaque over
-    // END_FADE_DURATION seconds -- no held/dead time before it starts.
-    // isPlayingScenario() (below) stays true for that whole span, so
-    // StorySequencer doesn't react and start its own scene-switch FADE until
-    // this screen is already fully black -- that transition's fade-in half
-    // then continues seamlessly straight out of this one.
+    // Starts ramping immediately when endScenario() fires (endElapsed jumps to
+    // 0.0f right then) and climbs continuously to fully opaque over
+    // END_FADE_DURATION seconds. isPlayingScenario() stays true for that whole
+    // span, so StorySequencer doesn't start its own scene-switch FADE until
+    // this screen is already fully black.
     if (endElapsed >= 0.0f) {
         float t = endElapsed / END_FADE_DURATION;
         if (t > 1.0f) t = 1.0f;
@@ -217,20 +252,21 @@ void PizzaParlorScene::cleanup() {
     Scene::cleanup();
     sunEffect = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
-    for (int actor = 0; actor < 3; actor++) {
-        for (int emotion = 0; emotion < 3; emotion++) {
-            if (poses[actor][emotion].id != 0) UnloadTexture(poses[actor][emotion]);
-        }
+    for (int e = 0; e < 4; e++) {
+        if (tomPoses[e].id != 0)    UnloadTexture(tomPoses[e]);
+        if (karenPoses[e].id != 0)  UnloadTexture(karenPoses[e]);
+        if (ronzerPoses[e].id != 0) UnloadTexture(ronzerPoses[e]);
     }
 
     // init() re-runs on every re-entry to this scene (SceneManager re-inits
-    // scenes on switch) and unconditionally push_back()s the scenario table
-    // -- without resetting these, scenarios accumulates duplicates and
+    // scenes on switch) and unconditionally push_back()s the scenario table --
+    // without resetting these, scenarios accumulates duplicates and
     // activeScenario can be left >= 0 if the player left mid-scenario,
     // permanently blocking triggerScenario()'s guard on every future visit.
     scenarios.clear();
     activeScenario = -1;
     lineIndex = 0;
+    currentFocusActor = -1;
     endElapsed = -1.0f;
 }
 
@@ -257,7 +293,7 @@ void PizzaParlorScene::advanceLine() {
     if (activeScenario < 0) return;
 
     auto& seq = scenarios[activeScenario];
-    SceneActor* actorsByIndex[3] = {tom, wife, pokemon};
+    SceneActor* actorsByIndex[3] = {tom, karen, ronzer};
     triggerActorMoves(seq[lineIndex].movesAtEnd, actorsByIndex, 3);
 
     lineIndex++;
@@ -272,65 +308,82 @@ void PizzaParlorScene::playLine(const PizzaLine& line) {
     dialog->setCharacter(line.speaker, line.emotion, line.firstTimeName);
     dialog->setText(line.text);
     dialog->show();
-    focusCameraOn(line.focusActor, line.shake);
+    focusCameraOn(line.focusActor, line.shake, line.cutCamera);
 
-    SceneActor* actorsByIndex[3] = {tom, wife, pokemon};
+    // Pose emotions persist between lines -- each line carries the full set, so
+    // a line just restates whatever should currently be showing.
+    tomPoseEmotion = line.tomPoseEmotion;
+    karenPoseEmotion = line.karenPoseEmotion;
+    ronzerPoseEmotion = line.ronzerPoseEmotion;
+
+    SceneActor* actorsByIndex[3] = {tom, karen, ronzer};
     triggerActorMoves(line.movesAtStart, actorsByIndex, 3);
 }
 
 void PizzaParlorScene::endScenario() {
     activeScenario = -1;
     lineIndex = 0;
+    currentFocusActor = -1;
     endElapsed = 0.0f;
     dialog->hide();
     dialog->clearCharacter();
     getCamera()->zoomTo(1.0f, 0.6f);
 }
 
-void PizzaParlorScene::focusCameraOn(int actorIndex, bool shake) {
+// The point the camera aims at for a given actor, from its LIVE position.
+// Actor position is the pose's top-left (editor convention), so offset into the
+// visible body rather than using getCenter(). Returns false for Narrator /
+// actorIndex -1 so the caller leaves the camera where it is. Same recipe as
+// OfficeScene: zoom 2, aim {p.x+160, p.y+240}.
+bool PizzaParlorScene::cameraTargetFor(int actorIndex, Vector2& out) const {
     SceneActor* target = nullptr;
     if (actorIndex == 0) target = tom;
-    else if (actorIndex == 1) target = wife;
-    else if (actorIndex == 2) target = pokemon;
+    else if (actorIndex == 1) target = karen;
+    else if (actorIndex == 2) target = ronzer;
+    if (!target) return false;
 
-    if (target) {
-        Vector2 pos = target->getCenter();
-        getCamera()->followPosition({pos.x, pos.y - 40.0f}, 8.0f);
-        getCamera()->zoomTo(1.4f, 0.5f);
+    Vector2 p = target->getPosition();
+    out = { p.x + 160.0f, p.y + 240.0f };
+    return true;
+}
+
+void PizzaParlorScene::focusCameraOn(int actorIndex, bool shake, bool cut) {
+    currentFocusActor = actorIndex;  // update() keeps following this every frame
+
+    Vector2 t;
+    if (cameraTargetFor(actorIndex, t)) {
+        // Smooth ease (the normal look) unless the line asks for a hard cut for
+        // a dramatic beat. Either way update()'s per-frame follow takes over
+        // from here to track the actor as they walk.
+        if (cut) getCamera()->setPosition(t.x, t.y);
+        else getCamera()->followPosition(t, 8.0f);
+        getCamera()->zoomTo(2.0f, 0.5f);
     }
 
     if (shake) {
-        getCamera()->shake(6.0f, 0.35f);
+        getCamera()->shake(5.0f, 0.3f);
     }
 }
 
-// --- Character silhouettes -----------------------------------------------
-// All shape-only placeholders. Distinct silhouettes so the cast reads apart
-// even before real art lands: Tom is a slouched blob, Karen is sharp and
-// upright, Ronzer is a round creature with ears -- nothing here is final art
-// direction, just enough shape language to tell them apart at a glance.
+// Draw a pose EXACTLY the way tools/scene_editor.cpp draws it: texture top-left
+// pinned at the actor's position, native size * scale, origin {0,0}. flipX
+// mirrors horizontally (negative source width). Per-actor scale/flip hardcoded
+// here, matching the editor's layout.json (all three at scale 1).
+static void drawPose(Texture2D pose, Vector2 pos, bool flipX, float scale) {
+    if (pose.id == 0) return;
+    Rectangle src = { 0.0f, 0.0f, (flipX ? -1.0f : 1.0f) * (float)pose.width, (float)pose.height };
+    Rectangle dest = { pos.x, pos.y, pose.width * scale, pose.height * scale };
+    DrawTexturePro(pose, src, dest, {0.0f, 0.0f}, 0.0f, WHITE);
+}
 
 void PizzaParlorScene::drawTom(Vector2 pos) {
-    float cx = pos.x + 24.0f;
-    float cy = pos.y + 32.0f;
-
-    Texture2D pose = poses[0][1];
-    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 30.0f - pose.height), WHITE);
+    drawPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true, 1.0f);   // faces right
 }
 
-void PizzaParlorScene::drawWife(Vector2 pos) {
-    float cx = pos.x + 24.0f;
-    float cy = pos.y + 36.0f;
-
-    Texture2D pose = poses[1][1];
-    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 34.0f - pose.height), WHITE);
+void PizzaParlorScene::drawKaren(Vector2 pos) {
+    drawPose(karenPoses[(int)karenPoseEmotion], pos, /*flipX*/ false, 1.0f);  // faces left
 }
 
-void PizzaParlorScene::drawPokemon(Vector2 pos) {
-    float cx = pos.x + 20.0f;
-    float cy = pos.y + 24.0f;
-
-    Texture2D pose = poses[2][1];
-    DrawTexture(pose, (int)(cx - pose.width / 2.0f), (int)(cy + 22.0f - pose.height), WHITE);
+void PizzaParlorScene::drawRonzer(Vector2 pos) {
+    drawPose(ronzerPoses[(int)ronzerPoseEmotion], pos, /*flipX*/ false, 1.0f);  // faces left
 }
-

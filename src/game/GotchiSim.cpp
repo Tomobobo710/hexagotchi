@@ -49,12 +49,14 @@ void GotchiSim::update(float dt) {
     // Skip vitals tick when in Story mode (simulator is paused) or while
     // the tutorial/collapse gate has frozen stats.
     if (state_.mode != Mode::Story && !state_.statsFrozen) {
-        // 1. Sleep metronome: drain while seenReality is true
-        if (state_.seenReality) {
-            state_.sleep -= SLEEP_DRAIN_RATE * dt;
-            if (state_.sleep < 0.0f) {
-                state_.sleep = 0.0f;
-            }
+        // 1. Sleep metronome: always drains, including before the first-ever
+        // merge -- it's what forces/unlocks that first merge via the
+        // sleep-collapse gate (see GotchiScene::applySleepCollapseGate()).
+        // seenReality only affects the button's label/branch bucket, not
+        // whether the metronome itself is running.
+        state_.sleep -= SLEEP_DRAIN_RATE * dt;
+        if (state_.sleep < 0.0f) {
+            state_.sleep = 0.0f;
         }
 
         // Tick vitals every GOTCHI_TICK_RATE seconds

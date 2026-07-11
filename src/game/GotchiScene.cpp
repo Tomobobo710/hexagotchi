@@ -557,13 +557,25 @@ void GotchiScene::update(float deltaTime) {
     }
 
     // Freeze vitals while the tutorial is actively teaching, or once the
-    // gotchi has collapsed from exhaustion -- see Gotchi::setStatsFrozen()
-    // for what this does/doesn't skip.
+    // gotchi has collapsed from exhaustion. Written directly to GameState
+    // (which is what GotchiSim actually reads) rather than through
+    // Gotchi::setStatsFrozen() -- that forwards via Gotchi::gameState_,
+    // which nothing ever wires up (no setGameState() call site exists), so
+    // it was silently a no-op and GotchiSim kept ticking during the tutorial.
     if (gotchi) {
         bool tutorialFreeze = tutorialController_ && tutorialController_->isActive();
         bool collapseFreeze = gameState_ && gameState_->sleepCollapsed;
-        gotchi->setStatsFrozen(tutorialFreeze || collapseFreeze);
+        if (gameState_) gameState_->statsFrozen = tutorialFreeze || collapseFreeze;
         gotchi->update(deltaTime);
+
+        // Gotchi::update()'s own action-timer logic auto-resets back to
+        // "idle" once actionTimer_ elapses (setAction("wobble") never sets
+        // one), so re-assert wobble every frame while collapsed to hold the
+        // pose until the player merges -- there's no timed "wobble is over"
+        // moment here, it should stay locked in place indefinitely.
+        if (collapseFreeze) {
+            gotchi->setAction("wobble");
+        }
 
         // One-shot: fire the death transition exactly once. switchScene()'s
         // own currentSceneName guard isn't enough here since the fade takes

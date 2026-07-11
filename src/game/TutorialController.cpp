@@ -34,7 +34,10 @@ TutorialController::TutorialController(GameState& state)
         { "Try Wash -- keeps me clean.", "Wash", "gotchi" },
         { "Explore, you've already seen. It'll take us to HexLand's HexMap!", "", "gotchi" },
         { "That button.. hmm.. I'm not sure what that one does.", "", "gotchi" },
-        { "That covers the basics! Have fun!", "", "gotchi" },
+        { "Ok I'll unlock all the buttons now!", "", "gotchi" },
+        { "Hmm, one of them isn't working.", "", "gotchi" },
+        { "Oh that button..", "", "gotchi" },
+        { "Oh well, I'll unlock what I can.", "", "gotchi" },
     };
 }
 

@@ -664,7 +664,7 @@ void GotchiStats::tick(float ticks, bool sleeping) {
     // Core vital stats drain/gain
     addStat(SecondaryStat::FOOD_LEVEL, 5.0f * ticks);     // Hunger increases
     addStat(SecondaryStat::HYDRATION, 3.0f * ticks);     // Thirst increases
-    addStat(SecondaryStat::SLEEP_DEBT, 2.0f * ticks);    // Sleep debt increases
+    addStat(SecondaryStat::SLEEP_DEBT, 22.22f * ticks);    // Sleep debt increases (~45s full-to-exhausted at GOTCHI_TICK_RATE=10s)
     addStat(SecondaryStat::ENERGY, -3.0f * ticks);       // Energy drains
     addStat(SecondaryStat::CLEANLINESS, -2.0f * ticks);  // Gets dirty slowly
 

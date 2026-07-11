@@ -16,8 +16,14 @@
 struct PizzaLine {
     CharacterId speaker;
     std::string text;
-    int focusActor;   // index into `actors[]` the camera should favor, or -1 for none
+    int focusActor;   // 0 = Tom, 1 = Karen, 2 = Ronzer, -1 = none
     bool shake;        // punch-in beat: small camera shake when this line shows
+
+    // Camera style for this line's focus shot. false (default) = smooth
+    // followPosition ease -- the normal look. true = instant setPosition cut,
+    // reserved for dramatic beats. See focusCameraOn().
+    bool cutCamera = false;
+
     PortraitEmotion emotion = PortraitEmotion::Mid;
 
     // Marks this line as the character's introduction -- playLine() passes
@@ -33,6 +39,16 @@ struct PizzaLine {
     // movement at all.
     std::vector<ActorMove> movesAtStart;
     std::vector<ActorMove> movesAtEnd;
+
+    // Per-actor POSE emotion for the on-screen figures during this line.
+    // Separate from the portrait `emotion` above (portrait = dialog-box
+    // headshot; these = full-body poses). Each persists until a later line
+    // changes it, so set only the ones that CHANGE on a line. Indexed like
+    // focusActor: [0]=Tom, [1]=Karen, [2]=Ronzer. Last fields so existing
+    // brace-init lines are unaffected. Default Mid.
+    PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion karenPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion ronzerPoseEmotion = PoseEmotion::Mid;
 };
 
 // Recurring "check in on the gotchi's world" hangout location. Most visits
@@ -74,35 +90,46 @@ public:
 
 private:
     SceneActor* tom    = nullptr;
-    SceneActor* wife     = nullptr;
-    SceneActor* pokemon  = nullptr;
+    SceneActor* karen  = nullptr;
+    SceneActor* ronzer = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     Texture2D background = {0};
 
-    // Full-body pose art, [0]=Tom, [1]=wife/Karen, [2]=pokemon/Ronzer,
-    // each [0]=sad [1]=mid [2]=happy -- loaded via CharacterRegistry
-    // (see init()). Dialog-box portraits are no longer loaded/owned here at
-    // all -- DialogBox::setCharacter() loads and caches those itself.
-    // loaded via CharacterRegistry::loadPose(). Only "mid" is used for now
-    // (see drawTom/drawWife/drawPokemon); the other two slots are loaded
-    // too so swapping which emotion's pose is drawn later is just an index
-    // change, not a re-load.
-    Texture2D poses[3][3] = {};
+    // Full-body pose art, indexed by PoseEmotion: [0]=sad [1]=mid [2]=happy
+    // [3]=scared -- loaded via CharacterRegistry (see init()). Dialog-box
+    // portraits are no longer loaded/owned here at all -- DialogBox::
+    // setCharacter() loads and caches those itself.
+    Texture2D tomPoses[4] = {};
+    Texture2D karenPoses[4] = {};
+    Texture2D ronzerPoses[4] = {};
+
+    // Which pose emotion each on-screen actor is currently drawn with. Set
+    // per-line in playLine() from PizzaLine's *PoseEmotion fields, persists
+    // between lines. drawX() indexes its pose array with this.
+    PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion karenPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion ronzerPoseEmotion = PoseEmotion::Mid;
 
     // --- Ambient behavior ---
     float ambientTimer = 0.0f;
     float nextQuipTime = 0.0f;
     float quipTimer = 0.0f;
     float tomBobTimer = 0.0f;
-    float wifeTapTimer = 0.0f;
-    float pokemonHopTimer = 0.0f;
+    float karenTapTimer = 0.0f;
+    float ronzerHopTimer = 0.0f;
 
     // --- Scenario playback ---
     std::vector<std::vector<PizzaLine>> scenarios;
     int activeScenario = -1;
     int lineIndex = 0;
+
+    // Which actor the camera is currently tracking (0=Tom,1=Karen,2=Ronzer,
+    // -1=none). update() re-follows this actor's LIVE position every frame so
+    // the camera keeps up while they moveTo()-walk, instead of easing once to
+    // where they were at line start.
+    int currentFocusActor = -1;
 
     // Counts UP from 0 once endScenario() fires, 0..END_FADE_DURATION.
     // Negative (-1) means no fade-out is in progress.
@@ -111,12 +138,12 @@ private:
     void advanceLine();
     void playLine(const PizzaLine& line);
     void endScenario();
-    void focusCameraOn(int actorIndex, bool shake);
+    void focusCameraOn(int actorIndex, bool shake, bool cut = false);
+    bool cameraTargetFor(int actorIndex, Vector2& out) const;
 
-    // Draws this character's pose art (poses[actor][1] == mid).
     void drawTom(Vector2 pos);
-    void drawWife(Vector2 pos);
-    void drawPokemon(Vector2 pos);
+    void drawKaren(Vector2 pos);
+    void drawRonzer(Vector2 pos);
 
     // A sunset sun glimpsed through the transparent glass cutout in the
     // parlor's front door (parlorbg.png) -- see SunEffect.hpp.

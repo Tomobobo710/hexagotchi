@@ -208,9 +208,12 @@ void HexViewScene::update(float deltaTime) {
 
     // Freeze vitals while the tutorial is actively teaching -- must happen
     // before Scene::update() since that's what drives gotchi->update() (added
-    // via addActor()).
-    if (gotchi) {
-        gotchi->setStatsFrozen(tutorialController_ && tutorialController_->isActive());
+    // via addActor()). Written directly to GameState (what GotchiSim
+    // actually reads) since Gotchi::setStatsFrozen() forwards through
+    // Gotchi::gameState_, which nothing wires up -- see GotchiScene's
+    // matching fix for details.
+    if (gameState_) {
+        gameState_->statsFrozen = tutorialController_ && tutorialController_->isActive();
     }
 
     Scene::update(deltaTime);
