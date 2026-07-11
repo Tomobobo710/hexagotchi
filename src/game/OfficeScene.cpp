@@ -1,27 +1,8 @@
 #include "OfficeScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
-#include "SceneDebugCamera.hpp"
 #include "CharacterRegistry.hpp"
 #include <cmath>
-
-// The portal's anchor in this scene's 2D world space (same coordinate space
-// as tom/larry's positions) -- where in the room it should visually sit.
-// PortalEffect's own 3D camera is otherwise entirely independent of this
-// scene's 2D SceneCamera, so without projecting this point through the 2D
-// camera every frame (see the exact-projection math in draw()), the portal
-// would either stay glued to screen-center or drift approximately as the 2D
-// camera pans/zooms during dialogue instead of staying pixel-locked to a
-// fixed spot in the room.
-// Reference 3D camera framing -- a normal, undistorted view of the model at
-// its native ~1-3 unit scale (NOT solved from the 2D camera's raw zoom
-// value: the model's 3D units and the 2D scene's pixel units are entirely
-// different scales, so forcing "1 3D unit = 1 2D pixel" collapses fovy to
-// ~180 degrees and the model to a degenerate sliver). This framing defines
-// the "1x" pixels-per-3D-unit baseline (see PORTAL_BASE_PPU below); zoom
-// changes scale relative to that baseline instead of in raw pixel units.
-static const float PORTAL_CAM_DIST = 6.0f;
-static const float PORTAL_BASE_FOVY_DEG = 45.0f;
 
 OfficeScene::OfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {20, 22, 28, 255}), dialog(sharedDialog) {
@@ -37,14 +18,6 @@ void OfficeScene::init() {
         larryPoses[e]   = CharacterRegistry::loadPose(CharacterId::Larry,   (PoseEmotion)e);
         lorainePoses[e] = CharacterRegistry::loadPose(CharacterId::Loraine, (PoseEmotion)e);
     }
-
-    portal = new PortalEffect();
-    portal->init();
-    portal->setDebugCamDist(PORTAL_CAM_DIST);
-    portal->setDebugFovy(PORTAL_BASE_FOVY_DEG);
-    portal->setObjectScale(0.6f);
-    // Fixed 3D placement, set once here + in draw(); no longer synced to the
-    // 2D camera (see draw()). PORTAL_WORLD_2D is unused now.
 
     // Positions from the scene editor's layout.json. Tom stands at open
     // (left), the scenario zooms on him then walks him to (546,450). Larry
@@ -118,7 +91,7 @@ void OfficeScene::init() {
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
 
         // --- Comedy beat: lands on Tom coming in 15 minutes earlier ---------
-        { CharacterId::Larry, "Mm. The numbers don't lie, Tom.\nAnd the numbers are... a choice.",
+        { CharacterId::Larry, "Mm. The numbers don't lie, Tom.\nAnd the numbers are...\nHard to read...",
           1, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Tom, "I'll do better next time. I just need to get a good night's sleep.",
@@ -134,7 +107,7 @@ void OfficeScene::init() {
           0, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy },
         // Loraine drops from Happy to Mid as she delivers the bad news.
-        { CharacterId::Loraine, "It means you come in fifteen minutes\nearlier. Every day.",
+        { CharacterId::Loraine, "EBOI. It just means you come in fifteen\nminutes earlier. Every day.",
           2, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
         { CharacterId::Tom, "Fifteen minutes earlier.\nForever?",
@@ -172,10 +145,10 @@ void OfficeScene::init() {
         { CharacterId::Tom, "The train was --",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
-        { CharacterId::Larry, "The winners don't take the train, Tom.\nThe winners ARE the train.",
+        { CharacterId::Larry, "Winners don't take the train, Tom.\nThe winners ARE the train.",
           1, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
-        { CharacterId::Tom, "That doesn't mean anything.",
+        { CharacterId::Tom, "That doesn't make any sense.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
         { CharacterId::Larry, "Now get out there and make that\nkid ENGAGE. Engagement, Tom!",
@@ -195,30 +168,6 @@ void OfficeScene::update(float deltaTime) {
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
         if (endElapsed > END_FADE_DURATION) endElapsed = END_FADE_DURATION;
-    }
-
-    if (portal) portal->update(deltaTime);
-
-    bool fromDebugHub = getEntrySceneName() == "scene_select";
-    if (fromDebugHub) {
-        updateSceneDebugCamera(portal, getCamera(), deltaTime);
-
-        if (portal) {
-            // Numpad +/-: uniform scale. Numpad 4/6: yaw (rotate around Y).
-            // PortalEffect-specific (not part of SceneEffect's generic
-            // debug-camera interface), so handled directly here rather than
-            // through SceneDebugCamera.hpp.
-            float scale = portal->getObjectScale();
-            if (IsKeyDown(KEY_KP_ADD)) scale += 0.6f * deltaTime;
-            if (IsKeyDown(KEY_KP_SUBTRACT)) scale -= 0.6f * deltaTime;
-            if (scale < 0.1f) scale = 0.1f;
-            portal->setObjectScale(scale);
-
-            float yaw = portal->getObjectYaw();
-            if (IsKeyDown(KEY_KP_6)) yaw += 60.0f * deltaTime;
-            if (IsKeyDown(KEY_KP_4)) yaw -= 60.0f * deltaTime;
-            portal->setObjectYaw(yaw);
-        }
     }
 
     if (activeScenario < 0) {
@@ -270,22 +219,7 @@ void OfficeScene::draw() {
     drawOffice();
     EndMode2D();
 
-    // Portal/merge-machine: renders ON TOP of the background art but BEHIND
-    // the actors, since the actor draws come after this. Needs its own 3D
-    // mode (can't share the 2D camera), so the 2D pass is split around it.
-    //
-    // Fixed placement -- it just sits in its 3D spot with its own camera,
-    // fully independent of the 2D SceneCamera (same as ApartmentScene's
-    // CityWindowEffect). It no longer tracks the 2D camera's pan/zoom, so it
-    // will slide with the view like any set-dressing during camera moves
-    // rather than staying pixel-locked; that's a deliberate trade so the 2D
-    // camera behaves normally instead of feeding a per-frame projection sync.
-    if (portal) {
-        portal->setObjectPosition({-4.0f, -3.5f, -2.5f});
-        portal->drawBackground();
-    }
-
-    // Actors last, on top of the portal. Once the scenario is ending (the
+    // Actors last. Once the scenario is ending (the
     // black fade is ramping), stop drawing every actor so none of them show
     // under/after the fade -- the scene reads as fully cleared before it
     // hands off.
@@ -300,15 +234,6 @@ void OfficeScene::draw() {
         if (activeScenario >= 0) drawLoraine(loraine->getPosition());
     }
     EndMode2D();
-
-    if (getEntrySceneName() == "scene_select") {
-        drawSceneDebugCameraReadout(portal, 16, 16);
-        if (portal) {
-            const char* txt = TextFormat("scale: %.2f (Numpad +/-)   yaw: %.1f deg (Numpad 4/6)",
-                portal->getObjectScale(), portal->getObjectYaw());
-            DrawText(txt, 16, 60, 18, Color{255, 220, 140, 255});
-        }
-    }
 
     // Starts ramping immediately when endScenario() fires (endElapsed jumps
     // to 0.0f right then) and climbs continuously to fully opaque over
@@ -343,8 +268,6 @@ void OfficeScene::cleanup() {
         if (larryPoses[i].id != 0) UnloadTexture(larryPoses[i]);
         if (lorainePoses[i].id != 0) UnloadTexture(lorainePoses[i]);
     }
-
-    if (portal) { portal->cleanup(); delete portal; portal = nullptr; }
 }
 
 void OfficeScene::triggerScenario(int index) {

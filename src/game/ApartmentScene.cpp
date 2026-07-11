@@ -283,7 +283,7 @@ bool ApartmentScene::cameraTargetFor(int actorIndex, Vector2& out) const {
     // Offsets are large because poses draw at ~1.0-1.3x here (256px native ->
     // ~256-330px tall). Aim right and low into the body so the camera frames
     // the torso/feet, not the head, and doesn't shove them to the edge.
-    out = { p.x + 160.0f, p.y + 240.0f };
+    out = { p.x + 160.0f, p.y + 210.0f };
     return true;
 }
 
