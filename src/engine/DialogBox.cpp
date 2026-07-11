@@ -205,25 +205,6 @@ void DialogBox::draw() {
         }
     }
 
-    // --- Skip button (>> symbol) - visible when dialog is showing and not finished ---
-    if (visible && !isFinished()) {
-        float skipBtnSize = 32.0f;
-        float skipBtnX = drawPos.x + width - padding - skipBtnSize;
-        float skipBtnY = drawPos.y + height - padding - skipBtnSize;
-
-        // Skip button background (hover effect)
-        Vector2 mousePos = GetMousePosition();
-        bool hovered = CheckCollisionPointRec(mousePos, {skipBtnX, skipBtnY, skipBtnSize, skipBtnSize});
-        Color skipBg = hovered ? Color{255, 255, 255, (unsigned char)(alpha * 0.3f)} : Color{0, 0, 0, (unsigned char)(alpha * 0.5f)};
-        DrawRectangle((int)skipBtnX, (int)skipBtnY, (int)skipBtnSize, (int)skipBtnSize, skipBg);
-
-        // Skip button border
-        DrawRectangleLines((int)skipBtnX, (int)skipBtnY, (int)skipBtnSize, (int)skipBtnSize, accent);
-
-        // Skip icon (>> symbol)
-        DrawText(">>", (int)(skipBtnX + skipBtnSize/2 - MeasureText(">>", fontSize - 2)/2),
-                 (int)(skipBtnY + skipBtnSize/2 + fontSize/4), fontSize - 2, Color{255, 255, 255, alpha});
-    }
 }
 
 void DialogBox::setSpeakerName(const std::string& name) { speakerName = name; }
@@ -449,33 +430,6 @@ void DialogBox::setOnOptionSelected(std::function<void(int)> callback) {
 
 void DialogBox::setOnFinished(std::function<void()> callback) {
     onFinished = callback;
-}
-
-void DialogBox::setOnSkip(std::function<void()> callback) {
-    onSkip = callback;
-}
-
-void DialogBox::updateClickState(bool mousePressed, bool mouseReleased) {
-    if (!visible || isFinished() || fadeAlpha <= 0.01f) return;
-
-    float skipBtnSize = 32.0f;
-    Vector2 drawPos = position;
-    if (anchorPoint == "center" || anchorPoint == "top-center") {
-        drawPos.x -= width / 2.0f;
-    } else if (anchorPoint == "bottom") {
-        drawPos.x -= width / 2.0f;
-        drawPos.y -= height;
-    }
-
-    float skipBtnX = drawPos.x + width - padding - skipBtnSize;
-    float skipBtnY = drawPos.y + height - padding - skipBtnSize;
-
-    Vector2 mousePos = GetMousePosition();
-    if (CheckCollisionPointRec(mousePos, {skipBtnX, skipBtnY, skipBtnSize, skipBtnSize})) {
-        if (mouseReleased && onSkip) {
-            onSkip();
-        }
-    }
 }
 
 void DialogBox::wrapText() {

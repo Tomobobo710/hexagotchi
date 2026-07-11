@@ -199,11 +199,6 @@ void UpdateDrawFrame() {
 
     dialog->update(dt);
 
-    // Update dialog box click state for skip button
-    bool mousePressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    bool mouseReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
-    dialog->updateClickState(mousePressed, mouseReleased);
-
     BeginTextureMode(gameTarget);
         ClearBackground(BLACK);
         sceneManager->draw();

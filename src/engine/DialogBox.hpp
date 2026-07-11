@@ -124,10 +124,6 @@ public:
     
     void setOnOptionSelected(std::function<void(int)> callback);
     void setOnFinished(std::function<void()> callback);
-    void setOnSkip(std::function<void()> callback);
-
-    // Update click state - call this with input handler to handle skip button clicks
-    void updateClickState(bool mousePressed, bool mouseReleased);
 
     // Check if dialog should advance (finished and ready for next line)
     bool shouldAdvance() const;
@@ -180,7 +176,6 @@ protected:
     
     std::function<void(int)> onOptionSelected;
     std::function<void()> onFinished;
-    std::function<void()> onSkip;
 
     // Portrait textures loaded via setCharacter(), cached and owned here --
     // load-once-per-(character,emotion), unloaded in the destructor. Keyed
