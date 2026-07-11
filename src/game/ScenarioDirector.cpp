@@ -38,6 +38,19 @@ Sequence ScenarioDirector::SelectSequence(const GameState& state) {
         };
     }
 
+    // --- 4th merge: school pickup -> Mark's philosophy -> office endcap ---
+    //   school       0  -- "The School Pickup Incident": Karen needles Tom
+    //   apartment    1  -- "The Drain / What Does It All Mean": Mark the
+    //                       accidental philosopher + boundary-violating creep
+    //   office       2  -- Scenario Z endcap, then merge out
+    if (state.mergeCount == 3) {
+        return {
+            { "school", 0, false },
+            { "apartment", 1, false },
+            { "office", 2, false },
+        };
+    }
+
     // --- 1st merge (default): the office/apartment intro run ---
     //   Office A (office 0)     -- Larry greets Tom, three E's, Early Bird
     //   Apartment 0             -- "The Heating Situation" with Mark

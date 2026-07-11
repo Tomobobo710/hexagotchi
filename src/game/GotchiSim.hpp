@@ -57,9 +57,11 @@ private:
     // Track if we've already emitted PetCollapsed (only once)
     bool collapsedEmitted_ = false;
 
-    // Tick timer for vitals/mood updates (separate from other metronomes)
-    static constexpr float GOTCHI_TICK_RATE = 10.0f;  // Base tick rate in seconds
-    float vitalsTickTimer_ = 0.0f;
+    // Reference period the per-tick drain amounts in GotchiStats::tick() are
+    // tuned against (e.g. sleep's 22.22/tick == full drain in ~45s at this
+    // rate). tickVitals() now applies every frame rather than batching to
+    // this period, so this only scales the per-second math, nothing else.
+    static constexpr float GOTCHI_TICK_RATE = 10.0f;
 };
 
 #endif // GOTCHI_SIM_HPP

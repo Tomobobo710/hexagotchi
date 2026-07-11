@@ -26,17 +26,14 @@ GotchiSim::~GotchiSim() {
 }
 
 void GotchiSim::tickVitals(float dt) {
-    // Accumulate time for vitals tick
-    vitalsTickTimer_ += dt;
-
-    // Check if we've accumulated enough time for a tick
-    if (vitalsTickTimer_ >= GOTCHI_TICK_RATE) {
-        float ticks = vitalsTickTimer_ / GOTCHI_TICK_RATE;
-        vitalsTickTimer_ -= (ticks * GOTCHI_TICK_RATE);
-
-        // Update stats over time (pass sleeping state for recovery rates)
-        state_.vitals.tick(ticks, state_.sleeping);
-    }
+    // Apply every frame instead of batching into GOTCHI_TICK_RATE-sized
+    // jumps -- tick()'s per-second math is unchanged (still divided by the
+    // same GOTCHI_TICK_RATE), only how often it's applied changes, so bars
+    // creep smoothly frame-to-frame instead of sitting still for 10s then
+    // lurching. dt itself is untouched, so this can't reintroduce the
+    // dt-spike-during-scene-load bug from shrinking GOTCHI_TICK_RATE.
+    float ticks = dt / GOTCHI_TICK_RATE;
+    state_.vitals.tick(ticks, state_.sleeping);
 }
 
 // Separate method for mood updates (runs every frame, outside vitals tick gate)

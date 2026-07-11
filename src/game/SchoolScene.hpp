@@ -4,27 +4,39 @@
 #include "Scene.hpp"
 #include "DialogBox.hpp"
 #include "CharacterRegistry.hpp"
+#include "SchoolSkyEffect.hpp"
 #include <vector>
 #include <string>
 
+// One line of the school scenario. Current scene template (matches
+// OfficeLine/ApartmentLine): speaker/text/focus/shake/cut/emotion/firstTimeName,
+// scripted walks, per-actor pose emotions. focusActor: 0=Tom, 1=Karen,
+// 2=Jimmy, 3=Bimmy, -1=none.
 struct SchoolLine {
     CharacterId speaker;
     std::string text;
-    int focusActor;   // 0 = Tom, 1 = Karen, 2 = Jimmy, -1 = none
+    int focusActor;
     bool shake;
+    bool cutCamera = false;
     PortraitEmotion emotion = PortraitEmotion::Mid;
-
-    // Scripted actor walks (see ActorMove in Scene.hpp) fired the instant
-    // this line starts/ends. Empty by default -- most lines have no
-    // movement at all.
+    std::string firstTimeName;
     std::vector<ActorMove> movesAtStart;
     std::vector<ActorMove> movesAtEnd;
+
+    // Per-actor POSE emotion, persists between lines. Indexed like focusActor:
+    // [0]=Tom, [1]=Karen, [2]=Jimmy, [3]=Bimmy. Last fields so existing
+    // brace-init lines are unaffected. Default Mid.
+    PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion karenPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion jimmyPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion bimmyPoseEmotion = PoseEmotion::Mid;
 };
 
-// Jimmy's school pickup -- ported from the JS prototype's "The School Pickup
-// Incident" episode. Ambient mode is Tom waiting alone outside; the
-// scripted scenario is the ported pickup almost line-for-line (Karen needling
-// him for being late, Jimmy's lost tooth, the inflation joke).
+// Jimmy's school pickup -- the tooth-fairy inflation beat, reworked: Karen
+// needles Tom for being late, Jimmy lost a tooth (the fairy now pays $20),
+// Bimmy chimes in, Karen tells Tom to just go home and take a break, then
+// reveals Ronzer got the boys $100 Candy City gift cards each. The kids are
+// hyped; Tom is quietly flattened. On the current scene template.
 class SchoolScene : public Scene {
 public:
     SchoolScene(DialogBox* sharedDialog);
@@ -38,33 +50,48 @@ public:
     void triggerStoryEvent(int scenarioIndex) override;
     bool isPlayingScenario() const override;
 
+    static constexpr float END_FADE_DURATION = 1.5f;
+
 private:
-    SceneActor* tom  = nullptr;
+    SceneActor* tom   = nullptr;
     SceneActor* karen = nullptr;
-    SceneActor* jimmy   = nullptr;
+    SceneActor* jimmy = nullptr;
+    SceneActor* bimmy = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
     Texture2D background = {0};
 
-    // Full-body pose art, [0]=Tom, [1]=Karen, [2]=Jimmy, each [0]=sad
-    // [1]=mid [2]=happy -- loaded via CharacterRegistry (see init()).
-    Texture2D poses[3][3] = {};
+    // Full-body pose art, indexed by PoseEmotion [0]=sad [1]=mid [2]=happy
+    // [3]=scared. Dialog-box portraits are loaded/cached by DialogBox itself.
+    Texture2D tomPoses[4] = {};
+    Texture2D karenPoses[4] = {};
+    Texture2D jimmyPoses[4] = {};
+    Texture2D bimmyPoses[4] = {};
+
+    PoseEmotion tomPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion karenPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion jimmyPoseEmotion = PoseEmotion::Mid;
+    PoseEmotion bimmyPoseEmotion = PoseEmotion::Mid;
 
     float tomWaitTimer = 0.0f;
 
     std::vector<std::vector<SchoolLine>> scenarios;
     int activeScenario = -1;
     int lineIndex = 0;
+    int currentFocusActor = -1;
+    float endElapsed = -1.0f;
 
     void advanceLine();
     void playLine(const SchoolLine& line);
     void endScenario();
-    void focusCameraOn(int actorIndex, bool shake);
+    void focusCameraOn(int actorIndex, bool shake, bool cut = false);
+    bool cameraTargetFor(int actorIndex, Vector2& out) const;
 
     void drawTom(Vector2 pos);
     void drawKaren(Vector2 pos);
     void drawJimmy(Vector2 pos);
+    void drawBimmy(Vector2 pos);
     void drawSchoolYard();
 };
 

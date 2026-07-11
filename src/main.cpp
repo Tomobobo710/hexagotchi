@@ -196,6 +196,15 @@ void UpdateDrawFrame() {
             storySequencer->skipCurrentStep();
         }
     }
+    // Freeze vitals/mood ticking here, once, regardless of which scene is
+    // currently active -- GotchiScene/HexViewScene used to each set this
+    // themselves in their own update(), which left it unset (stale/false)
+    // during any other scene visited while the tutorial is active (e.g. the
+    // toy_animation intro on the way into GotchiScene), letting the sim run
+    // unguarded during that window.
+    if (tutorialController) {
+        globalGameState.statsFrozen = tutorialController->isActive() || globalGameState.sleepCollapsed;
+    }
     if (gotchiSim) {
         gotchiSim->update(dt);
     }

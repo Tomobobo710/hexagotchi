@@ -105,6 +105,117 @@ void ApartmentScene::init() {
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
     });
+
+    // --- Scenario 1: "The Drain / What Does It All Mean" ------------------
+    // Same setup as Scenario 0 (Mark at the door, Tom inside). The heat's
+    // fixed; now the shower won't drain -- and Mark's already "looked into it":
+    // the lady downstairs blocked it ON PURPOSE because Tom's kids are loud.
+    // Mark tries to leave; Tom, lonely, stops him with a big existential
+    // question. Mark -- a boundary-violating creep who goes through tenants'
+    // things -- accidentally lands the closest to the LITERAL truth of the
+    // game: reality's probably fake, some dudes in another universe simulate
+    // this for fun, so just have fun. (He does not know he's right. See the
+    // Tom-is-the-tomagotchi frame.) Then he casually reveals he found Tom's
+    // drawer of Karen photos, tells him to let her go, and leaves. Dark-funny;
+    // Mark sunny and oblivious, Tom pathetic and searching.
+    scenarios.push_back({
+        { CharacterId::Tom, "Mark -- hey. Thank you, seriously.\nThe heat finally works. I have HEAT.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Mark, "Yeah, told you the part'd come in.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "So, small thing -- now the shower\nwon't drain. It just fills up.",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Mark, "Oh, the drain, yeah. Already looked into that.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Tom, "...You did? That's -- great.\nWhat's the fix?",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        { CharacterId::Mark, "No fix. Lady downstairs blocked it.\nOn purpose. From her side.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "She -- WHY would she --",
+          0, true, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
+        { CharacterId::Mark, "Says your kids are too loud on weekends.\nHonestly? Fair complaint. Kids are loud.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "They're here TWO days a month, Mark.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "Anyway, I did fix your leaky faucet\nwhile I was in there. So. Win some.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Mark, "Alright, I gotta run. Other units.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+
+        // Tom, lonely, stops him. The existential turn.
+        { CharacterId::Tom, "Wait -- Mark. Hang on a second.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "Do you ever think about, like...\nwhat life actually means?",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "What do you mean?",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "Like -- do you ever feel insignificant?\nLike nothing you do matters at all?",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "Oh, sure. Because nothing DOES matter.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Mark, "Nothing matters except being happy.\nThat's the only thing that's real.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Mark, "Think about it. Maybe this whole reality's fake.\nMaybe some dudes in another universe --",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Mark, "-- are simulating all this. Just for fun.\nAnd we're the little guys inside it.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy },
+        { CharacterId::Tom, "...That's -- that hits weirdly close, Mark.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy },
+        { CharacterId::Mark, "So life should just be about having fun, right?\nEverything else is noise.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+
+        // Tom probes; Mark reveals the creep angle.
+        { CharacterId::Tom, "Do you... like your job, Mark?",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Mark, "Love it. I get to walk into people's homes\nwhile they're gone. Total authority.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Mark, "You learn a LOT about people that way.\nWho they really are.",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Tom, "...And what did you learn about ME?\nWhile you were fixing my heater?",
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy },
+        { CharacterId::Mark, "Your bottom dresser drawer.\nStuffed full of pictures of Karen.",
+          1, true, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
+        { CharacterId::Mark, "You're still all hung up on some\nstuck-up you-know-what. It's sad, man.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "Let her go. She's got the monster guy now.\nMove ON.",
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Tom, "...Nice to know you're going\nthrough my things, Mark.",
+          0, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+        { CharacterId::Mark, "Look. Just try to have some fun\nout there, okay, kiddo?",
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        { CharacterId::Narrator, "Mark leaves the door open on his way out.\nThe shower is still full of gray water.",
+          -1, false },
+    });
 }
 
 void ApartmentScene::update(float deltaTime) {

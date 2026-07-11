@@ -661,12 +661,15 @@ void GotchiStats::tick(float ticks, bool sleeping) {
     // Age increases with each tick (time passing)
     addStat(SecondaryStat::AGE, ticks);
 
-    // Core vital stats drain/gain
-    addStat(SecondaryStat::FOOD_LEVEL, 5.0f * ticks);     // Hunger increases
-    addStat(SecondaryStat::HYDRATION, 3.0f * ticks);     // Thirst increases
+    // Core vital stats drain/gain. Sleep is the fastest by design (~45s
+    // full-to-exhausted, 22.22/10s-tick); the others are sped up to sit
+    // closer behind it (same lever used to tune sleep -- only the per-tick
+    // amount, GOTCHI_TICK_RATE itself stays untouched).
+    addStat(SecondaryStat::FOOD_LEVEL, 14.0f * ticks);    // Hunger increases (~71s full)
+    addStat(SecondaryStat::HYDRATION, 16.0f * ticks);     // Thirst increases (~63s full)
     addStat(SecondaryStat::SLEEP_DEBT, 22.22f * ticks);    // Sleep debt increases (~45s full-to-exhausted at GOTCHI_TICK_RATE=10s)
-    addStat(SecondaryStat::ENERGY, -3.0f * ticks);       // Energy drains
-    addStat(SecondaryStat::CLEANLINESS, -2.0f * ticks);  // Gets dirty slowly
+    addStat(SecondaryStat::ENERGY, -6.0f * ticks);       // Energy drains
+    addStat(SecondaryStat::CLEANLINESS, -9.0f * ticks);  // Gets dirty (~111s full)
 
     // Emotional stats decay
     addStat(EmotionalStat::HAPPINESS, -1.0f * ticks);
