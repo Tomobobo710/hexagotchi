@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 
+class GameState;
+
 struct OfficeLine {
     CharacterId speaker;
     std::string text;
@@ -62,6 +64,12 @@ public:
     void triggerStoryEvent(int scenarioIndex) override;
     bool isPlayingScenario() const override;
 
+    // Shared live gotchi vitals (owned by GameState). Loraine's "reports"
+    // beat in Scenario A reads real stats off this so the numbers on screen
+    // are the player's actual creature. Set once in main.cpp; may be null in
+    // isolated tests, in which case the stat lines fall back to placeholders.
+    void setGameState(GameState* state) { gameState_ = state; }
+
     // The instant the last dialog line is dismissed, this scene's own black
     // overlay starts ramping 0->255 and keeps ramping continuously for
     // END_FADE_DURATION seconds -- no dead/held time before it starts.
@@ -83,6 +91,7 @@ private:
     SceneActor* loraine = nullptr;
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
+    GameState* gameState_ = nullptr;  // Not owned -- live vitals for stat lines
 
     // Full-body pose art, indexed by PoseEmotion: [0]=sad [1]=mid [2]=happy
     // [3]=scared -- loaded via CharacterRegistry (see init()). Dialog-box

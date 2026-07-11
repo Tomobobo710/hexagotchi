@@ -106,14 +106,16 @@ void Gotchi::update(float deltaTime) {
         float ticks = tickTimer_ / GOTCHI_TICK_RATE;
         tickTimer_ -= (ticks * GOTCHI_TICK_RATE);
 
-        // Update stats over time
-        updateStats(ticks);
+        if (!statsFrozen_) {
+            // Update stats over time
+            updateStats(ticks);
 
-        // Update mood based on stats
-        mood_.updateMood(deltaTime, stats_);
+            // Update mood based on stats
+            mood_.updateMood(deltaTime, stats_);
 
-        // Process mood overlays
-        mood_.processMoodOverlays(deltaTime);
+            // Process mood overlays
+            mood_.processMoodOverlays(deltaTime);
+        }
 
         // Update action timer
         actionTimer_ -= deltaTime;

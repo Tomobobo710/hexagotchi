@@ -1,6 +1,7 @@
 #include "MergeController.hpp"
 #include "EventBus.h"
 #include "Keys.h"
+#include "HappinessCheckpoints.hpp"
 
 MergeController::MergeController(EventBus& bus, GameState& state, SceneManager& scenes)
     : bus_(bus), state_(state), scenes_(scenes) {
@@ -57,12 +58,36 @@ bool MergeController::isMergeAvailable() const {
 }
 
 const char* MergeController::mergeButtonLabel() const {
-    return state_.seenReality ? "Merge" : "Give him a break";
+    return "Merge";
 }
 
 void MergeController::enterMerge(bool forced) {
     // 3.4 Entering a beat (shared by first / voluntary / forced merge)
     state_.mode = Mode::Story;
+
+    // Clear the sleep-collapse gate -- it was the only thing that unlocked
+    // Merge in the first place, and it should not still read "collapsed"
+    // once the player has actually merged.
+    state_.sleepCollapsed = false;
+
+    // --- Happiness Checkpoints (of 3): snapshot "is the gotchi happy right
+    // now?" at merge time, keyed off how many merges have happened. This is
+    // the single choke point every merge passes through, so it's where all
+    // three checks live. Each records ONE bool into the persistent story
+    // ledger; the tally (0..3) eventually gates the ending. See
+    // HappinessCheckpoints.hpp. Recorded here at merge-IN, before the story
+    // scene loads, off live vitals.
+    //
+    // mergeCount is only incremented on the way BACK (returnFromMerge), so at
+    // enter-time it still reads the count BEFORE this merge:
+    //   first merge ever -> mergeCount == 0  (also !seenReality)
+    // Checks 2 and 3 fire at hardcoded later merge counts (fill in when those
+    // story beats exist), e.g.:
+    //   if (state_.mergeCount == N) recordHappinessCheckpoint(state_, 2);
+    //   if (state_.mergeCount == M) recordHappinessCheckpoint(state_, 3);
+    if (state_.mergeCount == 0) {
+        recordHappinessCheckpoint(state_, 1);   // Check 1 -- the first merge
+    }
 
     // 3.3 First-merge timing bucket (computed only on first merge)
     if (!state_.seenReality) {

@@ -82,7 +82,7 @@ const CharacterInfo kNarrator = {
     "Narrator",
     {150, 150, 170, 255}, {150, 150, 170, 255},
     {150, 150, 170, 255}, {70, 70, 85, 255},
-    {"", "", ""}, {"", "", "", ""},
+    {"", "portraits/narrator/narratormid.png", ""}, {"", "", "", ""},
 };
 
 // Only "mid" art exists for the phone-text insert portrait -- loadPortrait()

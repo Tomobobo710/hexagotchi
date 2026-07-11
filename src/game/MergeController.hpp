@@ -38,7 +38,7 @@ public:
 
     void        update(float dt);          // call every frame from the main loop
     bool        isMergeAvailable() const;  // UI: is the merge button pressable now
-    const char* mergeButtonLabel() const;  // "Merge" if seenReality else "Give him a break"
+    const char* mergeButtonLabel() const;  // Always "Merge"
 
 private:
     void enterMerge(bool forced);

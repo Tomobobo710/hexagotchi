@@ -8,6 +8,7 @@
 #include "GotchiMood.hpp"
 #include "Button.hpp"
 #include "PauseMenuOverlay.hpp"
+#include "TutorialController.hpp"
 #include <memory>
 #include <vector>
 class Hotbar;
@@ -25,6 +26,9 @@ public:
 
     // Set the event bus for emitting CareAction events
     void setEventBus(EventBus* bus) { eventBus_ = bus; }
+
+    // Set the tutorial controller reference for button locking + step draw/advance
+    void setTutorialController(TutorialController* tc) { tutorialController_ = tc; }
 
 private:
     // Pause functionality
@@ -66,6 +70,15 @@ private:
 
     // Back button
     std::unique_ptr<Button> backButton_;
+
+    // Tutorial controller reference -- drives back-button/hotbar locking and
+    // owns the GotchiDialogBox drawn/advanced while a tutorial step belongs
+    // to this scene
+    TutorialController* tutorialController_ = nullptr;
+
+    // One-shot guard so the "death" scene switch only fires once -- see the
+    // isDead() check in update().
+    bool deathTriggered_ = false;
 
     // Vitals display
     void drawVitals() const;

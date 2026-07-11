@@ -63,6 +63,12 @@ struct GameState {
     bool  engagedCareSide  = false;  // set true once the player has used gotchi/hex care
     bool  engagedStorySide = false;  // set true once the player has completed a story beat
 
+    // True once `sleep` has drained to 0 while the gotchi is out in the
+    // world (not already mid-story). Merge is otherwise locked at all times;
+    // this is the ONLY way it unlocks. Cleared by MergeController when the
+    // player actually merges. See GotchiScene::applySleepCollapseGate().
+    bool  sleepCollapsed   = false;
+
     // ---- Extensible narrative bag: choices, seen-flags, arbitrary story vars ----
     std::unordered_map<std::string, Value> flags;
 

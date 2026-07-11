@@ -8,6 +8,7 @@
 #include "EventBus.h"
 #include "GameState.h"
 #include "MergeController.hpp"
+#include "TutorialController.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -35,6 +36,9 @@ public:
     // Set the merge controller reference for button label updates
     void setMergeController(MergeController* mc) { mergeController_ = mc; }
 
+    // Set the tutorial controller reference for button locking + step draw/advance
+    void setTutorialController(TutorialController* tc) { tutorialController_ = tc; }
+
 private:
     Gotchi* gotchi = nullptr;
     GameState* gameState_ = nullptr;  // Shared vitals from GameState
@@ -54,6 +58,23 @@ private:
 
     // Merge controller reference for button label updates
     MergeController* mergeController_ = nullptr;
+
+    // Tutorial controller reference -- drives button locking + owns the
+    // GotchiDialogBox drawn/advanced while a tutorial step belongs to this scene
+    TutorialController* tutorialController_ = nullptr;
+
+    // Applies tutorialController_->isActionUnlocked() to every care/nav
+    // button each frame, plus the always-on Merge lock (only the sleep
+    // collapse gate unlocks it -- see applySleepCollapseGate()).
+    void applyTutorialLocks();
+
+    // Trips GameState::sleepCollapsed once sleep reaches 0 while out in the
+    // world. This is the only way Merge ever unlocks.
+    void applySleepCollapseGate();
+
+    // One-shot guard so the "death" scene switch only fires once per entry
+    // into this scene -- see the isDead() check in update().
+    bool deathTriggered_ = false;
 
     // Button cooldown system
     std::map<std::string, float> buttonCooldowns_;
@@ -85,9 +106,7 @@ private:
     // Merge button callback - emits MergeRequested on the bus
     void onMergeButtonClicked();
 
-    // Explore button logic
-    void addExploreButton();
-    void updateExploreButtonVisibility();
+    // Explore button callback -- switches to the hexboard scene
     void onExploreButtonClicked();
 
     // Back button on hexboard - handled in HexViewScene

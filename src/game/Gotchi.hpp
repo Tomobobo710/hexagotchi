@@ -68,6 +68,14 @@ public:
     // Wander control - public for scene initialization
     void setWanderEnabled(bool e);
 
+    // Freezes vital-stat drain/gain and mood updates while true (tutorial
+    // hand-holding: the player shouldn't see hunger/energy/etc moving while
+    // they're still being taught what the buttons do). Animation, movement,
+    // and the state machine keep running as normal -- only updateStats()/
+    // mood_.updateMood() are skipped.
+    void setStatsFrozen(bool frozen) { statsFrozen_ = frozen; }
+    bool isStatsFrozen() const { return statsFrozen_; }
+
     // Path-based movement
     HexCoords getCurrentHex() const;
     void setPath(const std::vector<HexCoords>& path);
@@ -146,6 +154,9 @@ private:
 
     // Wander control
     bool wanderEnabled_;
+
+    // See setStatsFrozen() above
+    bool statsFrozen_ = false;
 
     // Timing
     float tickTimer_;       // For tick-based updates
