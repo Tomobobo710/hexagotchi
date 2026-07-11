@@ -166,6 +166,10 @@ void TitleScene::init() {
     float centerX = (float)GAME_W / 2.0f;
     float centerY = (float)GAME_H / 2.0f;
 
+    // Initialize title scroll shader effect
+    titleShader_ = new TitleScrollShader();
+    addEffect(titleShader_);
+
     // Create main menu buttons
     float buttonWidth = 200.0f;
     float buttonHeight = 50.0f;
@@ -344,6 +348,8 @@ void TitleScene::cleanup() {
         delete newGameButton_;
         newGameButton_ = nullptr;
     }
+
+    titleShader_ = nullptr;
     // if (loadGameButton_) {
     //     delete loadGameButton_;
     //     loadGameButton_ = nullptr;
