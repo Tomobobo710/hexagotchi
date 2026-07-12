@@ -452,7 +452,7 @@ void UpdateDrawFrame() {
                                 storySequencer && storySequencer->isPlayingStep();
             skipSceneOverlay->draw(skipVisible);
         }
-        if (pauseButton && tomWorldSceneEarly) {
+        if (pauseButton && tomWorldSceneEarly && !tomOptionsOpen) {
             pauseButton->draw();
         }
         if (tomWorldPaused) {

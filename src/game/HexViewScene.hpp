@@ -9,6 +9,7 @@
 #include "Button.hpp"
 #include "PauseMenuOverlay.hpp"
 #include "TutorialController.hpp"
+#include "../engine/GotchiDialogBox.hpp"
 #include <memory>
 #include <vector>
 class Hotbar;
@@ -93,6 +94,18 @@ private:
 
     // Vitals display
     void drawVitals() const;
+
+    // Early-game exploration timer: for the first two merges, exploring the
+    // hexboard is capped at HEXBOARD_TIME_LIMIT_SEC. Once it runs out, the
+    // gotchi says it's tired and the board locks (no movement/item drops)
+    // until the player heads back and merges. Skipped entirely once
+    // mergeCount >= 2 or while the tutorial owns the scene.
+    static constexpr float HEXBOARD_TIME_LIMIT_SEC = 30.0f;
+    float hexboardTimeLeft_ = HEXBOARD_TIME_LIMIT_SEC;
+    bool  hexboardLocked_ = false;
+    std::unique_ptr<GotchiDialogBox> tiredDialog_;
+    void drawCountdown() const;
+    bool timerActiveForThisVisit() const;
 };
 
 #endif

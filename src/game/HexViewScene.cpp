@@ -158,6 +158,19 @@ void HexViewScene::init() {
 
     // Add Pause button (top-right)
     addPauseButton();
+
+    // Early-game exploration timer resets fresh every time the hexboard is
+    // entered (init() runs on every switchScene("hexboard")).
+    hexboardTimeLeft_ = HEXBOARD_TIME_LIMIT_SEC;
+    hexboardLocked_ = false;
+    if (!tiredDialog_) {
+        // Same fixed screen-space placement convention as
+        // TutorialController's bubblePosition(): centered near the top of
+        // the screen, independent of camera/gotchi position.
+        float w = 420.0f;
+        Vector2 pos = { ((float)GAME_W - w) / 2.0f, 60.0f };
+        tiredDialog_ = std::make_unique<GotchiDialogBox>(pos, w, 130.0f);
+    }
 }
 
 void HexViewScene::draw() {
@@ -264,6 +277,11 @@ void HexViewScene::draw() {
     // Draw vitals at top right
     drawVitals();
 
+    // Bottom-left exploration countdown, only for the first two merges
+    if (timerActiveForThisVisit() || hexboardLocked_) {
+        drawCountdown();
+    }
+
     // Pan/zoom hint, top center -- pilled for readability over the map
     {
         const char* hint = "Right-click drag to pan  Mouse wheel to zoom";
@@ -311,10 +329,22 @@ void HexViewScene::draw() {
         tutorialController_->draw();
     }
 
+    // Gotchi's "I'm getting tired" line once the exploration timer runs out
+    if (hexboardLocked_ && tiredDialog_) {
+        tiredDialog_->draw();
+    }
+
     // Draw pause menu overlay last so it sits on top of the world/UI/tutorial
     if (paused && pauseMenu) {
         pauseMenu->draw();
     }
+}
+
+bool HexViewScene::timerActiveForThisVisit() const {
+    // Only for the first two merges' worth of exploration, and never while
+    // the tutorial is actively teaching (it has its own pacing/locks).
+    bool tutorialActive = tutorialController_ && tutorialController_->isActive();
+    return gameState_ && gameState_->mergeCount < 2 && !tutorialActive;
 }
 
 void HexViewScene::update(float deltaTime) {
@@ -401,6 +431,26 @@ void HexViewScene::update(float deltaTime) {
         }
     }
 
+    // Early-game exploration countdown: ticks only for the first two merges
+    // (see timerActiveForThisVisit()). Once it hits zero, lock the board --
+    // the gotchi announces it's tired and the player must head back (via the
+    // Back button, still enabled) to the gotchi scene and merge to reset it.
+    if (timerActiveForThisVisit() && !hexboardLocked_) {
+        hexboardTimeLeft_ -= deltaTime;
+        if (hexboardTimeLeft_ <= 0.0f) {
+            hexboardTimeLeft_ = 0.0f;
+            hexboardLocked_ = true;
+            if (tiredDialog_) {
+                tiredDialog_->setText("It's time to go back... I'm getting tired.");
+                tiredDialog_->setSuppressPrompt(true);  // informational, not waiting on a keypress
+                tiredDialog_->show();
+            }
+        }
+    }
+    if (hexboardLocked_ && tiredDialog_) {
+        tiredDialog_->update(deltaTime);
+    }
+
     // Camera panning logic
     SceneInputHandler* ih = getInputHandler();
     SceneCamera* cam = getCamera();
@@ -425,8 +475,9 @@ void HexViewScene::update(float deltaTime) {
     // Check if we're dragging from the hotbar
     bool isDraggingFromHotbar = hotbar_ ? hotbar_->isMouseOverSlot() : false;
 
-    // Update hotbar and check for drops
-    if (hotbar_) {
+    // Update hotbar and check for drops -- suspended once the exploration
+    // timer has locked the board (see timerActiveForThisVisit()).
+    if (hotbar_ && !hexboardLocked_) {
         if (hotbar_->update(deltaTime, getCamera())) {
             // A valid drop occurred
             if (hotbar_->hasPendingDrop()) {
@@ -472,7 +523,7 @@ void HexViewScene::update(float deltaTime) {
     // tutorial, clicks always move.
     bool tutorialBlocksMove = tutorialController_ && tutorialController_->isActive()
                               && !tutorialController_->isAwaitingAction("walk");
-    if (!tutorialBlocksMove && !isDraggingFromHotbar && gotchi && ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (!tutorialBlocksMove && !hexboardLocked_ && !isDraggingFromHotbar && gotchi && ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         // Don't process hex click if mouse is over the back button
         if (!(backButton_ && backButton_->isHovered())) {
             Vector2 mouseWorldPos = ih->getMouseWorldPosition();
@@ -618,6 +669,45 @@ void HexViewScene::onBackButtonClicked() {
         SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());
         mgr->switchScene("gotchi");
     }
+}
+
+// ============================================================================
+// Exploration Countdown Implementation
+// ============================================================================
+
+void HexViewScene::drawCountdown() const {
+    int secondsLeft = (int)std::ceil(hexboardTimeLeft_);
+    if (secondsLeft < 0) secondsLeft = 0;
+
+    std::string label = hexboardLocked_ ? "Time's up!" : ("Back in " + std::to_string(secondsLeft) + "s");
+
+    int fontSize = 16;
+    int textWidth = MeasureText(label.c_str(), fontSize);
+    int padding = 10;
+    float x = 20.0f;
+    float y = GAME_H - 60.0f;
+
+    Rectangle pill = {
+        x, y,
+        (float)(textWidth + padding * 2), (float)(fontSize + padding * 2)
+    };
+    DrawRectangleRounded(pill, 0.4f, 8, {0, 0, 0, 160});
+    DrawRectangleRoundedLines(pill, 0.4f, 8, {150, 150, 200, 220});
+
+    // A thin progress bar along the pill's bottom edge, draining left-to-right
+    // as time runs out -- same "timed fill bar" convention as DialogBox's
+    // auto-continue indicator.
+    float frac = hexboardLocked_ ? 0.0f : (hexboardTimeLeft_ / HEXBOARD_TIME_LIMIT_SEC);
+    if (frac < 0.0f) frac = 0.0f;
+    if (frac > 1.0f) frac = 1.0f;
+    float barHeight = 4.0f;
+    float barY = y + pill.height - barHeight - 4.0f;
+    Color barColor = frac > 0.3f ? Color{80, 200, 120, 255} : Color{220, 80, 80, 255};
+    DrawRectangle((int)(x + padding), (int)barY,
+                  (int)((pill.width - padding * 2) * frac), (int)barHeight, barColor);
+
+    Color textColor = hexboardLocked_ ? Color{255, 140, 140, 255} : Color{220, 220, 240, 255};
+    DrawText(label.c_str(), (int)(x + padding), (int)(y + padding), fontSize, textColor);
 }
 
 // ============================================================================

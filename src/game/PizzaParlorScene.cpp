@@ -21,16 +21,16 @@ static const float POKEMON_QUIP_DURATION = 1.8f;
 // --- Scenario 0 (the ex-wife-needling beat) positions ------------------------
 // Tom starts off the left edge and walks in; Karen and Ronzer are static at
 // their table. flipX is hardcoded per-actor in the draw fns.
-static const Vector2 TOM_SPAWN    = {-134.0f, 322.0f};
-static const Vector2 TOM_WALK_TO  = { 205.0f, 317.0f};
-static const Vector2 KAREN_POS    = { 700.0f, 298.0f};
-static const Vector2 RONZER_POS   = { 850.0f, 343.0f};
+static const Vector2 TOM_SPAWN    = {-215.0f, 353.0f};
+static const Vector2 TOM_WALK_TO  = {  87.0f, 369.0f};
+static const Vector2 KAREN_POS    = { 514.471f, 300.273f};
+static const Vector2 RONZER_POS   = { 879.471f, 313.273f};
 
 // --- Scenario 1 (Jimmy's birthday) positions, from layout.json ---------------
 // Tom enters from far off the left and moves through waypoints; Ronzer and Mark
 // have their own walks; the kids and Karen are static. Kids at 0.7 scale.
-static const Vector2 BDAY_TOM_SPAWN  = {-241.0f, 329.0f};
-static const Vector2 BDAY_TOM_WP1    = { 151.0f, 337.0f};
+static const Vector2 BDAY_TOM_SPAWN  = {-215.0f, 353.0f};
+static const Vector2 BDAY_TOM_WP1    = {  87.0f, 369.0f};
 static const Vector2 BDAY_TOM_WP2    = { 345.0f, 290.0f};
 static const Vector2 BDAY_TOM_WP3    = {-489.0f, 352.0f};   // exits left
 static const Vector2 BDAY_JIMMY_POS  = { 499.0f, 420.0f};
