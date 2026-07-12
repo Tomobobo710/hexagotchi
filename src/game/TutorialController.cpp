@@ -37,7 +37,7 @@ TutorialController::TutorialController(GameState& state)
         { "Try Groom -- leaves me happy and shiny.", "Groom", "gotchi" },
         { "Try Merge -- Oh that button shouldn't be here. Nevermind!", "", "gotchi" },
         { "Try Sleep --", "", "gotchi" },
-        { "Wait, where's my sleep button? Weird things happen when I don't sleep. Anyway.", "", "gotchi" },
+        { "Where's my sleep button? WEIRD things happen when I DON'T SLEEP.", "", "gotchi" },
         { "HexMap, you've already seen. It'll take us exploring on HexLand's HexMap!", "", "gotchi" },
         { "Ok I'll unlock all the buttons now!", "", "gotchi" },
         { "Hmm. One of the buttons isn't unlocking.", "", "gotchi" },
@@ -157,6 +157,7 @@ void TutorialController::draw() {
     if (!active_) return;
     dialog_.draw();
 }
+
 
 
 

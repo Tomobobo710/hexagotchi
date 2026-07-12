@@ -6,6 +6,11 @@
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
+// Defined in main.cpp -- true for the frame in which a click was consumed by
+// the global Tom-world pause button/menu (see its definition for why this
+// can't be done via SceneInputHandler::clearAllInputs()).
+extern bool IsPauseUiClaimingClick();
+
 ApartmentScene::ApartmentScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {22, 18, 26, 255}), dialog(sharedDialog) {
 }
@@ -192,7 +197,7 @@ void ApartmentScene::init() {
         { CharacterId::Mark, "-- are simulating all this. Just for fun.\nAnd we're the little guys inside it.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
-        { CharacterId::Tom, "...That's -- that hits weirdly close, Mark.",
+        { CharacterId::Tom, "...That's -- that's crazy, Mark.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
         { CharacterId::Mark, "So life should just be about having fun, right?\nEverything else is noise.",
@@ -349,6 +354,7 @@ void ApartmentScene::init() {
 
 void ApartmentScene::update(float deltaTime) {
     Scene::update(deltaTime);
+    if (isPaused()) return;
 
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
@@ -391,7 +397,8 @@ void ApartmentScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) ||
+                                        (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsPauseUiClaimingClick()));
             if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
             if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();
@@ -554,7 +561,7 @@ void ApartmentScene::drawMark(Vector2 pos) {
 }
 
 void ApartmentScene::drawLoraine(Vector2 pos) {
-    drawApartmentPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ false, 1.0f);  // on the right, faces left toward Tom
+    drawApartmentPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ true, 1.0f);  // on the right, faces left toward Tom
 }
 
 void ApartmentScene::drawApartment() {
@@ -569,6 +576,7 @@ void ApartmentScene::drawApartment() {
     DrawRectangle(720, 100, 180, 160, windowFrame);
     DrawRectangle(730, 110, 160, 140, windowSky);
 }
+
 
 
 

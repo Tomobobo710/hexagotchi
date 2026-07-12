@@ -46,7 +46,8 @@ void OptionsScene::init() {
     backButton_->setHoverColor({100, 100, 160, 240});
     backButton_->setBorderColor({150, 150, 200, 255});
     backButton_->setOnClick([this]() {
-        if (sceneManager) sceneManager->switchScene("title");
+        if (onBackOverride) onBackOverride();
+        else if (sceneManager) sceneManager->switchScene(returnScene_);
     });
 
     // --- Rows ---

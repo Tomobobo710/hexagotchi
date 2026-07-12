@@ -33,6 +33,9 @@
 #include "game/TutorialController.hpp"
 #include "game/StorySequencer.hpp"
 #include "game/DeathSequencer.hpp"
+#include "game/SkipSceneOverlay.hpp"
+#include "game/PauseMenuOverlay.hpp"
+#include "Button.hpp"
 #include "game/DialogSequences.hpp"
 #include "engine/GameState.h"
 #include "engine/SaveManager.h"
@@ -94,6 +97,64 @@ static EM_BOOL OnVisibilityChange(int, const EmscriptenVisibilityChangeEvent* e,
 SceneManager* sceneManager = nullptr;
 DialogBox*    dialog       = nullptr;
 RenderTexture2D gameTarget;
+
+// Global skip-scene button/confirm overlay -- see comment at its use site in
+// UpdateDrawFrame() for which scenes it's allowed to appear on.
+SkipSceneOverlay* skipSceneOverlay = nullptr;
+
+// Story-beat scenes reachable via StorySequencer's Sequence steps (see
+// ScenarioDirector.cpp) -- the only scenes a "skip this scene" button is
+// allowed to act on. Deliberately excludes gotchi, hexboard, merge,
+// toy_animation, death, ending (terminal/credits scene), title, options,
+// credits, scene_select, and the debug/test scenes.
+static bool IsSkippableStoryScene(const std::string& sceneName) {
+    return sceneName == "office" || sceneName == "pizza_parlor" ||
+           sceneName == "kids_visit" || sceneName == "therapist_office" ||
+           sceneName == "school" || sceneName == "apartment";
+}
+
+// Global pause button/overlay for Tom's story-world scenes (GotchiScene and
+// HexViewScene already have their own per-scene pause menus -- see those
+// classes -- since they're self-contained and drive their own gameplay loop
+// in-scene). The Tom scenes instead share ONE overlay driven from here,
+// because their "pause-worthy" state (dialog typing/auto-advance,
+// StorySequencer's scripted steps) lives outside any single Scene subclass,
+// in main.cpp's own globals -- see the dialog->update()/storySequencer->
+// update() gating below. Includes the ending scene (still has a
+// player-controlled Tom actor) but not credits (terminal, no gameplay).
+Button* pauseButton = nullptr;
+PauseMenuOverlay* tomPauseMenu = nullptr;
+bool tomWorldPaused = false;
+
+// True while OPTIONS is showing as an overlay on top of a paused Tom-world
+// scene. Deliberately NOT a real SceneManager::switchScene("options") --
+// that would call cleanup()/init() on the story scene twice (once leaving,
+// once coming back), and every story scene's cleanup() unconditionally
+// resets activeScenario/lineIndex to "not playing" (see e.g.
+// OfficeScene::cleanup()), which made StorySequencer's PlayingStep phase
+// see isPlayingScenario()==false and treat it as "the step legitimately
+// finished" -- skipping straight to the next story beat the instant the
+// player came back from Options. Drawing/updating the shared OptionsScene
+// instance directly as an overlay (like tomPauseMenu/skipSceneOverlay
+// already are) means currentSceneName never changes, so nothing about the
+// story scene or StorySequencer is touched at all.
+bool tomOptionsOpen = false;
+
+// True for the remainder of the frame in which a click was consumed by the
+// pause button/menu OR the skip-scene button/confirm modal -- checked by
+// story scenes before treating a mouse-press as "advance the dialogue line"
+// (see IsPauseUiClaimingClick() below). Needed because the click-to-advance
+// check reads raylib's raw one-frame IsMouseButtonPressed() edge, which
+// SceneInputHandler::clearAllInputs() cannot suppress.
+bool g_pauseUiClaimedClick = false;
+bool IsPauseUiClaimingClick() { return g_pauseUiClaimedClick; }
+
+static bool IsTomWorldScene(const std::string& sceneName) {
+    return sceneName == "office" || sceneName == "pizza_parlor" ||
+           sceneName == "kids_visit" || sceneName == "therapist_office" ||
+           sceneName == "school" || sceneName == "apartment" ||
+           sceneName == "ending";
+}
 
 int         dialogIndex = 0;
 std::string lastScene   = "title";
@@ -186,36 +247,98 @@ void UpdateDrawFrame() {
 
     // Pause key (0) is reserved for future use - no scene supports it yet
 
-    // Debug trigger for the apartment's/etc scripted story beat (normally
-    // invoked by the tomagotchi/stat side, not by a raw key). Pizza Parlor
-    // is now driven entirely by StorySequencer -- see startStep()/update()'s
-    // Phase::EnteringStep -- so it no longer needs this manual E-press hook.
-    // Gated to scenes entered via the scene_select debug hub (key 7) --
+    // Debug trigger for a story scene's scripted scenario(s) (normally
+    // invoked by the tomagotchi/stat side, not by a raw key). Gated to
+    // scenes entered via the scene_select debug hub (key 7) --
     // Scene::getEntrySceneName() is stamped by SceneManager on every switch
-    // -- so this never fires when a scene is reached through the real
+    // -- so none of this ever fires when a scene is reached through the real
     // sequencer/merge flow.
+    //
+    // Z: cycle to the next scenario (wrapping) and play it from the top --
+    // generic over every story scene via Scene::getScenarioCount()/
+    // triggerScenario(), so a new scene gets this for free without another
+    // per-scene-type block here (previously only 4 of 7 story scenes had a
+    // hardcoded, scene-specific KEY_E single-scenario trigger).
+    // X: toggle wide-view off/on -- each story scene's own update() already
+    // gates its ambient idle camera drift and scripted per-line
+    // followPosition() behind `!getCamera()->isWideViewEnabled()`, so
+    // turning wide view OFF hands the camera back to the exact same logic
+    // that runs during real gameplay, letting a 3D effect placed via the
+    // I/J/K/L/U/O dial-in controls be checked framed as it would actually be
+    // seen in-game, not just in the zoomed-out debug view.
     Scene* curScene = sceneManager->getCurrentScene();
     bool fromDebugHub = curScene && curScene->getEntrySceneName() == "scene_select";
-    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "apartment") {
-        ApartmentScene* apartment = (ApartmentScene*)curScene;
-        if (apartment && !apartment->isPlayingScenario()) apartment->triggerScenario(0);
-    }
-    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "therapist_office") {
-        TherapistOfficeScene* office = (TherapistOfficeScene*)curScene;
-        if (office && !office->isPlayingScenario()) office->triggerScenario(0);
-    }
-    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "office") {
-        static int nextOfficeScenario = 0;
-        OfficeScene* office = (OfficeScene*)curScene;
-        if (office && !office->isPlayingScenario()) {
-            office->triggerScenario(nextOfficeScenario);
-            nextOfficeScenario = (nextOfficeScenario + 1) % 2;
+    if (fromDebugHub && curScene) {
+        static int debugScenarioIndex = 0;
+        int count = curScene->getScenarioCount();
+        if (count > 0 && IsKeyPressed(KEY_Z) && !curScene->isPlayingScenario()) {
+            curScene->triggerScenario(debugScenarioIndex);
+            debugScenarioIndex = (debugScenarioIndex + 1) % count;
+        }
+        if (curScene->getCamera() && IsKeyPressed(KEY_X)) {
+            curScene->getCamera()->toggleWideView();
         }
     }
-    if (fromDebugHub && IsKeyPressed(KEY_E) && currentScene == "school") {
-        SchoolScene* school = (SchoolScene*)curScene;
-        if (school && !school->isPlayingScenario()) school->triggerScenario(0);
+
+    // Reflect the global Tom-world pause flag onto the current scene before
+    // it updates, so the isPaused() early-return each story scene's update()
+    // added actually triggers (ambient sway/camera-focus/end-fade logic).
+    bool tomWorldSceneEarly = IsTomWorldScene(currentScene);
+    if (tomWorldSceneEarly) {
+        if (Scene* curSceneForPause = sceneManager->getCurrentScene()) {
+            curSceneForPause->setPaused(tomWorldPaused);
+        }
     }
+
+    // Update the pause button/menu AND the skip-scene button/confirm modal
+    // BEFORE the scene itself updates, so a click on PAUSE/RESUME/OPTIONS or
+    // SKIP/YES/NO is consumed here first. This can't be done via
+    // clearAllInputs() -- the story scenes' click-to-advance check reads
+    // ih->isMouseButtonPressed(), which forwards straight to raylib's own
+    // IsMouseButtonPressed() one-frame edge flag, not through
+    // SceneInputHandler's own (unrelated) tracked state, so it can't be
+    // cleared out from under them. Instead g_pauseUiClaimedClick is a
+    // frame-scoped flag the story scenes check (see IsPauseUiClaimingClick()
+    // below) before treating a mouse-press as "advance the dialogue line".
+    Scene* curSceneForUi = sceneManager->getCurrentScene();
+    SceneInputHandler* ihForUi = curSceneForUi ? curSceneForUi->getInputHandler() : nullptr;
+
+    if (tomWorldSceneEarly) {
+        if (tomOptionsOpen) {
+            // Options is on top -- it owns input this frame, not the pause
+            // menu underneath it or the story scene. OptionsScene is a real
+            // Scene with its own SceneInputHandler (reads raylib's live
+            // mouse/key state directly, independent of the story scene's
+            // handler), so its own update() is self-sufficient here.
+            if (auto* options = static_cast<OptionsScene*>(sceneManager->getScene("options"))) {
+                options->update(dt);
+            }
+        } else {
+            if (pauseButton) pauseButton->update(ihForUi, dt);
+            if (tomWorldPaused && tomPauseMenu) tomPauseMenu->update(dt, ihForUi);
+        }
+    }
+
+    // Only a regular story beat in the sequencer is skippable -- not
+    // gotchi/hexboard, merge/toy_animation transitions, the terminal
+    // ending/credits scene, or any menu/debug scene. isPlayingStep() also
+    // excludes the merge-in/merge-out transition windows, where there's no
+    // active step to skip. Hidden while paused so it can't be clicked out
+    // from under the pause overlay.
+    bool skipVisible = !tomWorldPaused && IsSkippableStoryScene(currentScene) &&
+                        storySequencer && storySequencer->isPlayingStep();
+    if (skipSceneOverlay) {
+        skipSceneOverlay->update(dt, ihForUi, skipVisible);
+    }
+
+    // Any click this frame belongs to a UI overlay, never to the scene behind
+    // it, whenever: the pause button itself is hovered (covers opening
+    // pause), the pause menu is already open (every click while paused is
+    // either RESUME/OPTIONS or a miss-click on the dimmed backdrop), the skip
+    // button is hovered, or the skip confirm modal is open.
+    g_pauseUiClaimedClick =
+        (tomWorldSceneEarly && ((pauseButton && pauseButton->isHovered()) || tomWorldPaused)) ||
+        (skipSceneOverlay && skipVisible && skipSceneOverlay->isInteractive());
 
     sceneManager->update(dt);
 
@@ -245,15 +368,32 @@ void UpdateDrawFrame() {
         AudioManager::Get().updateMusic();
     }
 
+    // Leaving a Tom-world scene (via back button, tutorial, etc) forces the
+    // pause back off so it can't get stuck open behind a scene that has no
+    // pause button of its own to close it with. (pauseButton/tomPauseMenu and
+    // skipSceneOverlay were already updated earlier, before sceneManager
+    // updated the scene itself -- see the comment at that block.)
+    if (!IsTomWorldScene(currentScene)) {
+        tomWorldPaused = false;
+        tomOptionsOpen = false;
+    }
+
     if (mergeController) {
         mergeController->update(dt);
     }
-    if (storySequencer) {
-        storySequencer->update(dt);
-        // Handle skip action - skip current story step (for testing)
-        // Key S works in any scene when story sequencer is active
-        if (IsKeyPressed(KEY_S)) {
-            storySequencer->skipCurrentStep();
+    // Dialog typing/auto-advance and the story sequencer's scripted steps
+    // both live outside any Scene subclass (shared globals), so pausing a
+    // Tom-world scene has to skip these here too -- gating just the scene's
+    // own update() (see the isPaused() early-returns added to each story
+    // scene) isn't enough on its own.
+    if (!tomWorldPaused) {
+        if (storySequencer) {
+            storySequencer->update(dt);
+            // Handle skip action - skip current story step (for testing)
+            // Key S works in any scene when story sequencer is active
+            if (IsKeyPressed(KEY_S)) {
+                storySequencer->skipCurrentStep();
+            }
         }
     }
     if (deathSequencer) {
@@ -277,10 +417,14 @@ void UpdateDrawFrame() {
         // This is a WHITELIST, not a blacklist: a blacklist of "pre-game"
         // scenes kept missing new scenes (options/credits/death), which let the
         // sim run -- and you could literally die sitting on the main menu.
-        // Also frozen during the tutorial and the sleep-collapse gate.
+        // Also frozen during the tutorial, the sleep-collapse gate, and while
+        // the current scene's own pause menu is open (Scene::isPaused()) --
+        // otherwise vitals kept draining behind the pause overlay.
         bool onCareSide = (currentScene == "gotchi" || currentScene == "hexboard");
         bool tutorialActive = tutorialController && tutorialController->isActive();
-        globalGameState.statsFrozen = !onCareSide || tutorialActive || globalGameState.sleepCollapsed;
+        Scene* activeScene = sceneManager->getCurrentScene();
+        bool scenePaused = activeScene && activeScene->isPaused();
+        globalGameState.statsFrozen = !onCareSide || tutorialActive || globalGameState.sleepCollapsed || scenePaused;
     }
     if (gotchiSim) {
         gotchiSim->update(dt);
@@ -289,12 +433,40 @@ void UpdateDrawFrame() {
         driversController->update(dt);
     }
 
-    dialog->update(dt);
+    if (!tomWorldPaused) {
+        dialog->update(dt);
+    }
 
     BeginTextureMode(gameTarget);
         ClearBackground(BLACK);
         sceneManager->draw();
-        dialog->draw();
+        // Options fully covers the screen with its own opaque background
+        // (see below) -- don't draw the dialog box underneath it or it peeks
+        // through/overlaps the options UI.
+        if (!tomOptionsOpen) {
+            dialog->draw();
+        }
+        if (skipSceneOverlay) {
+            const std::string& skipScene = sceneManager->getCurrentSceneName();
+            bool skipVisible = !tomWorldPaused && IsSkippableStoryScene(skipScene) &&
+                                storySequencer && storySequencer->isPlayingStep();
+            skipSceneOverlay->draw(skipVisible);
+        }
+        if (pauseButton && tomWorldSceneEarly) {
+            pauseButton->draw();
+        }
+        if (tomWorldPaused) {
+            if (tomOptionsOpen) {
+                // Options fully covers the screen with its own opaque
+                // background (see OptionsScene's Scene(...) bg color), so it
+                // replaces the pause menu rather than drawing on top of it.
+                if (auto* options = static_cast<OptionsScene*>(sceneManager->getScene("options"))) {
+                    options->draw();
+                }
+            } else if (tomPauseMenu) {
+                tomPauseMenu->draw();
+            }
+        }
     EndTextureMode();
 
     Rectangle dest = GetLetterboxRect();
@@ -372,6 +544,7 @@ int main() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 #endif
     InitWindow(720, 720, "Hexagotchi");
+    SetExitKey(KEY_NULL);
     SetTargetFPS(60);
 
     gameTarget = LoadRenderTexture(GAME_W, GAME_H);
@@ -457,6 +630,54 @@ int main() {
     // Wire up the story sequencer
     storySequencer = new StorySequencer(globalEventBus, globalGameState, *sceneManager, *dialog);
 
+    // Wire up the skip-scene overlay
+    skipSceneOverlay = new SkipSceneOverlay();
+    skipSceneOverlay->onConfirmSkip = []() {
+        // Hide the skipped scene's in-progress line first -- skipCurrentStep()
+        // jumps straight to the next step (or the merge-out transition)
+        // without finishing the dialog naturally, so without this the old
+        // line/portrait lingers on screen over whatever comes next.
+        if (dialog) dialog->hide();
+        if (storySequencer) storySequencer->skipCurrentStep();
+    };
+
+    // Wire up the global pause button/overlay for Tom's story-world scenes
+    // (GotchiScene/HexViewScene have their own -- see IsTomWorldScene()'s
+    // comment above for why this one has to live here instead).
+    static const float PAUSE_BTN_W = 80.0f, PAUSE_BTN_H = 32.0f, PAUSE_BTN_PAD = 12.0f;
+    pauseButton = new Button({(float)GAME_W - PAUSE_BTN_W - PAUSE_BTN_PAD, PAUSE_BTN_PAD},
+                             PAUSE_BTN_W, PAUSE_BTN_H, "PAUSE");
+    pauseButton->setAnchor("top-left");
+    pauseButton->setFontSize(16);
+    pauseButton->setBackgroundColor({60, 60, 100, 220});
+    pauseButton->setHoverColor({100, 100, 160, 240});
+    pauseButton->setBorderColor({150, 150, 200, 255});
+    pauseButton->setOnClick([]() { tomWorldPaused = !tomWorldPaused; });
+
+    tomPauseMenu = new PauseMenuOverlay();
+    tomPauseMenu->onResume = []() {
+        tomWorldPaused = false;
+        // The click that closed the menu is still "pressed" on this same
+        // frame -- without clearing it, the scene's own click-to-advance
+        // dialogue check (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)) reads
+        // that same click as a request to advance the current dialogue line
+        // the instant the game unpauses. Matches GotchiScene/HexViewScene's
+        // own onResume, which clears input for the same reason.
+        if (Scene* s = sceneManager->getCurrentScene()) {
+            if (SceneInputHandler* ih = s->getInputHandler()) ih->clearAllInputs();
+        }
+    };
+    tomPauseMenu->onOptionsSelected = []() {
+        // Opens OPTIONS as an overlay ON TOP of the still-current, still-
+        // paused story scene -- see tomOptionsOpen's comment above for why
+        // this deliberately does NOT go through sceneManager->switchScene().
+        if (auto* options = static_cast<OptionsScene*>(sceneManager->getScene("options"))) {
+            options->init();  // rebuilds buttons + refreshes volume/speed labels
+            options->onBackOverride = []() { tomOptionsOpen = false; };
+        }
+        tomOptionsOpen = true;
+    };
+
     // Wire up the death sequencer
     deathSequencer = new DeathSequencer(globalEventBus, globalGameState, *sceneManager);
 
@@ -489,7 +710,7 @@ int main() {
 #ifdef HEXA_SHOT_TOOL
     int shotFrame = 0;
 #endif
-    while (!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE) && !exitRequested) {
+    while (!WindowShouldClose() && !exitRequested) {
         UpdateDrawFrame();
 #ifdef HEXA_SHOT_TOOL
         if (shotScene && shotScene[0]) {
@@ -513,6 +734,7 @@ int main() {
     delete mergeController;
     delete tutorialController;
     delete storySequencer;
+    delete skipSceneOverlay;
     delete deathSequencer;
     delete gotchiSim;
     delete driversController;

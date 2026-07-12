@@ -115,21 +115,21 @@ private:
     // reposition everything together into the window frame, rather than
     // needing to separately re-tune the road path, backdrop, and vehicle
     // placement math.
-    Vector3 roadOrigin = {8.55f, -2.07f, -11.89f};
+    Vector3 roadOrigin = {8.55f, 1.86f, -11.89f};
     // Same purpose as roadOrigin, but for the tree stand -- see
     // getTreeOrigin()/setTreeOrigin().
-    Vector3 treeOrigin = {3.61f, 0.20f, 11.76f};
+    Vector3 treeOrigin = {3.28f, 0.47f, 11.76f};
     // Center of the backdrop quad -- see getBackdropOrigin()/
     // setBackdropOrigin(). Starts centered/at-origin; dial in via
     // TherapistOfficeScene's controls same as road/tree origins were.
-    Vector3 backdropOrigin = {0.00f, -7.08f, -29.15f};
+    Vector3 backdropOrigin = {0.00f, -3.14f, -29.15f};
 
     float time = 0.0f;
 
     // Camera framing, tuned live via the shared debug-camera controls
     // (SceneDebugCamera.hpp): Numpad 8/2 dist, 9/3 pitch, 7/1 fovy.
     float debugCamDist = 25.0f;
-    float debugPitchDeg = 0.0f;
+    float debugPitchDeg = -3.3f;
     float debugFovyDeg = 32.0f;
 };
 

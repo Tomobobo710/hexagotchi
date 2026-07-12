@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <functional>
 
 // Global options menu, reachable from the title screen. Adjusts the
 // header-only global settings in GameConstants.hpp (music/sfx volume, dialog
@@ -30,8 +31,27 @@ public:
     void draw() override;
     void cleanup() override;
 
+    // Which scene BACK returns to. Defaults to "title" (reached from the
+    // title screen); set to "gotchi"/"hexboard" when opened from their pause
+    // menus so BACK returns to gameplay instead of the main menu. Ignored
+    // when onBackOverride is set (see below).
+    void setReturnScene(const std::string& sceneName) { returnScene_ = sceneName; }
+
+    // When set, BACK calls this instead of sceneManager->switchScene().
+    // Used by main.cpp to drive OptionsScene as a plain overlay on top of
+    // Tom's world (see main.cpp's tomOptionsOpen) instead of a real
+    // SceneManager scene switch -- routing a "temporary detour into Options"
+    // through switchScene()'s cleanup()/init() would wipe the story scene's
+    // in-progress activeScenario/lineIndex (each story scene's cleanup()
+    // resets them unconditionally), which made StorySequencer think the
+    // current step had finished and skip ahead the instant the player
+    // returned from Options. Kept as a std::function (not overriding a
+    // virtual) since OptionsScene has exactly one caller that needs this.
+    std::function<void()> onBackOverride;
+
 private:
     SceneManager* sceneManager;
+    std::string returnScene_ = "title";
 
     std::unique_ptr<Button> backButton_;
 

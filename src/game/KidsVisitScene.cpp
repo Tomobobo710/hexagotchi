@@ -13,6 +13,10 @@ static const Vector2 TOM_POS   = {735.0f, 309.0f};
 static const Vector2 BIMMY_POS = { 92.0f, 361.0f};
 static const Vector2 JIMMY_POS = {358.0f, 315.0f};
 
+// Defined in main.cpp -- true for the frame in which a click was consumed by
+// the global Tom-world pause button/menu.
+extern bool IsPauseUiClaimingClick();
+
 KidsVisitScene::KidsVisitScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {22, 18, 26, 255}), dialog(sharedDialog) {
 }
@@ -63,7 +67,7 @@ void KidsVisitScene::init() {
           {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
         // The Ronzer comparisons -- kids genuinely delighted, oblivious to the sting.
         { CharacterId::Jimmy, "Ronzer's apartment has a HOT TUB.",
-          2, false, false, PortraitEmotion::Happy, "Jimmy (Tom's son)",
+          2, false, false, PortraitEmotion::Happy, "Jimmy (Tom's other son)",
           {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Bimmy, "And the bus here SMELLED.\nA man was eating soup on it.",
           1, false, false, PortraitEmotion::Mid, "",
@@ -156,6 +160,7 @@ void KidsVisitScene::init() {
 
 void KidsVisitScene::update(float deltaTime) {
     Scene::update(deltaTime);
+    if (isPaused()) return;
 
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
@@ -195,7 +200,8 @@ void KidsVisitScene::update(float deltaTime) {
             return;
         }
         if (dialog->isFinished()) {
-            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) ||
+                                        (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsPauseUiClaimingClick()));
             if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
             if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();
@@ -343,7 +349,7 @@ static void drawKidsPose(Texture2D pose, Vector2 pos, bool flipX, float scale) {
 }
 
 void KidsVisitScene::drawTom(Vector2 pos) {
-    drawKidsPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true, 1.0f);   // on the right, faces left toward the kids
+    drawKidsPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ false, 1.0f);   // on the right, faces left toward the kids
 }
 
 void KidsVisitScene::drawBimmy(Vector2 pos) {

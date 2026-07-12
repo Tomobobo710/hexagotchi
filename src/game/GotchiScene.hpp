@@ -9,6 +9,8 @@
 #include "GameState.h"
 #include "MergeController.hpp"
 #include "TutorialController.hpp"
+#include "PauseMenuOverlay.hpp"
+#include "GotchiDialogBox.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -38,6 +40,14 @@ public:
 
     // Set the tutorial controller reference for button locking + step draw/advance
     void setTutorialController(TutorialController* tc) { tutorialController_ = tc; }
+
+private:
+    // Pause functionality
+    void togglePause() override;
+    bool isPaused() const override { return paused; }
+
+    std::unique_ptr<PauseMenuOverlay> pauseMenu;
+    std::unique_ptr<Button> pauseButton_;
 
 private:
     Gotchi* gotchi = nullptr;
@@ -73,6 +83,12 @@ private:
     // Trips GameState::sleepCollapsed once sleep reaches 0 while out in the
     // world. This is the only way Merge ever unlocks.
     void applySleepCollapseGate();
+
+    // Speech-bubble line shown once when applySleepCollapseGate() first trips,
+    // telling the player Tom's collapsed. Owned here (not TutorialController)
+    // since it's unrelated to the tutorial and can fire long after it's done.
+    GotchiDialogBox wobbleDialog_{ {0, 0}, 460.0f, 150.0f };
+    bool wobbleDialogShown_ = false;
 
     // Counts down from DEATH_HOLD_SECONDS once isDead() first flips true;
     // the death animation plays and holds on screen for this long. The

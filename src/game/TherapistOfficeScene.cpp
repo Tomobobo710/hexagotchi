@@ -8,8 +8,12 @@
 
 // Top-left placement (editor convention), read well at zoom 2: Tom on the left
 // facing right, Judy on the right facing left. Static -- a seated session.
-static const Vector2 TOM_POS  = {230.0f, 300.0f};
-static const Vector2 JUDY_POS = {800.0f, 288.0f};
+static const Vector2 TOM_POS  = {126.0f, 351.0f};
+static const Vector2 JUDY_POS = {913.0f, 361.0f};
+
+// Defined in main.cpp -- true for the frame in which a click was consumed by
+// the global Tom-world pause button/menu.
+extern bool IsPauseUiClaimingClick();
 
 TherapistOfficeScene::TherapistOfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {
@@ -167,6 +171,7 @@ void TherapistOfficeScene::init() {
 
 void TherapistOfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
+    if (isPaused()) return;
 
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
@@ -179,9 +184,16 @@ void TherapistOfficeScene::update(float deltaTime) {
         updateSceneDebugCamera(windowEffect, getCamera(), deltaTime);
 
         if (windowEffect) {
-            // Dial-in controls for the backdrop quad's center -- I/K: Y, J/L: X,
+            // TAB cycles which origin the I/J/K/L/U/O controls below move --
+            // backdrop/road/tree each need independent placement (see
+            // TherapistWindowEffect.hpp), previously only backdrop was reachable.
+            if (IsKeyPressed(KEY_TAB)) debugOriginTarget = (debugOriginTarget + 1) % 3;
+
+            // Dial-in controls for whichever origin is selected -- I/K: Y, J/L: X,
             // U/O: Z. Temporary, for finding placement to bake into the scene.
-            Vector3 origin = windowEffect->getBackdropOrigin();
+            Vector3 origin = debugOriginTarget == 0 ? windowEffect->getBackdropOrigin()
+                            : debugOriginTarget == 1 ? windowEffect->getRoadOrigin()
+                                                      : windowEffect->getTreeOrigin();
             float moveSpeed = 4.0f * deltaTime;
             if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
             if (IsKeyDown(KEY_I)) origin.y += moveSpeed;
@@ -189,7 +201,9 @@ void TherapistOfficeScene::update(float deltaTime) {
             if (IsKeyDown(KEY_L)) origin.x += moveSpeed;
             if (IsKeyDown(KEY_U)) origin.z -= moveSpeed;
             if (IsKeyDown(KEY_O)) origin.z += moveSpeed;
-            windowEffect->setBackdropOrigin(origin);
+            if (debugOriginTarget == 0) windowEffect->setBackdropOrigin(origin);
+            else if (debugOriginTarget == 1) windowEffect->setRoadOrigin(origin);
+            else windowEffect->setTreeOrigin(origin);
         }
     }
 
@@ -226,7 +240,8 @@ void TherapistOfficeScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) ||
+                                        (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsPauseUiClaimingClick()));
             if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
             if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();
@@ -255,9 +270,13 @@ void TherapistOfficeScene::draw() {
         drawSceneDebugCameraReadout(windowEffect, 16, 40);
 
         if (windowEffect) {
-            Vector3 origin = windowEffect->getBackdropOrigin();
-            const char* txt = TextFormat("backdropOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
-                origin.x, origin.y, origin.z);
+            const char* label = debugOriginTarget == 0 ? "backdropOrigin"
+                               : debugOriginTarget == 1 ? "roadOrigin" : "treeOrigin";
+            Vector3 origin = debugOriginTarget == 0 ? windowEffect->getBackdropOrigin()
+                            : debugOriginTarget == 1 ? windowEffect->getRoadOrigin()
+                                                      : windowEffect->getTreeOrigin();
+            const char* txt = TextFormat("%s: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z  (TAB to cycle)",
+                label, origin.x, origin.y, origin.z);
             DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
             DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
         }
@@ -382,11 +401,11 @@ static void drawTherapistPose(Texture2D pose, Vector2 pos, bool flipX, float sca
 }
 
 void TherapistOfficeScene::drawTom(Vector2 pos) {
-    drawTherapistPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ false, 1.0f);   // on the left, faces right toward Judy
+    drawTherapistPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true, 1.0f);   // on the left, faces right toward Judy
 }
 
 void TherapistOfficeScene::drawJudy(Vector2 pos) {
-    drawTherapistPose(judyPoses[(int)judyPoseEmotion], pos, /*flipX*/ true, 1.0f);  // on the right, faces left toward Tom
+    drawTherapistPose(judyPoses[(int)judyPoseEmotion], pos, /*flipX*/ false, 1.0f);  // on the right, faces left toward Tom
 }
 
 // --- Set dressing (fallback only, if therapistbg.png is missing) ----------

@@ -14,8 +14,32 @@ cd "$(dirname "$0")"
 
 RL=raylib/src
 WEB_OUT=build/web
-EMCC="python emsdk/upstream/emscripten/emcc.py"
-EMAR="python emsdk/upstream/emscripten/emar.py"
+
+# Plain MSYS2 bash (as launched by build-web.bat) has a minimal PATH that
+# doesn't include python, even when it's installed for Windows -- search a
+# few known install locations before giving up.
+PYTHON=""
+for candidate in python python3 \
+    "/c/Users/$USER/AppData/Local/Programs/Python/Python310/python" \
+    "/c/Users/$USER/AppData/Local/Programs/Python/Python311/python" \
+    "/c/Users/$USER/AppData/Local/Programs/Python/Python38/python"; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    PYTHON="$candidate"
+    break
+  fi
+done
+if [ -z "$PYTHON" ]; then
+  echo "build-web.sh: no python interpreter found (checked PATH and common install dirs)" >&2
+  exit 1
+fi
+
+EMCC="$PYTHON emsdk/upstream/emscripten/emcc.py"
+EMAR="$PYTHON emsdk/upstream/emscripten/emar.py"
+
+# emcc shells out to other tools (e.g. file_packager.py) using its own
+# interpreter resolution, which ignores our $PATH searching above -- point it
+# at the same interpreter via the env var emsdk actually honors.
+export EMSDK_PYTHON="$(cygpath -w "$PYTHON" 2>/dev/null || echo "$PYTHON")"
 
 if [ "$1" = "clean" ]; then
   rm -rf "$WEB_OUT" "$RL"/*.wasm.o "$RL/libraylib.web.a"

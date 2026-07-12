@@ -7,6 +7,21 @@
 #include "raymath.h"
 #include <cmath>
 
+// Cloud loop range: despawn once a cloud drifts past CLOUD_DESPAWN_X off the
+// left edge; recycled/initial clouds spawn somewhere in
+// [CLOUD_DESPAWN_X, CLOUD_SPAWN_X_MAX] off the right edge. Shared by init()'s
+// even initial spacing and RespawnCloud()'s recycle placement so both agree
+// on the same loop span.
+//
+// Sized against the CURRENT camera framing (debugCamDist 4, pitch -5deg,
+// fovy 28), whose visible frustum at the clouds' depth is only ~2.4 units
+// wide -- this span is wider than that so clouds still drift in/out past the
+// edges instead of popping, but nowhere near the old 8.5-wide span that was
+// tuned for a since-changed dist-10 camera and left most of the loop
+// permanently off-frame.
+static const float CLOUD_DESPAWN_X = -2.5f;
+static const float CLOUD_SPAWN_X_MAX = 2.5f;
+
 static Model MakeLitModel(Mesh mesh, Shader shader, Color tint) {
     Model m = LoadModelFromMesh(mesh);
     m.materials[0].shader = shader;
@@ -45,12 +60,17 @@ void SchoolSkyEffect::init() {
     light = CreateLight0(LIGHT_DIRECTIONAL, {0.0f, 4.0f, 6.0f}, {0.0f, -4.0f, -6.0f}, WHITE, shader);
 
     // A pool of clouds, each a small cluster of overlapping puffs so they
-    // read as a cloud silhouette rather than a single sphere. Scattered
-    // across the visible width/depth at start (not all off one edge), then
-    // drift left and recycle off the right edge -- see RespawnCloud().
+    // read as a cloud silhouette rather than a single sphere. Evenly spaced
+    // across the full loop span at start (not randomly scattered -- random
+    // scatter let RNG clump several on one side and leave the rest empty),
+    // then drift left at a shared fixed speed and recycle off the right edge
+    // -- see RespawnCloud(). Even spacing + a shared speed means they never
+    // bunch up or gap out over time, unlike the old per-cloud random speed.
     clouds.resize(10);
-    for (auto& cloud : clouds) {
-        RespawnCloud(cloud, false);
+    float slotWidth = (CLOUD_SPAWN_X_MAX - CLOUD_DESPAWN_X) / (float)clouds.size();
+    for (size_t i = 0; i < clouds.size(); i++) {
+        RespawnCloud(clouds[i]);
+        clouds[i].basePos.x = CLOUD_DESPAWN_X + slotWidth * ((float)i + 0.5f);
     }
 }
 
@@ -67,18 +87,27 @@ void SchoolSkyEffect::update(float deltaTime) {
     contrailTimer += deltaTime;
     if (contrailTimer > 0.05f) {
         contrailTimer = 0.0f;
-        contrailPoints.push_back(jetPos);
+        contrailPoints.push_back(Vector3Add(jetPos, jetOrigin));
         if (contrailPoints.size() > 90) contrailPoints.erase(contrailPoints.begin());
     }
 
     // Clouds drift gently left; once one has gone far enough past the left
     // edge that it can't possibly still be visible, recycle it back in off
-    // the right edge with a fresh randomized position/puff layout.
-    static const float CLOUD_DESPAWN_X = -6.0f;
+    // the right edge, placed one slot-width beyond whichever cloud is
+    // currently furthest right -- keeps the even spacing from init()
+    // permanently instead of just for the first lap (a fixed/random
+    // off-screen respawn band would let spacing drift once clouds are no
+    // longer all recycling in the same order they started in).
+    float slotWidth = (CLOUD_SPAWN_X_MAX - CLOUD_DESPAWN_X) / (float)clouds.size();
     for (auto& cloud : clouds) {
         cloud.basePos.x -= cloud.driftSpeed * deltaTime;
         if (cloud.basePos.x < CLOUD_DESPAWN_X) {
-            RespawnCloud(cloud, true);
+            float maxX = CLOUD_SPAWN_X_MAX - slotWidth;
+            for (const auto& other : clouds) {
+                if (other.basePos.x > maxX) maxX = other.basePos.x;
+            }
+            RespawnCloud(cloud);
+            cloud.basePos.x = maxX + slotWidth;
         }
     }
 
@@ -87,30 +116,36 @@ void SchoolSkyEffect::update(float deltaTime) {
     UpdateLightValues(shader, light);
 }
 
-void SchoolSkyEffect::RespawnCloud(CloudInstance& cloud, bool offscreenRight) {
-    // X: either scattered across the visible width (initial placement) or
-    // placed just past the right edge (recycling one that drifted off-left).
-    // Recycle range is as wide as the initial scatter (6.5 to 12.5, matching
-    // the 6-unit spread of -5.5 to 5.5) -- a narrow fixed recycle band made
-    // every cloud funnel through the same ~1.5-unit slot on respawn, so after
-    // the first cycle they'd drift in near-lockstep and clump/gap instead of
-    // staying naturally staggered like the initial scatter.
-    float x = offscreenRight ? (6.5f + (float)(GetRandomValue(0, 600)) / 100.0f)
-                              : (float)(GetRandomValue(-550, 550)) / 100.0f;
+void SchoolSkyEffect::RespawnCloud(CloudInstance& cloud) {
+    // X is NOT set here -- both call sites (init()'s even initial spacing and
+    // update()'s "one slot-width past the current rightmost cloud" recycle
+    // placement) set basePos.x themselves right after calling this, so every
+    // cloud stays evenly spaced across the loop permanently instead of only
+    // for the first lap. This only randomizes what varies cloud-to-cloud
+    // within the existing band: depth/height/puff shape/fixed drift speed.
+    //
     // The 3D camera (fovy=28 at z=10) always renders into the FULL 1280x720
     // canvas regardless of where the 2D SceneCamera is panned/zoomed to at
     // that moment -- the 2D camera crops a window out of this canvas after
     // the fact, it doesn't affect the 3D sky render itself. So this range
     // only needs to stay within the actual sky band of that fixed canvas:
-    // above schoolbg.png's roofline (~3D-Y -0.6) and below the top edge
-    // (~3D-Y +2.6). 0.0 to 1.6 keeps clouds comfortably inside that band
-    // instead of clustering near the top edge (previous 0.5-2.5 put too much
-    // of the range right at the frame's very top, above where you'd ever
-    // actually see it once the 2D camera crops down toward gameplay zoom).
-    float y = 0.0f + (float)(GetRandomValue(0, 160)) / 100.0f;
+    // Camera is now much closer/tighter than when this band was tuned
+    // (debugCamDist 4, pitch -5deg, fovy 28 -- was dist 10, pitch 0). At that
+    // framing the visible frustum at the clouds' depth is only ~2.4 units
+    // wide and ~1.4 tall, so the old X/Y/Z band (sized for a dist-10 camera)
+    // put almost the entire cloud path outside the frame -- only whichever
+    // cloud happened to be crossing dead-center was ever visible. Rescaled
+    // to actually sit inside the current frustum, with the vertical center
+    // nudged down slightly to account for the downward pitch.
+    float y = -0.3f + (float)(GetRandomValue(0, 140)) / 100.0f;  // -0.3 to 1.1
     float z = -0.8f - (float)(GetRandomValue(0, 180)) / 100.0f; // -0.8 to -2.6, some forward/back depth variance
-    cloud.basePos = {x, y, z};
-    cloud.driftSpeed = 0.05f + (float)(GetRandomValue(0, 60)) / 1000.0f;  // 0.05-0.11 u/s, gentle and varied
+    cloud.basePos.y = y;
+    cloud.basePos.z = z;
+    // Fixed shared speed (was randomized 0.05-0.11 per cloud) -- combined
+    // with even spacing that never gets reshuffled, this is what keeps the
+    // sky from clumping/gapping over time; a shared speed can't let one
+    // cloud catch up to or fall behind another.
+    cloud.driftSpeed = 0.08f;
 
     int puffCount = GetRandomValue(3, 4);
     cloud.puffOffsets.clear();
@@ -128,7 +163,7 @@ void SchoolSkyEffect::RespawnCloud(CloudInstance& cloud, bool offscreenRight) {
 
 void SchoolSkyEffect::drawCloud(const CloudInstance& cloud) const {
     for (size_t i = 0; i < cloud.puffOffsets.size(); i++) {
-        Vector3 pos = Vector3Add(cloud.basePos, cloud.puffOffsets[i]);
+        Vector3 pos = Vector3Add(Vector3Add(cloud.basePos, cloudOrigin), cloud.puffOffsets[i]);
         float s = cloud.puffScales[i];
         // Flattened on Y so puffs read as cloud-shaped rather than round balls.
         DrawModelEx(cloudPuff, pos, {0, 1, 0}, 0.0f, {s, s * 0.6f, s}, WHITE);
@@ -136,15 +171,20 @@ void SchoolSkyEffect::drawCloud(const CloudInstance& cloud) const {
 }
 
 void SchoolSkyEffect::drawBackground() {
+    Vector3 camPos = {0.0f, 0.0f, debugCamDist};
+    Vector3 forward = {0.0f, 0.0f, -debugCamDist};
+    Vector3 right = {1.0f, 0.0f, 0.0f};
+    forward = Vector3RotateByAxisAngle(forward, right, debugPitchDeg * DEG2RAD);
+
     Camera3D cam3d = {};
-    cam3d.position   = {0.0f, 0.0f, 10.0f};
-    cam3d.target     = {0.0f, 0.0f, 0.0f};
+    cam3d.position   = camPos;
+    cam3d.target     = Vector3Add(camPos, forward);
     cam3d.up         = {0.0f, 1.0f, 0.0f};
-    cam3d.fovy       = 28.0f;
+    cam3d.fovy       = debugFovyDeg;
     cam3d.projection = CAMERA_PERSPECTIVE;
 
     BeginMode3D(cam3d);
-        Vector3 jetPos = Vector3Lerp(jetStart, jetEnd, jetT);
+        Vector3 jetPos = Vector3Add(Vector3Lerp(jetStart, jetEnd, jetT), jetOrigin);
         // Gentle rock/bank around the roll axis (X, the direction of travel) --
         // a slow sine wave, not real flight dynamics, just enough motion to
         // keep it from looking like a static cardboard cutout sliding past.
@@ -181,3 +221,4 @@ void SchoolSkyEffect::cleanup() {
     UnloadModel(cloudPuff);
     UnloadShader(shader);
 }
+

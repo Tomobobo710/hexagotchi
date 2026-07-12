@@ -48,7 +48,8 @@ public:
     void draw() override;
     void cleanup() override;
 
-    void triggerScenario(int index);
+    void triggerScenario(int index) override;
+    int getScenarioCount() const override { return (int)scenarios.size(); }
     void triggerStoryEvent(int scenarioIndex) override;
     bool isPlayingScenario() const override;
 
@@ -96,6 +97,12 @@ private:
     // (with computed screen rects) instead of through the normal
     // background/foreground SceneEffect split.
     TherapistWindowEffect* windowEffect = nullptr;
+
+    // Which of windowEffect's three dial-in origins (backdrop/road/tree) the
+    // I/J/K/L/U/O debug controls currently move -- cycled with TAB. Previously
+    // only backdropOrigin was wired, so road/tree could only be fixed by
+    // hand-editing constants in TherapistWindowEffect.hpp.
+    int debugOriginTarget = 0;  // 0=backdrop, 1=road, 2=tree
 };
 
 #endif // THERAPIST_OFFICE_SCENE_HPP

@@ -208,19 +208,31 @@ float hash(vec2 p) {
 }
 
 // Pointy-top axial hex grid. Returns (cell center .xy, edge-distance .z 0..1,
-// stable per-cell hash .w).
-vec4 hexInfo(vec2 p) {
+// stable per-cell hash .w) and writes the cell's INTEGER coords to qr.
+//
+// qr comes from the exact same floor() values that select the cell -- never
+// recovered from the center afterward. (The old recovery version rounded
+// differently on the GPU than the selection did, so whole rows of cells got
+// the neighboring row's index -> same-color neighbor pairs.)
+// A-lattice cells land on (odd, odd) qr, B-lattice on (even, even); qr.x is
+// in half-column units, qr.y in half-row (sqrt(3)/2) units.
+vec4 hexInfo(vec2 p, out vec2 qr) {
     vec2 s = vec2(1.0, 1.7320508);
-    vec2 hexA = mod(p, s) - s * 0.5;
-    vec2 hexB = mod(p - s * 0.5, s) - s * 0.5;
-    vec2 gridA = p - hexA;
-    vec2 gridB = p - s * 0.5 - hexB;
-    bool aWins = dot(hexA, hexA) < dot(hexB, hexB);
+    vec2 fa = floor(p / s);
+    vec2 fb = floor(p / s - 0.5);
+    vec2 ca = (fa + 0.5) * s;   // A candidate center
+    vec2 cb = (fb + 1.0) * s;   // B candidate center
+    vec2 hexA = p - ca;
+    vec2 hexB = p - cb;
+    // Tiny bias so the A/B tie line doesn't flicker per-pixel (it produced a
+    // dithered noise streak where the two sub-lattices are exactly equidistant).
+    bool aWins = dot(hexA, hexA) < dot(hexB, hexB) + 1.0e-4;
     vec2 hex  = aWins ? hexA : hexB;
-    vec2 grid = aWins ? gridA : gridB;
+    vec2 grid = aWins ? ca : cb;
+    qr = aWins ? fa * 2.0 + 1.0 : fb * 2.0 + 2.0;
     vec3 hc = vec3(hex.x, hex.y*0.5 + hex.x*0.28867513, hex.y*0.5 - hex.x*0.28867513);
     float d = max(max(abs(hc.x), abs(hc.y)), abs(hc.z)) / 0.8660254;
-    return vec4(grid, d, hash(floor(grid*16.0 + 0.5)/16.0));
+    return vec4(grid, d, hash(qr));
 }
 
 // One of the 9 cast colors by integer index 0..8 (dynamic-index-free).
@@ -236,49 +248,58 @@ vec3 castColor(float id) {
     return castColorI(int(floor(id * 9.0)));
 }
 
-// Pick a cast color for a hex from its GRID CENTER, using a linear function of
-// integer cell coords instead of a random hash. This spreads the 9 colors
-// EVENLY across the field and makes same-color neighbors rare (a linear
-// coloring on a lattice avoids most adjacencies), while never clumping the way
-// a random hash does. `mod 9` cycles the whole cast.
-vec3 castColorForCell(vec2 gridCenter) {
-    // Recover integer axial-ish cell coords from the hex center. Rows are
-    // spaced sqrt(3)/2 vertically; odd rows are offset half a column in x.
-    float row = floor(gridCenter.y / 0.8660254 + 0.5);
-    float col = floor(gridCenter.x - mod(row, 2.0) * 0.5 + 0.5);
-    // Linear combo chosen so the 6 hex neighbors land on different residues
-    // mod 9 as much as possible -> even spread, minimal same-color touching.
-    float k = mod(col * 2.0 + row * 5.0, 9.0);
-    if (k < 0.0) k += 9.0;
-    return castColorI(int(k));
+// Pick a cast color for a hex from its integer qr coords (from hexInfo).
+//
+// Any pure formula (k linear in qr, mod 9) puts each color on a perfect
+// diagonal -- reads as stripes/lines. Instead: a proper 3-COLORING of the hex
+// lattice (class = qr.x mod 3; neighbor deltas in qr.x are +-1/+-2, so
+// touching cells ALWAYS land in different classes), where each class owns a
+// private bucket of 3 palette colors and the cell picks RANDOMLY within its
+// bucket. Random-looking, yet two touching hexes can never share a color --
+// and look-alike colors are grouped into the same bucket (see the palette
+// cast order) so near-identical hues can't touch either.
+vec3 castColorForCell(vec2 qr) {
+    float cls = mod(qr.x, 3.0);
+    if (cls < 0.0) cls += 3.0;
+    float sub = min(floor(hash(qr) * 3.0), 2.0);
+    return castColorI(int(cls * 3.0 + sub));
 }
 
 // One rotated, drifting hex layer, shaded with glow + neighbor bleed + flowing
 // seam. `depth` dims the back layer so it reads further away.
-vec3 sampleLayer(vec2 uv, float sc, float rot, vec2 drift, float depth) {
+// Returns color in .rgb and edge-distance in .a; writes the cell center (in
+// layer grid space) to cellCenter so main() can run cell-quantized opacity
+// waves over the front layer.
+vec4 sampleLayer(vec2 uv, float sc, float rot, vec2 drift, float depth, out vec2 cellCenter, out vec2 layerP) {
     float cr = cos(rot), sr = sin(rot);
     vec2 rv = vec2(uv.x*cr - uv.y*sr, uv.x*sr + uv.y*cr);
     vec2 p = rv * sc + drift;
+    layerP = p;
 
-    vec4 info = hexInfo(p);
+    vec2 qr;
+    vec4 info = hexInfo(p, qr);
     float d = info.z;
     float id = info.w;
-    vec3 base = castColorForCell(info.xy);   // even, non-clumping cast coloring
+    vec3 base = castColorForCell(qr);   // even, non-clumping cast coloring
 
+    // Brightness kept nearly FLAT: heavy per-cell dimming collapsed distinct
+    // palette colors into each other (white dimmed 40% == grey, yellow ==
+    // orange), which read as same-color neighbor pairs. Subtle glow only.
     float pulse = sin(time * 0.9 + id * 6.2831853) * 0.5 + 0.5;
     float glow = (1.0 - smoothstep(0.0, 1.0, d)) * (0.35 + 0.35 * pulse);
-    vec3 col = base * (0.72 + 0.5 * glow);
+    vec3 col = base * (0.92 + 0.16 * glow);
 
     vec3 nb = castColor(fract(id + 0.37));
-    col = mix(col, mix(col, nb, 0.5), smoothstep(0.55, 1.0, d));
+    col = mix(col, mix(col, nb, 0.15), smoothstep(0.55, 1.0, d));
 
     float edge = smoothstep(0.86, 0.98, d);
     float flow = sin(id * 20.0 + time * 1.6) * 0.5 + 0.5;
     vec3 seam = base * (0.30 + 0.9 * flow);
     col = mix(col, seam, edge * 0.8);
 
-    col = mix(col, col * 0.45, depth);
-    return col;
+    col = mix(col, col * 0.60, depth);
+    cellCenter = info.xy;
+    return vec4(col, d);
 }
 
 void main() {
@@ -286,18 +307,26 @@ void main() {
     uv.x *= aspect;
 
     float t = time;
-    vec3 frontCol = sampleLayer(uv, 6.0, t * 0.03, vec2(t*0.10, t*-0.07), 0.0);
-    vec3 backCol  = sampleLayer(uv + vec2(0.04, 0.02), 3.3, t * -0.02, vec2(t*-0.05, t*0.04), 1.0);
+    // ONE grid: small crisp hexes, cast colors, provably no same-color
+    // neighbors (see castColorForCell).
+    vec2 fc, fp;
+    vec4 front = sampleLayer(uv, 9.0, t * 0.04, vec2(t*0.12, t*-0.08), 0.0, fc, fp);
 
-    float frontLum = (frontCol.r + frontCol.g + frontCol.b) * 0.3333;
-    float showBack = smoothstep(0.10, 0.35, frontLum);
-    vec3 col = mix(backCol, frontCol, showBack);
+    // Gentle brightness RIPPLES sweeping across the field. Spatially smooth
+    // (built from the continuous layer position fp, never per-cell values --
+    // cell-quantized modulation dithered into noise bands at cell boundaries).
+    float w1 = sin(dot(fp, vec2(0.80, 0.45)) * 1.5 - t * 2.6);
+    float w2 = sin(dot(fp, vec2(-0.35, 0.90)) * 1.9 + t * 1.9);
+    float ripple = w1 * 0.5 + w2 * 0.5;                    // -1..1
+    vec3 col = front.rgb * (1.0 + 0.07 * ripple);
 
+    // Wave + vignette kept SHALLOW for the same reason as the flat cell glow:
+    // deep luminance swings make distinct palette colors read as each other.
     float wave = sin(uv.x * 1.2 + uv.y * 0.8 - t * 0.4) * 0.5 + 0.5;
-    col *= 0.9 + 0.15 * wave;
+    col *= 0.96 + 0.06 * wave;
 
-    float vig = 1.0 - 0.35 * dot(uv, uv);
-    col *= clamp(vig, 0.6, 1.0);
+    float vig = 1.0 - 0.18 * dot(uv, uv);
+    col *= clamp(vig, 0.8, 1.0);
 
     OUTCOLOR = vec4(col, 1.0);
 }
@@ -332,10 +361,17 @@ TitleScrollShader::TitleScrollShader()
     // The palette IS the cast: each hex gets one of the 9 characters' identity
     // (name) colors, pulled straight from CharacterRegistry so this stays in
     // sync if a character's color ever changes.
+    //
+    // ORDER MATTERS: the shader's 3-coloring gives each lattice class a
+    // private bucket of 3 consecutive palette slots (0-2, 3-5, 6-8), and
+    // touching hexes are always in different classes/buckets. So look-alike
+    // colors are grouped INTO THE SAME BUCKET to guarantee they never touch:
+    // white/grey (+olive), the warm yellow/orange/red family, and the
+    // pink/purple/blue family.
     const CharacterId cast[PALETTE_SIZE] = {
-        CharacterId::Tom, CharacterId::Karen, CharacterId::Ronzer,
-        CharacterId::Jimmy, CharacterId::Bimmy, CharacterId::Judy,
-        CharacterId::Larry, CharacterId::Loraine, CharacterId::Mark,
+        CharacterId::Judy,  CharacterId::Larry,   CharacterId::Tom,     // white | grey | olive
+        CharacterId::Karen, CharacterId::Loraine, CharacterId::Ronzer,  // yellow | orange | red
+        CharacterId::Mark,  CharacterId::Bimmy,   CharacterId::Jimmy,   // pink | purple | blue
     };
     for (int i = 0; i < PALETTE_SIZE; i++) {
         palette_[i] = CharacterRegistry::get(cast[i]).nameColor;

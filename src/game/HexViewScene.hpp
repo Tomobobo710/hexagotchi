@@ -39,12 +39,12 @@ private:
     void togglePause() override;
     bool isPaused() const override { return paused; }
 
-    // Callback for pause menu
-    void onExitSelected();  // Request exit
-
     // Back button logic
     void addBackButton();
     void onBackButtonClicked();
+
+    // Pause button logic (top-right corner)
+    void addPauseButton();
 
 private:
     HexWorld* world;
@@ -82,6 +82,9 @@ private:
 
     // Back button
     std::unique_ptr<Button> backButton_;
+
+    // Pause button (top-right corner)
+    std::unique_ptr<Button> pauseButton_;
 
     // Tutorial controller reference -- drives back-button/hotbar locking and
     // owns the GotchiDialogBox drawn/advanced while a tutorial step belongs

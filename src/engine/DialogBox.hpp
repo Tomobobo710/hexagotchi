@@ -169,6 +169,16 @@ protected:
     float fadeTimer;
 
     bool autoContinueEnabled;
+    // What the current scene/line actually asked for via
+    // setAutoContinueEnabled(), independent of the live global Auto Dialog
+    // setting. autoContinueEnabled (the effective, actually-used flag) is
+    // recomputed from this every update() against the CURRENT GetDialogSpeed()
+    // -- so toggling the setting in OPTIONS (even mid-line, e.g. paused in a
+    // Tom-world scene) takes effect immediately instead of only on the next
+    // setAutoContinueEnabled() call (previously only made at scenario/line
+    // start), which was the "flip Auto Dialog but it doesn't apply until you
+    // leave/re-enter" bug.
+    bool requestedAutoContinue_;
     float autoContinueDuration;
     bool autoContinueDurationOverridden;
     float autoContinueTimer;

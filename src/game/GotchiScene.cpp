@@ -8,6 +8,7 @@
 #include "MergeController.hpp"
 #include "ExploreGate.h"
 #include "EventType.h"
+#include "OptionsScene.hpp"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -377,6 +378,38 @@ GotchiScene::GotchiScene()
 }
 
 void GotchiScene::init() {
+    // Set up callbacks for the pause menu (same pattern as HexViewScene)
+    pauseMenu = std::unique_ptr<PauseMenuOverlay>(new PauseMenuOverlay(*this));
+    pauseMenu->onResume = [this]() {
+        paused = false;
+        SceneInputHandler* ih = getInputHandler();
+        if (ih) ih->clearAllInputs();
+    };
+    pauseMenu->onClose = [this]() {
+    };
+    pauseMenu->onOptionsSelected = [this]() {
+        if (auto* sm = static_cast<SceneManager*>(getSceneManager())) {
+            auto* options = static_cast<OptionsScene*>(sm->getScene("options"));
+            if (options) options->setReturnScene("gotchi");
+            paused = false;
+            sm->switchScene("options");
+        }
+    };
+
+    // Pause button -- half the size of the care-action buttons (160x64 -> 80x32),
+    // top-right corner, small padding. Button only supports top-left/center/
+    // top-center/bottom anchors, so top-left is used with position computed
+    // from the button's own width.
+    static const float PAUSE_BTN_W = 80.0f, PAUSE_BTN_H = 32.0f, PAUSE_BTN_PAD = 12.0f;
+    pauseButton_ = std::unique_ptr<Button>(new Button(
+        {(float)GAME_W - PAUSE_BTN_W - PAUSE_BTN_PAD, PAUSE_BTN_PAD}, PAUSE_BTN_W, PAUSE_BTN_H, "PAUSE"));
+    pauseButton_->setAnchor("top-left");
+    pauseButton_->setFontSize(16);
+    pauseButton_->setBackgroundColor({60, 60, 100, 220});
+    pauseButton_->setHoverColor({100, 100, 160, 240});
+    pauseButton_->setBorderColor({150, 150, 200, 255});
+    pauseButton_->setOnClick([this]() { togglePause(); });
+
     // Center camera
     getCamera()->setBoundary(0, 0, 720.0f, 720.0f);
 
@@ -528,7 +561,7 @@ void GotchiScene::addButton(const std::string& label, float x, float y, bool isM
     btn->setBorderColor({150, 150, 200, 255});
 
     if (label == "Sleep") {
-        btn->setTooltip("Use this to sleep in HexLand!");
+        btn->setTooltip("Use this to stay in HexLand!");
     }
 
     if (isMergeButton) {
@@ -562,6 +595,16 @@ void GotchiScene::onMergeButtonClicked() {
 
 void GotchiScene::update(float deltaTime) {
     Scene::update(deltaTime);
+
+    // Pause button is always live, even while paused, so it can be used to
+    // resume; when paused, skip the rest of gameplay logic entirely (matches
+    // HexViewScene's pause handling).
+    SceneInputHandler* pauseInput = getInputHandler();
+    if (pauseButton_) pauseButton_->update(pauseInput, deltaTime);
+    if (paused) {
+        if (pauseMenu) pauseMenu->update(deltaTime);
+        return;
+    }
 
     // Detect the sleep-hits-0 collapse BEFORE freezing/updating the gotchi
     // this frame, so the freeze takes effect the same frame sleep bottoms out.
@@ -656,6 +699,20 @@ void GotchiScene::update(float deltaTime) {
     applyTutorialLocks();
     for (auto& btn : buttons) {
         btn->update(input, deltaTime);
+    }
+
+    // Advance/reveal the wobble speech bubble. Manual advance only, same
+    // tap/space convention as the tutorial's GotchiDialogBox.
+    if (wobbleDialogShown_) {
+        wobbleDialog_.update(deltaTime);
+        bool acceptPressed = IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+        if (acceptPressed && wobbleDialog_.isVisible()) {
+            if (!wobbleDialog_.isFinished()) {
+                wobbleDialog_.skipReveal();
+            } else {
+                wobbleDialog_.hide();
+            }
+        }
     }
 
     // Advance/reveal the tutorial dialog while it belongs to this scene; once
@@ -762,7 +819,29 @@ void GotchiScene::draw() {
 
     // Sleep bar (0 is rested, 100 is exhausted - bar fills as sleep debt increases)
     float sleep = gotchi->getStats().getNormalizedStat(SecondaryStat::SLEEP_DEBT);
-    DrawText("Sleep", lx, ly, 12, {200, 200, 200, 255});
+    // "Sleep stat" as shown to the player is sleep QUALITY (100 - debt), so
+    // the glow triggers once quality drops below 50 (i.e. debt above 0.5f).
+    float sleepQuality = 1.0f - sleep;
+    if (sleepQuality < 0.5f) {
+        // Breathe faster the lower sleep quality gets: ~1.2Hz at just-under-50,
+        // ramping to ~3.5Hz as it approaches 0 (fully exhausted).
+        float severity = 1.0f - (sleepQuality / 0.5f);  // 0 at threshold, 1 at empty
+        float breathHz = 0.6f + severity * 1.15f;
+        float breathe = (sinf(simTime_ * breathHz * 2.0f * PI) + 1.0f) * 0.5f;  // 0..1
+
+        unsigned char glowAlpha = static_cast<unsigned char>(80 + breathe * 120);
+        Color glowColor = {255, 80, 80, glowAlpha};
+
+        // Soft glow behind the label + bar, pulsing outward slightly.
+        float glowPad = 3.0f + breathe * 3.0f;
+        DrawRectangleRounded(
+            { (float)lx - glowPad, (float)ly - glowPad + 2.0f, 60.0f + 120.0f + glowPad * 2.0f, 10.0f + glowPad * 2.0f },
+            0.4f, 8, glowColor);
+
+        DrawText("Sleep", lx, ly, 12, {255, (unsigned char)(200 * (1.0f - breathe * 0.5f)), (unsigned char)(200 * (1.0f - breathe * 0.5f)), 255});
+    } else {
+        DrawText("Sleep", lx, ly, 12, {200, 200, 200, 255});
+    }
     DrawRectangle(lx + 60, ly + 2, 120, 10, {50, 50, 50, 255});
     DrawRectangle(lx + 60, ly + 2, static_cast<int>(120 * sleep), 10, {100, 50, 150, 255});
     DrawText(std::to_string(static_cast<int>(sleep * 100)).c_str(), lx + 185, ly, 12, {200, 200, 200, 255});
@@ -784,7 +863,12 @@ void GotchiScene::draw() {
     // fixed left x-position -- the old rx=460 left a big unused gap between
     // the panel and the screen edge, and the pill width used the wrap
     // target width instead of the widest line actually drawn.
+    //
+    // Starts below the top-right PAUSE button (12px pad + 32px tall, see
+    // addPauseButton()) with the same 12px vertical padding beneath it, so
+    // the two never overlap.
     const int panelMargin = 16;
+    const int pauseButtonBottom = 12 + 32;  // PAUSE_BTN_PAD + PAUSE_BTN_H
     const int panelPadding = 14;
     const int titleFontSize = 14;
     const int moodFontSize = 24;
@@ -836,7 +920,7 @@ void GotchiScene::draw() {
 
     int panelWidth = contentWidth + panelPadding * 2;
     int rx = GAME_W - panelMargin - panelWidth + panelPadding;
-    int ry = 40;
+    int ry = pauseButtonBottom + 12 + panelPadding;
 
     int panelHeight = titleFontSize + 6 + moodFontSize + 10 + (int)needsLines.size() * needsLineHeight;
     DrawRectangleRounded(
@@ -890,6 +974,15 @@ void GotchiScene::draw() {
     if (tutorialController_ && tutorialController_->isActive() && tutorialController_->currentScene() == "gotchi") {
         tutorialController_->draw();
     }
+
+    if (wobbleDialogShown_) {
+        wobbleDialog_.draw();
+    }
+
+    // Pause button, always visible top-right; pause overlay drawn on top of
+    // everything when paused.
+    if (pauseButton_) pauseButton_->draw();
+    if (paused && pauseMenu) pauseMenu->draw();
 
     // Draw action shader overlay on top of the gotchi
     if (actionOverlayTimer_ > 0.0f && actionOverlayMode_ >= 0) {
@@ -1129,6 +1222,7 @@ void GotchiScene::cleanup() {
     }
 
     gotchi = nullptr;
+    paused = false;
 }
 
 void GotchiScene::applyTutorialLocks() {
@@ -1239,6 +1333,11 @@ void GotchiScene::applySleepCollapseGate() {
     if (!gameState_->sleepCollapsed && sleepMaxed && gameState_->mode == Mode::Gotchi) {
         gameState_->sleepCollapsed = true;
         gotchi->setAction("wobble");
+
+        wobbleDialog_.setPosition({ (GAME_W - 460.0f) / 2.0f, 60.0f });
+        wobbleDialog_.setText("Oh... I don't feel so good..");
+        wobbleDialog_.show();
+        wobbleDialogShown_ = true;
     }
 }
 
@@ -1249,3 +1348,21 @@ void GotchiScene::onExploreButtonClicked() {
         mgr->switchScene("hexboard");
     }
 }
+
+void GotchiScene::togglePause() {
+    if (!paused) {
+        paused = true;
+        if (pauseMenu) pauseMenu->open();
+
+        // Cut any in-flight care-action shader overlay (wash/groom/feed/pet/
+        // water splash effect) short rather than leaving it frozen mid-effect
+        // behind the pause menu, or having it resume and finish on top of
+        // gameplay once the player unpauses.
+        actionOverlayTimer_ = 0.0f;
+        actionOverlayMode_ = -1;
+    } else {
+        paused = false;
+        if (pauseMenu) pauseMenu->close();
+    }
+}
+

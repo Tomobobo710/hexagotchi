@@ -11,7 +11,15 @@ SceneSelectScene::SceneSelectScene(SceneManager* manager)
 }
 
 void SceneSelectScene::addSceneButton(const std::string& label, const std::string& sceneName, float y) {
-    Button* btn = new Button({(float)GAME_W / 2.0f, y}, BUTTON_WIDTH, BUTTON_HEIGHT, label);
+    addSceneButtonAt(label, sceneName, (float)GAME_W / 2.0f, y);
+}
+
+void SceneSelectScene::addSceneButtonAt(const std::string& label, const std::string& sceneName, float x, float y) {
+    addSceneButtonAt(label, sceneName, x, y, BUTTON_WIDTH);
+}
+
+void SceneSelectScene::addSceneButtonAt(const std::string& label, const std::string& sceneName, float x, float y, float width) {
+    Button* btn = new Button({x, y}, width, BUTTON_HEIGHT, label);
     btn->setAnchor("center");
     SceneManager* mgr = sceneManager;
     btn->setOnClick([mgr, sceneName]() {
@@ -35,7 +43,15 @@ void SceneSelectScene::init() {
     addSceneButton("MERGE TRANSITION", "merge", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 6);
     addSceneButton("TOY ANIMATION", "toy_animation", startY + (BUTTON_HEIGHT + BUTTON_SPACING) * 7);
 
-    // Future world-scenes get one more addSceneButton() call here.
+    // First column is full (spans GAME_W/2 +/- BUTTON_WIDTH/2, i.e. 200..520
+    // at GAME_W=720) -- new entries go in a narrower second column using the
+    // remaining right margin instead.
+    float col2Width = 160.0f;
+    float col2X = (float)GAME_W - col2Width / 2.0f - 20.0f;
+    addSceneButtonAt("CREDITS", "credits", col2X, startY, col2Width);
+
+    // Future world-scenes get one more addSceneButton() (col 1, if there's
+    // room) or addSceneButtonAt() (col 2) call here.
     // (Numpad 0 in any world scene toggles a wide view showing the whole
     // scene at once, for eyeballing 3D effect placement -- see
     // SceneCamera::toggleWideView() -- so there's no separate preview scene

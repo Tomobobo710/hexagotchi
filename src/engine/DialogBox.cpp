@@ -16,8 +16,9 @@ DialogBox::DialogBox(Vector2 pos, float w, float h)
       fontSize(DIALOG_DEFAULT_FONT_SIZE), padding(DIALOG_DEFAULT_PADDING),
       borderThickness(DIALOG_DEFAULT_BORDER), optionSpacing(DIALOG_OPTION_SPACING),
       charRevealSpeed(DIALOG_CHAR_REVEAL_SPEED), fadeSpeed(DIALOG_FADE_DURATION),
-      visible(false), fadeAlpha(0.0f), fadeTimer(0.0f),
-      autoContinueEnabled(false), autoContinueDuration(DIALOG_AUTO_CONTINUE_MIN_DURATION),
+      visible(false), fadeAlpha(0.0f), fadeTimer(DIALOG_FADE_DURATION),
+      autoContinueEnabled(false), requestedAutoContinue_(false),
+      autoContinueDuration(DIALOG_AUTO_CONTINUE_MIN_DURATION),
       autoContinueDurationOverridden(false),
       autoContinueTimer(0.0f), autoAdvancePending(false) {
 }
@@ -32,6 +33,18 @@ void DialogBox::update(float deltaTime) {
     updateFade(deltaTime);
     if (visible) {
         updateCharReveal(deltaTime);
+
+        // Re-derive the effective enabled flag from the LIVE global setting
+        // every frame (not just when setAutoContinueEnabled() was last
+        // called), so flipping Auto Dialog in OPTIONS takes effect on the
+        // dialogue that's already on screen instead of only the next line.
+        bool wasEnabled = autoContinueEnabled;
+        autoContinueEnabled = requestedAutoContinue_ && GetDialogSpeed() != DialogSpeed::Off;
+        if (autoContinueEnabled && !wasEnabled) {
+            // Turning it on mid-line: start the bar from now, not from
+            // whatever accumulated (or didn't) while it was off.
+            autoContinueTimer = 0.0f;
+        }
 
         // Auto-continue runs from the moment the line is shown, in parallel
         // with the character reveal, so the bar reflects the whole time the
@@ -342,11 +355,12 @@ void DialogBox::skip() {
 }
 
 void DialogBox::setAutoContinueEnabled(bool enabled) {
-    // Global OFF setting hard-disables the feature regardless of what a scene
-    // requests -- both the timer (update) and the progress bar (draw) are gated
-    // on autoContinueEnabled, so forcing it false gives "no bar, manual-only".
-    if (GetDialogSpeed() == DialogSpeed::Off) enabled = false;
-    autoContinueEnabled = enabled;
+    // Store what the scene/line actually requested; the effective
+    // autoContinueEnabled is re-derived every update() against the LIVE
+    // global Auto Dialog setting (see update()) so a later change to that
+    // setting is picked up immediately instead of needing another call here.
+    requestedAutoContinue_ = enabled;
+    autoContinueEnabled = enabled && GetDialogSpeed() != DialogSpeed::Off;
     autoContinueTimer = 0.0f;
     autoAdvancePending = false;
 }

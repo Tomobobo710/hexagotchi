@@ -26,6 +26,8 @@ private:
     std::vector<std::unique_ptr<Button>> buttons;
 
     void addSceneButton(const std::string& label, const std::string& sceneName, float y);
+    void addSceneButtonAt(const std::string& label, const std::string& sceneName, float x, float y);
+    void addSceneButtonAt(const std::string& label, const std::string& sceneName, float x, float y, float width);
 };
 
 #endif // SCENE_SELECT_SCENE_HPP

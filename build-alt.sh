@@ -51,16 +51,12 @@ if [ ! -f raylib/src/libraylib.a ]; then
   make raylib/src/libraylib.a
 fi
 
-# Repack build/assets.rres whenever anything under assets/ is newer than it,
-# so asset changes are picked up automatically -- no manual pack step. Packed
-# into build/ -- it's a generated artifact, never the repo root.
+# Always repack assets so a stale/mistimed pack can never ship (matches
+# build-web.sh). Packed into build/ -- it's a generated artifact, never the
+# repo root.
 mkdir -p build
-if [ -z "$(find assets -newer build/assets.rres 2>/dev/null)" ] && [ -f build/assets.rres ]; then
-  echo "  assets.rres up to date"
-else
-  echo "  packing assets.rres"
-  tools/pack_assets.sh assets build/assets.rres
-fi
+echo "  packing assets.rres"
+tools/pack_assets.sh assets build/assets.rres
 
 mkdir -p "$OBJ"
 for f in src/main.cpp src/engine/*.cpp src/game/*.cpp src/effects/*.cpp src/events/*.cpp; do

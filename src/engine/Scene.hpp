@@ -108,6 +108,19 @@ public:
     // once per scenario). Default false for non-story scenes.
     virtual bool isPlayingScenario() const { return false; }
 
+    // Number of scripted scenarios this scene defines (scenarios.size() in
+    // subclasses that have one). Lets the scene_select debug hub cycle
+    // through and preview them generically (see main.cpp's Z key) without
+    // needing to know each scene's concrete type. Default 0 for non-story
+    // scenes.
+    virtual int getScenarioCount() const { return 0; }
+
+    // Plays scenario `index`'s dialog/camera/actor-move script from the top.
+    // Same override subclasses already provide for the StorySequencer-driven
+    // triggerStoryEvent() path, exposed here too so the scene_select debug
+    // hub can trigger scenarios without a per-scene-type cast. Default no-op.
+    virtual void triggerScenario(int index) {}
+
 protected:
     std::vector<SceneActor*> actors;
     std::vector<SceneActor*> actorsToRemove;

@@ -86,7 +86,8 @@ public:
     // Starts scripted scenario `index` (0-based into the internal scenario
     // table). Safe to call while ambient; ignored if a scenario is already
     // playing.
-    void triggerScenario(int index);
+    void triggerScenario(int index) override;
+    int getScenarioCount() const override { return (int)scenarios.size(); }
 
     // Scene override: calls triggerScenario
     void triggerStoryEvent(int scenarioIndex) override;
@@ -176,6 +177,12 @@ private:
     // A sunset sun glimpsed through the transparent glass cutout in the
     // parlor's front door (parlorbg.png) -- see SunEffect.hpp.
     SunEffect* sunEffect = nullptr;
+
+    // Which of sunEffect's two dial-in origins (sun/tree) the I/J/K/L/U/O
+    // debug controls currently move -- cycled with TAB. Previously only
+    // treeOrigin was wired, so sunOrigin could only be fixed by hand-editing
+    // the constant in SunEffect.hpp.
+    int debugOriginTarget = 0;  // 0=sun, 1=tree
 };
 
 #endif // PIZZA_PARLOR_SCENE_HPP

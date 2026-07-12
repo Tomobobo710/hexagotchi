@@ -46,7 +46,8 @@ public:
     void draw() override;
     void cleanup() override;
 
-    void triggerScenario(int index);
+    void triggerScenario(int index) override;
+    int getScenarioCount() const override { return (int)scenarios.size(); }
     void triggerStoryEvent(int scenarioIndex) override;
     bool isPlayingScenario() const override;
 
@@ -57,6 +58,18 @@ private:
     SceneActor* karen = nullptr;
     SceneActor* jimmy = nullptr;
     SceneActor* bimmy = nullptr;
+
+    // Not owned -- lifetime managed by Scene's effect list (addEffect() in
+    // init(), cleaned up by Scene::cleanup()). Kept here too so update()/
+    // draw() can wire the scene_select debug-camera/dial-in controls against
+    // it, same pattern as TherapistOfficeScene's windowEffect/PizzaParlorScene's
+    // sunEffect.
+    SchoolSkyEffect* skyEffect = nullptr;
+
+    // Which of skyEffect's two dial-in origins (jet/cloud) the I/J/K/L/U/O
+    // debug controls currently move -- cycled with TAB. Same pattern as
+    // TherapistOfficeScene/PizzaParlorScene's debugOriginTarget.
+    int debugOriginTarget = 0;  // 0=jet, 1=cloud
 
     DialogBox* dialog = nullptr;  // Not owned -- shared with main.cpp
 
@@ -81,6 +94,15 @@ private:
     int lineIndex = 0;
     int currentFocusActor = -1;
     float endElapsed = -1.0f;
+
+    // Live-tunable camera aim offset (see cameraTargetFor()) -- Up/Down keys
+    // nudge whichever one currently applies to the focused actor, in the
+    // scene_select debug hub. These ARE the real aimY values (not a delta on
+    // top of them), so whatever the readout shows is directly bake-able into
+    // the TOM_AIM_Y/KAREN_AIM_Y/KID_AIM_Y constants in SchoolScene.cpp.
+    float tomAimY;
+    float karenAimY;
+    float kidAimY;
 
     void advanceLine();
     void playLine(const SchoolLine& line);

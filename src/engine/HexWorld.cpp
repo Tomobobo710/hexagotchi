@@ -137,6 +137,8 @@ std::vector<TileType*> HexWorld::createBiomeTileTypes(BiomeType biome) const {
             types.push_back(new TileType("special_000", "special", TileDepth::SHALLOW));
             types.push_back(new TileType("special_001", "special", TileDepth::SHALLOW));
             break;
+        case BiomeType::NUM_BIOMES:
+            break;
     }
 
     return types;

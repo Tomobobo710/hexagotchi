@@ -45,6 +45,10 @@ static const float BDAY_KID_SCALE = 0.7f;
 // The orange "???" phone-text insert color (message body + name plate feel).
 static const Color PHONE_ORANGE = {235, 150, 40, 255};
 
+// Defined in main.cpp -- true for the frame in which a click was consumed by
+// the global Tom-world pause button/menu.
+extern bool IsPauseUiClaimingClick();
+
 PizzaParlorScene::PizzaParlorScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {225, 120, 60, 255}), dialog(sharedDialog) {
 }
@@ -324,6 +328,7 @@ void PizzaParlorScene::init() {
 
 void PizzaParlorScene::update(float deltaTime) {
     Scene::update(deltaTime);
+    if (isPaused()) return;
 
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
@@ -333,11 +338,16 @@ void PizzaParlorScene::update(float deltaTime) {
     if (sunEffect && getEntrySceneName() == "scene_select") {
         updateSceneDebugCamera(sunEffect, getCamera(), deltaTime);
 
-        // Dial-in controls, targeting the pine tree's position -- I/K: Y,
-        // J/L: X, U/O: Z. Temporary, for finding placement to bake into the
-        // scene. Gated to the scene_select debug hub so it doesn't eat
-        // I/J/K/L/U/O during real sequencer-driven playthroughs.
-        Vector3 origin = sunEffect->getTreeOrigin();
+        // TAB cycles which origin the I/J/K/L/U/O controls below move -- the
+        // sun and the pine tree in front of it need independent placement
+        // (see SunEffect.hpp), previously only the tree was reachable.
+        if (IsKeyPressed(KEY_TAB)) debugOriginTarget = (debugOriginTarget + 1) % 2;
+
+        // Dial-in controls for whichever origin is selected -- I/K: Y, J/L: X,
+        // U/O: Z. Temporary, for finding placement to bake into the scene.
+        // Gated to the scene_select debug hub so it doesn't eat I/J/K/L/U/O
+        // during real sequencer-driven playthroughs.
+        Vector3 origin = debugOriginTarget == 0 ? sunEffect->getSunOrigin() : sunEffect->getTreeOrigin();
         float moveSpeed = 4.0f * deltaTime;
         if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
         if (IsKeyDown(KEY_I)) origin.y += moveSpeed;
@@ -345,7 +355,8 @@ void PizzaParlorScene::update(float deltaTime) {
         if (IsKeyDown(KEY_L)) origin.x += moveSpeed;
         if (IsKeyDown(KEY_U)) origin.z -= moveSpeed;
         if (IsKeyDown(KEY_O)) origin.z += moveSpeed;
-        sunEffect->setTreeOrigin(origin);
+        if (debugOriginTarget == 0) sunEffect->setSunOrigin(origin);
+        else sunEffect->setTreeOrigin(origin);
     }
 
     if (activeScenario < 0) {
@@ -405,7 +416,8 @@ void PizzaParlorScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) ||
+                                        (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsPauseUiClaimingClick()));
             if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
             if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();
@@ -443,9 +455,10 @@ void PizzaParlorScene::draw() {
         drawSceneDebugCameraReadout(sunEffect, 16, 40);
 
         if (sunEffect) {
-            Vector3 origin = sunEffect->getTreeOrigin();
-            const char* txt = TextFormat("treeOrigin: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z",
-                origin.x, origin.y, origin.z);
+            const char* label = debugOriginTarget == 0 ? "sunOrigin" : "treeOrigin";
+            Vector3 origin = debugOriginTarget == 0 ? sunEffect->getSunOrigin() : sunEffect->getTreeOrigin();
+            const char* txt = TextFormat("%s: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z  (TAB to cycle)",
+                label, origin.x, origin.y, origin.z);
             DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
             DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
         }

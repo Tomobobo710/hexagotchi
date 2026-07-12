@@ -5,23 +5,32 @@ static const Color PAUSE_DIM_COLOR = {0, 0, 0, 160};
 static const Color PAUSE_PANEL_COLOR = {20, 20, 40, 230};
 static const Color PAUSE_PANEL_BORDER = {100, 100, 200, 255};
 static const float PAUSE_PANEL_WIDTH = 280.0f;
-static const float PAUSE_PANEL_HEIGHT = 260.0f;
+static const float PAUSE_PANEL_HEIGHT = 200.0f;
 static const float PAUSE_BUTTON_WIDTH = 200.0f;
 static const float PAUSE_BUTTON_HEIGHT = 44.0f;
 static const float PAUSE_BUTTON_SPACING = 16.0f;
 
-PauseMenuOverlay::PauseMenuOverlay(Scene& s)
-    : scene(s),
-      resumeButton({(float)GAME_W / 2.0f, (float)GAME_H / 2.0f - 60.0f}, PAUSE_BUTTON_WIDTH, PAUSE_BUTTON_HEIGHT, "RESUME"),
-      controlsButton({(float)GAME_W / 2.0f, (float)GAME_H / 2.0f}, PAUSE_BUTTON_WIDTH, PAUSE_BUTTON_HEIGHT, "CONTROLS"),
-      exitButton({(float)GAME_W / 2.0f, (float)GAME_H / 2.0f + 60.0f}, PAUSE_BUTTON_WIDTH, PAUSE_BUTTON_HEIGHT, "EXIT GAME") {
+static void styleAndWirePauseButtons(Button& resumeButton, Button& optionsButton,
+                                      std::function<void()>& onResume,
+                                      std::function<void()>& onOptionsSelected) {
     resumeButton.setAnchor("center");
-    controlsButton.setAnchor("center");
-    exitButton.setAnchor("center");
+    optionsButton.setAnchor("center");
+    resumeButton.setOnClick([&onResume]() { if (onResume) onResume(); });
+    optionsButton.setOnClick([&onOptionsSelected]() { if (onOptionsSelected) onOptionsSelected(); });
+}
 
-    resumeButton.setOnClick([this]() { if (onResume) onResume(); });
-    controlsButton.setOnClick([this]() { if (onControlsSelected) onControlsSelected(); });
-    exitButton.setOnClick([this]() { if (onExitSelected) onExitSelected(); });
+PauseMenuOverlay::PauseMenuOverlay(Scene& s)
+    : scene(&s),
+      resumeButton({(float)GAME_W / 2.0f, (float)GAME_H / 2.0f - 30.0f}, PAUSE_BUTTON_WIDTH, PAUSE_BUTTON_HEIGHT, "RESUME"),
+      optionsButton({(float)GAME_W / 2.0f, (float)GAME_H / 2.0f + 30.0f}, PAUSE_BUTTON_WIDTH, PAUSE_BUTTON_HEIGHT, "OPTIONS") {
+    styleAndWirePauseButtons(resumeButton, optionsButton, onResume, onOptionsSelected);
+}
+
+PauseMenuOverlay::PauseMenuOverlay()
+    : scene(nullptr),
+      resumeButton({(float)GAME_W / 2.0f, (float)GAME_H / 2.0f - 30.0f}, PAUSE_BUTTON_WIDTH, PAUSE_BUTTON_HEIGHT, "RESUME"),
+      optionsButton({(float)GAME_W / 2.0f, (float)GAME_H / 2.0f + 30.0f}, PAUSE_BUTTON_WIDTH, PAUSE_BUTTON_HEIGHT, "OPTIONS") {
+    styleAndWirePauseButtons(resumeButton, optionsButton, onResume, onOptionsSelected);
 }
 
 void PauseMenuOverlay::open() {
@@ -34,10 +43,14 @@ void PauseMenuOverlay::close() {
 }
 
 void PauseMenuOverlay::update(float deltaTime) {
-    SceneInputHandler* input = scene.getInputHandler();
+    SceneInputHandler* input = scene ? scene->getInputHandler() : nullptr;
     resumeButton.update(input, deltaTime);
-    controlsButton.update(input, deltaTime);
-    exitButton.update(input, deltaTime);
+    optionsButton.update(input, deltaTime);
+}
+
+void PauseMenuOverlay::update(float deltaTime, SceneInputHandler* input) {
+    resumeButton.update(input, deltaTime);
+    optionsButton.update(input, deltaTime);
 }
 
 void PauseMenuOverlay::draw() {
@@ -55,6 +68,5 @@ void PauseMenuOverlay::draw() {
     DrawText("PAUSED", (int)(GAME_W / 2.0f - titleWidth / 2.0f), (int)(panel.y + 20.0f), 28, WHITE);
 
     resumeButton.draw();
-    controlsButton.draw();
-    exitButton.draw();
+    optionsButton.draw();
 }

@@ -47,7 +47,8 @@ public:
     void draw() override;
     void cleanup() override;
 
-    void triggerScenario(int index);
+    void triggerScenario(int index) override;
+    int getScenarioCount() const override { return (int)scenarios.size(); }
     void triggerStoryEvent(int scenarioIndex) override;
     bool isPlayingScenario() const override;
 

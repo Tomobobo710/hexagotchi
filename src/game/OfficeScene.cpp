@@ -16,6 +16,10 @@ int statPct(float value) {
 }
 }
 
+// Defined in main.cpp -- true for the frame in which a click was consumed by
+// the global Tom-world pause button/menu.
+extern bool IsPauseUiClaimingClick();
+
 OfficeScene::OfficeScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {20, 22, 28, 255}), dialog(sharedDialog) {
 }
@@ -416,6 +420,7 @@ void OfficeScene::init() {
 
 void OfficeScene::update(float deltaTime) {
     Scene::update(deltaTime);
+    if (isPaused()) return;
 
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
@@ -467,7 +472,8 @@ void OfficeScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) ||
+                                        (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsPauseUiClaimingClick()));
             if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
             if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();

@@ -23,6 +23,10 @@ static const float TOM_SCALE   = 0.8f;
 static const float SIDE_SCALE  = 0.8f;   // Loraine, Ronzer, Karen
 static const float MARK_SCALE  = 1.0f;
 
+// Defined in main.cpp -- true for the frame in which a click was consumed by
+// the global Tom-world pause button/menu.
+extern bool IsPauseUiClaimingClick();
+
 EndingScene::EndingScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {16, 16, 22, 255}), dialog(sharedDialog) {
 }
@@ -288,6 +292,7 @@ void EndingScene::init() {
 
 void EndingScene::update(float deltaTime) {
     Scene::update(deltaTime);
+    if (isPaused()) return;
 
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
@@ -319,7 +324,8 @@ void EndingScene::update(float deltaTime) {
             return;
         }
         if (dialog->isFinished()) {
-            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) ||
+                                        (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsPauseUiClaimingClick()));
             if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
             if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();

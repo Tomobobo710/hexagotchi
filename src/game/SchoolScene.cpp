@@ -3,19 +3,31 @@
 #include "AssetPack.hpp"
 #include "AudioManager.hpp"
 #include "SchoolSkyEffect.hpp"
+#include "SceneDebugCamera.hpp"
 #include "CharacterRegistry.hpp"
 #include <cmath>
 
 // Positions/scales/flips from the scene editor's layout.json. Tom on the far
-// left facing right; Karen center; the two boys on the right at 0.7 scale
-// (they're kids). flipX hardcoded per-actor in the draw fns.
-static const Vector2 TOM_POS   = {104.0f, 278.0f};
-static const Vector2 KAREN_POS = {594.0f, 357.0f};
-static const Vector2 JIMMY_POS = {760.0f, 379.0f};
-static const Vector2 BIMMY_POS = {928.0f, 428.0f};
-static const float KID_SCALE = 0.7f;
+// left facing right; Karen center; the two boys on the right. flipX hardcoded
+// per-actor in the draw fns.
+static const Vector2 TOM_POS   = {36.0f, 159.0f};
+static const Vector2 KAREN_POS = {515.0f, 176.0f};
+static const Vector2 JIMMY_POS = {796.0f, 271.0f};
+static const Vector2 BIMMY_POS = {945.0f, 320.0f};
+static const float ADULT_SCALE = 1.5f;
+static const float KID_SCALE = 1.0f;
+
+// Camera aim offset baked in from live scene_select dial-in -- see
+// cameraTargetFor()/tomAimY/karenAimY/kidAimY.
+static const float TOM_AIM_Y = 160.0f;
+static const float KAREN_AIM_Y = 85.0f;
+static const float KID_AIM_Y = 90.0f;
 
 // Matches the opaque sky color painted in schoolbg.png's daytime sky.
+// Defined in main.cpp -- true for the frame in which a click was consumed by
+// the global Tom-world pause button/menu.
+extern bool IsPauseUiClaimingClick();
+
 SchoolScene::SchoolScene(DialogBox* sharedDialog)
     : Scene(1280.0f, 720.0f, {202, 232, 250, 255}), dialog(sharedDialog) {
 }
@@ -23,7 +35,17 @@ SchoolScene::SchoolScene(DialogBox* sharedDialog)
 void SchoolScene::init() {
     getCamera()->setBoundary(0.0f, 0.0f, 1280.0f, 720.0f);
 
-    addEffect(new SchoolSkyEffect());
+    // Seed the live-tunable aim offsets from the baked constants (see
+    // cameraTargetFor()) so the scene_select debug readout always shows the
+    // real effective aimY on entry, not a delta relative to some hidden
+    // baseline -- whatever's on screen is directly bake-able back into
+    // TOM_AIM_Y/KAREN_AIM_Y/KID_AIM_Y.
+    tomAimY = TOM_AIM_Y;
+    karenAimY = KAREN_AIM_Y;
+    kidAimY = KID_AIM_Y;
+
+    skyEffect = new SchoolSkyEffect();
+    addEffect(skyEffect);
 
     tom = new SceneActor(TOM_POS, 48.0f, 64.0f);
     tom->setTag("tom");
@@ -151,10 +173,50 @@ void SchoolScene::init() {
 
 void SchoolScene::update(float deltaTime) {
     Scene::update(deltaTime);
+    if (isPaused()) return;
 
     if (endElapsed >= 0.0f) {
         endElapsed += deltaTime;
         if (endElapsed > END_FADE_DURATION) endElapsed = END_FADE_DURATION;
+    }
+
+    if (getEntrySceneName() == "scene_select") {
+        updateSceneDebugCamera(skyEffect, getCamera(), deltaTime);
+
+        if (skyEffect) {
+            // TAB cycles which origin the I/J/K/L/U/O controls below move --
+            // jet and clouds need independent placement (see
+            // SchoolSkyEffect.hpp), previously they shared one offset.
+            if (IsKeyPressed(KEY_TAB)) debugOriginTarget = (debugOriginTarget + 1) % 2;
+
+            // Dial-in controls for whichever origin is selected -- I/K: Y, J/L: X,
+            // U/O: Z. Temporary, for finding placement to bake into the scene.
+            // Gated to scene_select same as the other two 3D-effect scenes so
+            // it doesn't eat these keys during real sequencer-driven playthroughs.
+            Vector3 origin = debugOriginTarget == 0 ? skyEffect->getJetOrigin() : skyEffect->getCloudOrigin();
+            float moveSpeed = 4.0f * deltaTime;
+            if (IsKeyDown(KEY_K)) origin.y -= moveSpeed;
+            if (IsKeyDown(KEY_I)) origin.y += moveSpeed;
+            if (IsKeyDown(KEY_J)) origin.x -= moveSpeed;
+            if (IsKeyDown(KEY_L)) origin.x += moveSpeed;
+            if (IsKeyDown(KEY_U)) origin.z -= moveSpeed;
+            if (IsKeyDown(KEY_O)) origin.z += moveSpeed;
+            if (debugOriginTarget == 0) skyEffect->setJetOrigin(origin);
+            else skyEffect->setCloudOrigin(origin);
+        }
+
+        // Up/Down nudges the camera aim offset (cameraTargetFor()'s aimY) for
+        // whichever actor is currently focused -- tomAimY, karenAimY, or
+        // kidAimY for Jimmy/Bimmy. These fields ARE the real effective aimY
+        // (seeded from TOM_AIM_Y/KAREN_AIM_Y/KID_AIM_Y in init()), so the
+        // value shown in the readout is directly bake-able back into those
+        // constants -- no hidden delta/baseline to account for.
+        float aimMoveSpeed = 100.0f * deltaTime;
+        float* liveAimY = &tomAimY;
+        if (currentFocusActor == 1) liveAimY = &karenAimY;
+        else if (currentFocusActor == 2 || currentFocusActor == 3) liveAimY = &kidAimY;
+        if (IsKeyDown(KEY_UP))   *liveAimY -= aimMoveSpeed;
+        if (IsKeyDown(KEY_DOWN)) *liveAimY += aimMoveSpeed;
     }
 
     if (activeScenario < 0) {
@@ -187,7 +249,8 @@ void SchoolScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) ||
+                                        (ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsPauseUiClaimingClick()));
             if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
             if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();
@@ -215,6 +278,30 @@ void SchoolScene::draw() {
     }
     EndMode2D();
 
+    if (getEntrySceneName() == "scene_select") {
+        drawSceneDebugCameraReadout(skyEffect, 16, 40);
+
+        if (skyEffect) {
+            const char* label = debugOriginTarget == 0 ? "jetOrigin" : "cloudOrigin";
+            Vector3 origin = debugOriginTarget == 0 ? skyEffect->getJetOrigin() : skyEffect->getCloudOrigin();
+            const char* txt = TextFormat("%s: (%.2f, %.2f, %.2f)  I/K: Y  J/L: X  U/O: Z  (TAB to cycle)",
+                label, origin.x, origin.y, origin.z);
+            DrawRectangle(10, 84, MeasureText(txt, 18) + 12, 26, Color{0, 0, 0, 160});
+            DrawText(txt, 16, 88, 18, Color{140, 255, 160, 255});
+        }
+
+        // Real effective aimY for whichever actor is currently focused (see
+        // update()'s Up/Down handling) -- what's shown here IS the value to
+        // bake into TOM_AIM_Y/KAREN_AIM_Y/KID_AIM_Y, not a delta.
+        const char* aimLabel = "tomAimY";
+        float aimVal = tomAimY;
+        if (currentFocusActor == 1) { aimLabel = "karenAimY"; aimVal = karenAimY; }
+        else if (currentFocusActor == 2 || currentFocusActor == 3) { aimLabel = "kidAimY"; aimVal = kidAimY; }
+        const char* aimTxt = TextFormat("%s: %.1f  (Up/Down)", aimLabel, aimVal);
+        DrawRectangle(10, 112, MeasureText(aimTxt, 18) + 12, 26, Color{0, 0, 0, 160});
+        DrawText(aimTxt, 16, 116, 18, Color{140, 200, 255, 255});
+    }
+
     if (endElapsed >= 0.0f) {
         float t = endElapsed / END_FADE_DURATION;
         if (t > 1.0f) t = 1.0f;
@@ -225,6 +312,7 @@ void SchoolScene::draw() {
 
 void SchoolScene::cleanup() {
     Scene::cleanup();
+    skyEffect = nullptr;  // owned by Scene::effects, already deleted above
     if (background.id != 0) { UnloadTexture(background); background = {0}; }
     for (int i = 0; i < 4; i++) {
         if (tomPoses[i].id != 0)   UnloadTexture(tomPoses[i]);
@@ -315,16 +403,17 @@ void SchoolScene::focusCameraOn(int actorIndex, bool shake, bool cut) {
 }
 
 // Same recipe as OfficeScene: aim into the visible body from the pose's
-// top-left. Kids are drawn at 0.7 scale, so their aim offset is scaled down to
-// match (a 0.7 pose is ~180px tall vs ~256 for the adults). Returns false for
-// Narrator / actorIndex -1 so the camera holds.
+// top-left. Adults and kids each get their own tuned aim offset (not scaled
+// off pose height -- baked in directly from live dial-in).
+//
+// Returns false for Narrator / actorIndex -1 so the camera holds.
 bool SchoolScene::cameraTargetFor(int actorIndex, Vector2& out) const {
     SceneActor* target = nullptr;
-    float aimY = 210.0f;  // adults
+    float aimY = tomAimY;
     if (actorIndex == 0) target = tom;
-    else if (actorIndex == 1) target = karen;
-    else if (actorIndex == 2) { target = jimmy; aimY = 210.0f * KID_SCALE; }
-    else if (actorIndex == 3) { target = bimmy; aimY = 210.0f * KID_SCALE; }
+    else if (actorIndex == 1) { target = karen; aimY = karenAimY; }
+    else if (actorIndex == 2) { target = jimmy; aimY = kidAimY; }
+    else if (actorIndex == 3) { target = bimmy; aimY = kidAimY; }
     if (!target) return false;
 
     Vector2 p = target->getPosition();
@@ -342,11 +431,11 @@ static void drawSchoolPose(Texture2D pose, Vector2 pos, bool flipX, float scale)
 }
 
 void SchoolScene::drawTom(Vector2 pos) {
-    drawSchoolPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true, 1.0f);   // far left, faces right
+    drawSchoolPose(tomPoses[(int)tomPoseEmotion], pos, /*flipX*/ true, ADULT_SCALE);   // far left, faces right
 }
 
 void SchoolScene::drawKaren(Vector2 pos) {
-    drawSchoolPose(karenPoses[(int)karenPoseEmotion], pos, /*flipX*/ false, 1.0f);  // center, faces left toward Tom
+    drawSchoolPose(karenPoses[(int)karenPoseEmotion], pos, /*flipX*/ false, ADULT_SCALE);  // center, faces left toward Tom
 }
 
 void SchoolScene::drawJimmy(Vector2 pos) {
@@ -354,7 +443,7 @@ void SchoolScene::drawJimmy(Vector2 pos) {
 }
 
 void SchoolScene::drawBimmy(Vector2 pos) {
-    drawSchoolPose(bimmyPoses[(int)bimmyPoseEmotion], pos, /*flipX*/ false, KID_SCALE);  // far right, kid scale
+    drawSchoolPose(bimmyPoses[(int)bimmyPoseEmotion], pos, /*flipX*/ true, KID_SCALE);  // far right, kid scale
 }
 
 // --- Set dressing (fallback only, if schoolbg.png is missing) -------------
@@ -379,3 +468,5 @@ void SchoolScene::drawSchoolYard() {
     Color flag = {180, 60, 60, 255};
     DrawTriangle({96, 155}, {96, 195}, {150, 175}, flag);
 }
+
+

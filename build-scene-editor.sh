@@ -27,10 +27,9 @@ if [ ! -f raylib/src/libraylib.a ]; then
   echo "  building raylib (desktop)"; bash build-alt.sh >/dev/null 2>&1 || true
 fi
 
-# Ensure the pack + manifest exist to copy next to the editor.
-if [ ! -f build/assets.rres ]; then
-  tools/pack_assets.sh assets build/assets.rres
-fi
+# Always repack so a stale/mistimed pack can never ship (matches build-web.sh
+# and build-alt.sh).
+tools/pack_assets.sh assets build/assets.rres
 
 mkdir -p "$OUT"
 echo "  CC/LD $BIN"

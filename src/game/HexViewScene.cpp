@@ -9,6 +9,7 @@
 #include "../engine/GameState.h"
 #include "EventBus.h"
 #include "PauseMenuOverlay.hpp"
+#include "OptionsScene.hpp"
 #include "Hotbar.hpp"
 #include <cmath>
 #include <string>
@@ -94,9 +95,15 @@ void HexViewScene::init() {
     pauseMenu->onClose = [this]() {
     };
 
-    pauseMenu->onExitSelected = [this]() {
-        onExitSelected();
+    pauseMenu->onOptionsSelected = [this]() {
+        if (auto* sm = static_cast<SceneManager*>(getSceneManager())) {
+            auto* options = static_cast<OptionsScene*>(sm->getScene("options"));
+            if (options) options->setReturnScene("hexboard");
+            paused = false;
+            sm->switchScene("options");
+        }
     };
+
 
     // Initialize the hex world map
     HexWorldConfig config;
@@ -148,6 +155,9 @@ void HexViewScene::init() {
 
     // Add Back button
     addBackButton();
+
+    // Add Pause button (top-right)
+    addPauseButton();
 }
 
 void HexViewScene::draw() {
@@ -157,11 +167,6 @@ void HexViewScene::draw() {
         cam.target.x, cam.target.y, cam.offset.x, cam.offset.y, cam.zoom);
 
     Scene::draw();
-
-    // Draw pause menu overlay if paused
-    if (paused && pauseMenu) {
-        pauseMenu->draw();
-    }
 
     BeginMode2D(cam);
     // Draw hex world tiles first (background)
@@ -296,9 +301,19 @@ void HexViewScene::draw() {
         backButton_->draw();
     }
 
+    // Draw pause button (always visible top-right)
+    if (pauseButton_) {
+        pauseButton_->draw();
+    }
+
     // Draw the tutorial dialog on top of everything while it's this scene's turn
     if (tutorialController_ && tutorialController_->isActive() && tutorialController_->currentScene() == "hexboard") {
         tutorialController_->draw();
+    }
+
+    // Draw pause menu overlay last so it sits on top of the world/UI/tutorial
+    if (paused && pauseMenu) {
+        pauseMenu->draw();
     }
 }
 
@@ -351,6 +366,10 @@ void HexViewScene::update(float deltaTime) {
     // DeathSequencer (see main.cpp), which switches away from whichever
     // scene is current the moment GotchiSim emits PetCollapsed -- no
     // per-scene handling needed here.
+
+    if (pauseButton_) {
+        pauseButton_->update(getInputHandler(), deltaTime);
+    }
 
     if (paused) {
         if (pauseMenu) pauseMenu->update(deltaTime);
@@ -544,11 +563,6 @@ void HexViewScene::togglePause() {
     }
 }
 
-void HexViewScene::onExitSelected() {
-    extern bool exitRequested;
-    exitRequested = true;
-}
-
 // ============================================================================
 // Back Button Implementation
 // ============================================================================
@@ -571,6 +585,22 @@ void HexViewScene::addBackButton() {
     backButton_->setOnClick([this]() {
         onBackButtonClicked();
     });
+}
+
+void HexViewScene::addPauseButton() {
+    // Half the size of a standard 160x64 gameplay button, top-right corner,
+    // small padding. Button only supports top-left/center/top-center/bottom
+    // anchors, so top-left is used with position computed from its own width.
+    static const float PAUSE_BTN_W = 80.0f, PAUSE_BTN_H = 32.0f, PAUSE_BTN_PAD = 12.0f;
+
+    pauseButton_ = std::unique_ptr<Button>(new Button(
+        {(float)GAME_W - PAUSE_BTN_W - PAUSE_BTN_PAD, PAUSE_BTN_PAD}, PAUSE_BTN_W, PAUSE_BTN_H, "PAUSE"));
+    pauseButton_->setAnchor("top-left");
+    pauseButton_->setFontSize(16);
+    pauseButton_->setBackgroundColor({60, 60, 100, 220});
+    pauseButton_->setHoverColor({100, 100, 160, 240});
+    pauseButton_->setBorderColor({150, 150, 200, 255});
+    pauseButton_->setOnClick([this]() { togglePause(); });
 }
 
 void HexViewScene::onBackButtonClicked() {
@@ -634,7 +664,9 @@ void HexViewScene::drawVitals() const {
 
     float pillPadding = 10.0f;
     float panelX = GAME_W - panelWidth - 16.0f;
-    float panelY = 12.0f;
+    // Starts below the top-right PAUSE button (12px pad + 32px tall, see
+    // addPauseButton()) with the same 12px vertical padding beneath it.
+    float panelY = 12.0f + 32.0f + 12.0f + pillPadding;
     float titleHeight = titleFontSize + 6.0f;
     float pillHeight = titleHeight + vitals.size() * rowHeight + pillPadding;
 

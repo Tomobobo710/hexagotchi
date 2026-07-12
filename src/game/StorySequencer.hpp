@@ -42,6 +42,13 @@ public:
     // Skip the current step and move to the next one (or finish if last step)
     void skipCurrentStep();
 
+    // True while a step's scene/dialog is actively playing (not during the
+    // merge-in/merge-out transitions, and not for a terminal step, which
+    // parks the sequencer with no active step). This is exactly the window
+    // skipCurrentStep() acts on -- exposed so callers (a global skip button)
+    // can gate visibility/enablement without duplicating that condition.
+    bool isPlayingStep() const { return phase_ == Phase::PlayingStep; }
+
 private:
     // Phases of one sequence playthrough, one merge's worth of content --
     // position in the sequence (start vs end), NOT which MergeScene::Mode
