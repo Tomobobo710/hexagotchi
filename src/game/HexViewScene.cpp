@@ -209,7 +209,10 @@ void HexViewScene::draw() {
             if (image.id != 0) {
                 // Draw the actual tool image
                 float iconSize = hexSize_ * 0.6f;
-                DrawImageCentered(image, itemPos, iconSize);
+                // Compensate for visual offset in the asset images (they appear
+                // left-shifted by ~5-10 pixels, so add a small rightward offset)
+                Vector2 adjustedPos = {itemPos.x + 3.0f, itemPos.y};
+                DrawImageCentered(image, adjustedPos, iconSize);
             } else {
                 // Fallback: draw colored circle with value text
                 Color itemColor;

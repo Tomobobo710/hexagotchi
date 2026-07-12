@@ -63,23 +63,28 @@ float HexWorld::perlinNoise(float x, float y) const {
 
 BiomeType HexWorld::getBiomeForHeight(float height) const {
     // Map noise value (-1 to 1) to biomes
-    // -1 to -0.6: Ocean
-    // -0.6 to -0.4: Sand
-    // -0.4 to 0.3: Grass
-    // 0.3 to 0.5: Dirt
-    // 0.5 to 0.7: Swamp
-    // 0.7 to 0.85: Ice
-    // 0.85 to 1.0: Lava
+    // Skip ocean - biomes start from slightly negative noise
+    // Bigger blotches with flatter transitions and more equal distribution
+    // Grass is most frequent (about 35%), others are roughly equal (~8-10% each)
 
     float h = (height + 1.0f) / 2.0f; // Convert to 0-1 range
 
-    if (h < 0.10f) return BiomeType::OCEAN;
-    if (h < 0.20f) return BiomeType::SAND;
-    if (h < 0.50f) return BiomeType::GRASS;
-    if (h < 0.65f) return BiomeType::DIRT;
-    if (h < 0.75f) return BiomeType::SWAMP;
-    if (h < 0.85f) return BiomeType::ICE;
-    return BiomeType::LAVA;
+    // New thresholds - grass doubled, others roughly equal
+    // 0.00 - 0.08:  Sand    (~8%)
+    // 0.08 - 0.58:  Grass   (~50%, doubled)
+    // 0.58 - 0.66:  Dirt    (~8%)
+    // 0.66 - 0.74:  SWAMP   (~8%)
+    // 0.74 - 0.82:  ICE     (~8%)
+    // 0.82 - 0.90:  LAVA    (~8%)
+    // 0.90 - 1.00:  SPECIAL (~10%, for variety)
+
+    if (h < 0.08f) return BiomeType::SAND;
+    if (h < 0.58f) return BiomeType::GRASS;
+    if (h < 0.66f) return BiomeType::DIRT;
+    if (h < 0.74f) return BiomeType::SWAMP;
+    if (h < 0.82f) return BiomeType::ICE;
+    if (h < 0.90f) return BiomeType::LAVA;
+    return BiomeType::SPECIAL;
 }
 
 std::vector<TileType*> HexWorld::createBiomeTileTypes(BiomeType biome) const {
@@ -146,12 +151,13 @@ void HexWorld::generate() {
     biomeGroups.clear();
 
     // Generate perlin noise terrain
-    float persistence = 0.5f;  // How much each octave contributes
-    int octaves = 4;           // Number of noise layers
+    float persistence = 0.7f;  // Higher persistence for smoother, bigger patterns
+    int octaves = 6;           // More octaves for detail while maintaining large patterns
 
     // Calculate a reasonable scale for the noise
-    // Larger world needs lower frequency to get interesting patterns
-    float baseFrequency = 1.0f / std::max(config.width, config.height) * 3.0f;
+    // Lower frequency for bigger biome blotches
+    // Multiplied by 1.5 to reduce frequency (larger patches)
+    float baseFrequency = 1.0f / std::max(config.width, config.height) * 1.5f;
 
     // Create tile type pools for each biome
     std::map<BiomeType, std::vector<TileType*>> biomeTilePools;

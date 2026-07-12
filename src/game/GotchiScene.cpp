@@ -736,11 +736,11 @@ void GotchiScene::draw() {
     DrawText(std::to_string(static_cast<int>(health * 100)).c_str(), lx + 185, ly, 12, {200, 200, 200, 255});
     ly += 18;
 
-    // Hunger bar (inverted - 0 is full, 100 is starving)
+    // Hunger bar (0 is full, 100 is starving - bar fills as hunger increases)
     float hunger = gotchi->getStats().getNormalizedStat(SecondaryStat::FOOD_LEVEL);
     DrawText("Hunger", lx, ly, 12, {200, 200, 200, 255});
     DrawRectangle(lx + 60, ly + 2, 120, 10, {50, 50, 50, 255});
-    DrawRectangle(lx + 60, ly + 2, static_cast<int>(120 * (1.0f - hunger)), 10, {255, 200, 0, 255});
+    DrawRectangle(lx + 60, ly + 2, static_cast<int>(120 * hunger), 10, {255, 200, 0, 255});
     DrawText(std::to_string(static_cast<int>(hunger * 100)).c_str(), lx + 185, ly, 12, {200, 200, 200, 255});
     ly += 16;
 
@@ -752,19 +752,19 @@ void GotchiScene::draw() {
     DrawText(std::to_string(static_cast<int>(energy * 100)).c_str(), lx + 185, ly, 12, {200, 200, 200, 255});
     ly += 16;
 
-    // Thirst bar
+    // Thirst bar (0 is hydrated, 100 is dehydrated - bar fills as thirst increases)
     float thirst = gotchi->getStats().getNormalizedStat(SecondaryStat::HYDRATION);
     DrawText("Thirst", lx, ly, 12, {200, 200, 200, 255});
     DrawRectangle(lx + 60, ly + 2, 120, 10, {50, 50, 50, 255});
-    DrawRectangle(lx + 60, ly + 2, static_cast<int>(120 * (1.0f - thirst)), 10, {0, 150, 255, 255});
+    DrawRectangle(lx + 60, ly + 2, static_cast<int>(120 * thirst), 10, {0, 150, 255, 255});
     DrawText(std::to_string(static_cast<int>(thirst * 100)).c_str(), lx + 185, ly, 12, {200, 200, 200, 255});
     ly += 16;
 
-    // Sleep bar (inverted - 0 is rested, 100 is exhausted)
+    // Sleep bar (0 is rested, 100 is exhausted - bar fills as sleep debt increases)
     float sleep = gotchi->getStats().getNormalizedStat(SecondaryStat::SLEEP_DEBT);
     DrawText("Sleep", lx, ly, 12, {200, 200, 200, 255});
     DrawRectangle(lx + 60, ly + 2, 120, 10, {50, 50, 50, 255});
-    DrawRectangle(lx + 60, ly + 2, static_cast<int>(120 * (1.0f - sleep)), 10, {100, 50, 150, 255});
+    DrawRectangle(lx + 60, ly + 2, static_cast<int>(120 * sleep), 10, {100, 50, 150, 255});
     DrawText(std::to_string(static_cast<int>(sleep * 100)).c_str(), lx + 185, ly, 12, {200, 200, 200, 255});
     ly += 16;
 
