@@ -37,6 +37,7 @@
 #include "engine/SaveManager.h"
 #include "engine/SaveWiring.h"
 #include "engine/AudioManager.hpp"
+#include "engine/Config.hpp"
 #include "events/EventBus.h"
 #include <string>
 #include <vector>
@@ -228,15 +229,17 @@ void UpdateDrawFrame() {
         AudioManager::MusicWorld world = AudioManager::MusicWorld::None;
         if (s == "gotchi" || s == "hexboard") {
             world = AudioManager::MusicWorld::Gotchi;
-        } else if (s == "merge") {
+        } else if (s == "merge" || s == "toy_animation") {
+            // toy_animation shares the merge theme -- both are "crossing between
+            // worlds" transitions (the toy intro zooms into the gotchi's world).
             world = AudioManager::MusicWorld::Merge;
         } else if (s == "office" || s == "apartment" || s == "pizza_parlor" ||
                    s == "therapist_office" || s == "school" || s == "kids_visit" ||
                    s == "ending") {
             world = AudioManager::MusicWorld::RealWorld;
         }
-        // Everything else (title, options, credits, death, toy_animation, the
-        // debug/test scenes) stays silent.
+        // Everything else (title, options, credits, death, debug/test scenes)
+        // stays silent.
         AudioManager::Get().setMusicWorld(world);
         AudioManager::Get().updateMusic();
     }
@@ -265,9 +268,18 @@ void UpdateDrawFrame() {
     // from app boot, well before the player has even clicked START GAME, so
     // without this check stats were already visibly non-full by the time
     // the tutorial's first line appeared.
-    if (tutorialController) {
-        bool preGame = (currentScene == "title" || currentScene == "toy_animation");
-        globalGameState.statsFrozen = preGame || tutorialController->isActive() || globalGameState.sleepCollapsed;
+    {
+        // The sim (vitals drain, collapse/death) may ONLY tick while the player
+        // is actually on the care side -- the gotchi home screen or the
+        // hexboard. Everywhere else (title, options, credits, death,
+        // toy_animation intro, merge/story scenes, debug scenes) it's frozen.
+        // This is a WHITELIST, not a blacklist: a blacklist of "pre-game"
+        // scenes kept missing new scenes (options/credits/death), which let the
+        // sim run -- and you could literally die sitting on the main menu.
+        // Also frozen during the tutorial and the sleep-collapse gate.
+        bool onCareSide = (currentScene == "gotchi" || currentScene == "hexboard");
+        bool tutorialActive = tutorialController && tutorialController->isActive();
+        globalGameState.statsFrozen = !onCareSide || tutorialActive || globalGameState.sleepCollapsed;
     }
     if (gotchiSim) {
         gotchiSim->update(dt);
@@ -375,6 +387,12 @@ int main() {
     // Audio: opens the device and loads shared SFX (UI click) from the pack.
     // Must run after setPackFile so the click clip resolves.
     AudioManager::Get().init();
+
+    // Load persisted user settings (volumes, dialog speed, tutorial_seen) from
+    // localStorage (web) / settings.ini (desktop), applying them to the global
+    // settings + globalGameState. Absent config -> defaults. Runs before scenes
+    // register so the first frame already reflects saved prefs.
+    Config::Load();
 
 #if defined(PLATFORM_WEB)
     // Pause/resume music when the browser tab is hidden/shown so the streaming

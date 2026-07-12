@@ -339,6 +339,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/main.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/AssetPack.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/AudioManager.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/Config.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/GameState.cpp

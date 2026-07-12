@@ -1,6 +1,7 @@
 #include "TutorialController.hpp"
 #include "GameConstants.hpp"
 #include "AudioManager.hpp"
+#include "Config.hpp"
 #include "raylib.h"
 #include "SceneInputHandler.hpp"
 
@@ -108,6 +109,9 @@ bool TutorialController::isFinished() const {
 void TutorialController::finish() {
     state_.setFlag(TUTORIAL_SEEN_FLAG, true);
     active_ = false;
+    // Persist tutorial_seen so the tutorial never replays on a future launch of
+    // this machine/browser (see Config).
+    Config::Save();
 }
 
 void TutorialController::update(float deltaTime) {

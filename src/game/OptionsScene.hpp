@@ -11,8 +11,9 @@
 // Global options menu, reachable from the title screen. Adjusts the
 // header-only global settings in GameConstants.hpp (music/sfx volume, dialog
 // auto-advance speed) -- see MusicVolumeState()/SfxVolumeState()/
-// DialogSpeedState(). Nothing here is persisted to disk (SaveManager is off
-// for the jam), so changes last for the session.
+// DialogSpeedState(). Every change is persisted immediately via Config::Save()
+// (localStorage on web, settings.ini on desktop), so settings survive across
+// launches. A "Reset to Defaults" button restores the default settings.
 //
 // Controls are composed from plain Buttons:
 //   - a volume STEPPER is a "<" and ">" button pair; the current value is
@@ -44,6 +45,9 @@ private:
 
     // Dialog-speed cycling select
     std::unique_ptr<Button> dialogSpeed_;
+
+    // Reset-to-defaults button (restores default settings, keeps tutorial_seen).
+    std::unique_ptr<Button> resetButton_;
 
     // Y positions of each row's centerline, set in init(), reused by draw()
     // to place the row labels/values next to their controls.

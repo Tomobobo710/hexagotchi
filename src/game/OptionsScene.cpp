@@ -1,5 +1,6 @@
 #include "OptionsScene.hpp"
 #include "GameConstants.hpp"
+#include "Config.hpp"
 #include <cmath>
 #include <cstdio>
 
@@ -63,16 +64,16 @@ void OptionsScene::init() {
     musicUp_   = std::unique_ptr<Button>(new Button({rightX, musicRowY_}, STEP_BTN_SIZE, STEP_BTN_SIZE, ">"));
     styleControl(musicDown_.get());
     styleControl(musicUp_.get());
-    musicDown_->setOnClick([]() { SetMusicVolume(GetMusicVolume() - 1); });
-    musicUp_->setOnClick([]()   { SetMusicVolume(GetMusicVolume() + 1); });
+    musicDown_->setOnClick([]() { SetMusicVolume(GetMusicVolume() - 1); Config::Save(); });
+    musicUp_->setOnClick([]()   { SetMusicVolume(GetMusicVolume() + 1); Config::Save(); });
 
     // SFX stepper
     sfxDown_ = std::unique_ptr<Button>(new Button({leftX,  sfxRowY_}, STEP_BTN_SIZE, STEP_BTN_SIZE, "<"));
     sfxUp_   = std::unique_ptr<Button>(new Button({rightX, sfxRowY_}, STEP_BTN_SIZE, STEP_BTN_SIZE, ">"));
     styleControl(sfxDown_.get());
     styleControl(sfxUp_.get());
-    sfxDown_->setOnClick([]() { SetSfxVolume(GetSfxVolume() - 1); });
-    sfxUp_->setOnClick([]()   { SetSfxVolume(GetSfxVolume() + 1); });
+    sfxDown_->setOnClick([]() { SetSfxVolume(GetSfxVolume() - 1); Config::Save(); });
+    sfxUp_->setOnClick([]()   { SetSfxVolume(GetSfxVolume() + 1); Config::Save(); });
 
     // Dialog-speed cycling select
     dialogSpeed_ = std::unique_ptr<Button>(new Button({CONTROLS_CENTER, dialogRowY_}, SELECT_WIDTH, SELECT_HEIGHT, "NORMAL"));
@@ -84,8 +85,18 @@ void OptionsScene::init() {
             case DialogSpeed::Fast:   SetDialogSpeed(DialogSpeed::Off);    break;
         }
         refreshDialogSpeedLabel();
+        Config::Save();
     });
     refreshDialogSpeedLabel();
+
+    // Reset-to-defaults button, centered below the three rows.
+    float resetY = dialogRowY_ + 110.0f;
+    resetButton_ = std::unique_ptr<Button>(new Button({(float)GAME_W / 2.0f, resetY}, 300.0f, SELECT_HEIGHT, "RESET TO DEFAULTS"));
+    styleControl(resetButton_.get());
+    resetButton_->setOnClick([this]() {
+        Config::ResetToDefaults();   // restores default settings + saves
+        refreshDialogSpeedLabel();   // pull the reset speed back into the label
+    });
 }
 
 void OptionsScene::update(float deltaTime) {
@@ -106,6 +117,7 @@ void OptionsScene::update(float deltaTime) {
     if (sfxDown_)     sfxDown_->update(input, deltaTime);
     if (sfxUp_)       sfxUp_->update(input, deltaTime);
     if (dialogSpeed_) dialogSpeed_->update(input, deltaTime);
+    if (resetButton_) resetButton_->update(input, deltaTime);
 }
 
 void OptionsScene::draw() {
@@ -140,6 +152,7 @@ void OptionsScene::draw() {
     if (sfxDown_)     sfxDown_->draw();
     if (sfxUp_)       sfxUp_->draw();
     if (dialogSpeed_) dialogSpeed_->draw();
+    if (resetButton_) resetButton_->draw();
 }
 
 void OptionsScene::cleanup() {
@@ -150,4 +163,5 @@ void OptionsScene::cleanup() {
     sfxDown_.reset();
     sfxUp_.reset();
     dialogSpeed_.reset();
+    resetButton_.reset();
 }

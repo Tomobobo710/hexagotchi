@@ -78,6 +78,10 @@ private:
 
     // Returns the heap Music* for a world, or nullptr for None / unloaded.
     void* musicFor(MusicWorld w) const;
+
+    // Gain (0..1, curved + capped) for the current world's track. Reads the SFX
+    // slider for the Merge world, the Music slider otherwise.
+    float musicGainForCurrentWorld() const;
 };
 
 // Process-wide singleton.

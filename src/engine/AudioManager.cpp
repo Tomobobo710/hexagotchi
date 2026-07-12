@@ -5,6 +5,19 @@
 
 namespace AudioManager {
 
+// Maps a 0..1 slider level to a raylib linear-amplitude gain. Two shaping
+// steps so audio isn't ear-splitting at moderate settings:
+//   - perceptual curve: square the level, since perceived loudness ~ amplitude^2
+//     -- makes low settings genuinely quiet and the steps feel even.
+//   - MASTER_CEILING: cap the absolute maximum. Raw raylib volume 1.0 is
+//     brutally loud relative to other PC audio; this pulls the top down.
+// Applies to BOTH music and SFX so the whole game shares one loudness scale.
+static float levelToGain(float norm01) {
+    const float MASTER_CEILING = 0.55f;
+    if (norm01 <= 0.0f) return 0.0f;
+    return norm01 * norm01 * MASTER_CEILING;
+}
+
 // A streaming Music plus the packed byte buffer it reads from.
 // LoadMusicStreamFromMemory keeps a pointer INTO `bytes`, so the buffer must
 // live as long as the stream -- we hold both and free them together.
@@ -100,7 +113,7 @@ void Manager::shutdown() {
 void Manager::playClick() {
     if (!initialized_ || !clickSound_) return;
     Sound* s = static_cast<Sound*>(clickSound_);
-    SetSoundVolume(*s, GetSfxVolume01());
+    SetSoundVolume(*s, levelToGain(GetSfxVolume01()));   // curved + capped
     PlaySound(*s);
 }
 
@@ -111,6 +124,14 @@ void* Manager::musicFor(MusicWorld w) const {
         case MusicWorld::RealWorld: return realWorldMusic_;
         default:                    return nullptr;   // None
     }
+}
+
+// The volume (0..1, raylib linear amplitude) to apply to the CURRENT world's
+// music track. The MERGE theme is treated as an SFX -- it follows the SFX
+// slider (Tom's call: the merge sting belongs to the sound-effects bus).
+float Manager::musicGainForCurrentWorld() const {
+    float norm = (currentWorld_ == MusicWorld::Merge) ? GetSfxVolume01() : GetMusicVolume01();
+    return levelToGain(norm);
 }
 
 void Manager::setMusicWorld(MusicWorld w) {
@@ -129,8 +150,8 @@ void Manager::setMusicWorld(MusicWorld w) {
     // just-started stream. updateMusic() starts it later if the volume is
     // raised back above 0.
     MusicTrack* next = static_cast<MusicTrack*>(musicFor(w));
-    if (next && next->ok && GetMusicVolume01() > 0.0f) {
-        SetMusicVolume(next->music, GetMusicVolume01());
+    if (next && next->ok && musicGainForCurrentWorld() > 0.0f) {
+        SetMusicVolume(next->music, musicGainForCurrentWorld());
         PlayMusicStream(next->music);
     }
 }
@@ -140,11 +161,13 @@ void Manager::updateMusic() {
     MusicTrack* t = static_cast<MusicTrack*>(musicFor(currentWorld_));
     if (!t || !t->ok) return;
 
-    float vol = GetMusicVolume01();
+    // Merge theme follows the SFX slider; everything else follows Music. Both
+    // go through the perceptual curve + master ceiling (see levelToGain).
+    float vol = musicGainForCurrentWorld();
 
-    // Volume 0 == music OFF: stop the stream entirely rather than playing it
-    // silently. Guarantees true silence regardless of raylib's volume handling,
-    // and lets the slider act as an on/off at the bottom of its range.
+    // Volume 0 == OFF: stop the stream entirely rather than playing it silently.
+    // Guarantees true silence regardless of raylib's volume handling, and lets
+    // the relevant slider act as an on/off at the bottom of its range.
     if (vol <= 0.0f) {
         if (IsMusicStreamPlaying(t->music)) StopMusicStream(t->music);
         return;
@@ -163,7 +186,7 @@ void Manager::updateMusic() {
         PlayMusicStream(t->music);
     }
 
-    SetMusicVolume(t->music, vol);   // live-follow the Options slider
+    SetMusicVolume(t->music, vol);   // live-follow the slider (curved + capped)
     UpdateMusicStream(t->music);
 }
 
