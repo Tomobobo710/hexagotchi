@@ -17,7 +17,7 @@ the bars for food and stuff - wherever they count up they should visually count 
 QUICK WINS
 update title screen shader
 tools are slightly offset on toolbar
-
+pixel jitter shake on web
 
 GOTCHI TEXT
 

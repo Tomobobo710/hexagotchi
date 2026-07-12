@@ -65,7 +65,10 @@ void HexItemOverlay::draw(float hexSize) const {
     // Check if image is loaded - if so, draw it
     if (image_.id != 0) {
         float iconSize = hexSize * 0.75f;
-        DrawImageCentered(image_, centerPos, iconSize);
+        // Compensate for visual offset in the asset images (they appear
+        // left-shifted by ~5-10 pixels, so add a small rightward offset)
+        Vector2 adjustedCenter = {centerPos.x + 3.0f, centerPos.y};
+        DrawImageCentered(image_, adjustedCenter, iconSize);
     } else {
         // Fallback: draw the icon as a simple circle with pulse effect
         float radius = hexSize * 0.35f;

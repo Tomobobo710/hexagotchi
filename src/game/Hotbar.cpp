@@ -187,7 +187,10 @@ void Hotbar::draw() const {
         if (slot.image.id != 0) {
             // Draw the actual asset image
             float iconSize = slot.bounds.width * 0.65f;
-            DrawImageCentered(slot.image, center, iconSize);
+            // Compensate for visual offset in the asset images (they appear
+            // left-shifted by ~5-10 pixels, so add a small rightward offset)
+            Vector2 adjustedCenter = {center.x + 3.0f, center.y};
+            DrawImageCentered(slot.image, adjustedCenter, iconSize);
         } else {
             // Fallback: placeholder circle
             float radius = slot.bounds.width * 0.26f;
