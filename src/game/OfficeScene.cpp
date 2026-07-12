@@ -167,7 +167,6 @@ void OfficeScene::init() {
         { CharacterId::Loraine, "Yes sir?",
           2, false, false, PortraitEmotion::Mid, "Loraine (the secretary)",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy },
-
         // --- Larry asks for Tom's own vitals (the player-managed stats);
         // Loraine reads them. These are TOM'S numbers -- his performance as a
         // well-kept toy -- not the alien's. See Scenario D's frame comment.
@@ -196,6 +195,9 @@ void OfficeScene::init() {
           2, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
         { CharacterId::Loraine, loraineStats4,
+          2, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
+        { CharacterId::Loraine, loraineProj1,
           2, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
         // Tom clocks that every number just went down. Larry, of course, does not.
@@ -340,6 +342,9 @@ void OfficeScene::init() {
         { CharacterId::Loraine, loraineStats2,
           2, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
+        { CharacterId::Loraine, loraineProj2,
+          2, false, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Sad },
         { CharacterId::Larry, "You SEE that, Tom? When YOUR numbers\ndip, the player logs off. Bad for everyone.",
           1, true, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Sad },
@@ -392,12 +397,6 @@ void OfficeScene::init() {
               ActorMove{2, {{206.0f, 342.0f}}, 320.0f},
           }, {}, PoseEmotion::Sad, PoseEmotion::Mid },
         { CharacterId::Loraine, "Already pulled them, sir.",
-          2, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
-        { CharacterId::Loraine, loraineProj1,
-          2, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
-        { CharacterId::Loraine, loraineProj2,
           2, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Loraine, loraineProj3,
@@ -699,4 +698,5 @@ void OfficeScene::drawLarry(Vector2 pos) {
 void OfficeScene::drawLoraine(Vector2 pos) {
     drawPose(lorainePoses[(int)lorainePoseEmotion], pos, /*flipX*/ true, 1.0f);  // to Tom's left, faces right toward him
 }
+
 
