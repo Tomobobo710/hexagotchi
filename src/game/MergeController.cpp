@@ -159,6 +159,10 @@ void MergeController::returnFromMerge() {
     // Increment mergeCount
     state_.mergeCount++;
 
+    // Clear the hexboard exploration lock (see HexViewScene's countdown) --
+    // merging is what earns the player another timed trip to the hexboard.
+    state_.hexboardLockedUntilMerge = false;
+
     // tutorial_seen is set in-memory when the tutorial dialog ends, but only
     // persisted to disk here, on completing the 2nd merge (mergeCount hits 2).
     // A player who quits after the tutorial but before their 2nd merge will

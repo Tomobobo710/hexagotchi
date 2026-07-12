@@ -1247,6 +1247,17 @@ void GotchiScene::applyTutorialLocks() {
             continue;
         }
 
+        // HexMap locks out once the hexboard's early-game countdown has
+        // expired (GameState::hexboardLockedUntilMerge), until the player
+        // actually merges -- see MergeController::returnFromMerge(). Must be
+        // checked here (not just in the visibility block above) since the
+        // tutorial-finished branch below otherwise re-enables every button
+        // unconditionally the same frame.
+        if (label == "HexMap" && gameState_ && gameState_->hexboardLockedUntilMerge) {
+            btn->setEnabled(false);
+            continue;
+        }
+
         if (tutorialController_ && tutorialController_->isActive()) {
             // While the tutorial is running: use isAwaitingAction (not
             // isActionUnlocked) so a care button disables the INSTANT it's

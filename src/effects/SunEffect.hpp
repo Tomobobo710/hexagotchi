@@ -61,8 +61,8 @@ private:
     Model trunkModel;
     Model tierModel;
 
-    Vector3 sunOrigin = {-26.08f, 15.70f, -22.85f};
-    Vector3 treeOrigin = {-14.36f, 3.02f, -7.87f};
+    Vector3 sunOrigin = {-31.28f, 19.50f, -22.85f};
+    Vector3 treeOrigin = {-15.49f, 10.95f, -7.87f};
 
     float debugCamDist = 25.0f;
     float debugPitchDeg = 0.0f;

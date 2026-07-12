@@ -70,6 +70,14 @@ struct GameState {
     // player actually merges. See GotchiScene::applySleepCollapseGate().
     bool  sleepCollapsed   = false;
 
+    // True while the HexMap button is locked out on GotchiScene -- set once
+    // the hexboard's early-game exploration countdown (see
+    // HexViewScene::HEXBOARD_TIME_LIMIT_SEC) runs out, cleared by
+    // MergeController::returnFromMerge() the next time the player merges.
+    // Only meaningful for mergeCount < 2 (see HexViewScene's own gate);
+    // starts false since the countdown hasn't had a chance to expire yet.
+    bool  hexboardLockedUntilMerge = false;
+
     // True while the tutorial is actively teaching (or the sleep-collapse
     // gate is holding); freezes vitals/mood ticking in GotchiSim so the
     // player isn't watching needs drain while they're still being walked

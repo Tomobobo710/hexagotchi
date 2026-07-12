@@ -440,15 +440,42 @@ void HexViewScene::update(float deltaTime) {
         if (hexboardTimeLeft_ <= 0.0f) {
             hexboardTimeLeft_ = 0.0f;
             hexboardLocked_ = true;
+            // Persists on GameState (not just this scene) so GotchiScene can
+            // keep the HexMap button locked out until MergeController clears
+            // it on the next merge -- see returnFromMerge().
+            if (gameState_) gameState_->hexboardLockedUntilMerge = true;
             if (tiredDialog_) {
                 tiredDialog_->setText("It's time to go back... I'm getting tired.");
-                tiredDialog_->setSuppressPrompt(true);  // informational, not waiting on a keypress
                 tiredDialog_->show();
             }
         }
     }
     if (hexboardLocked_ && tiredDialog_) {
         tiredDialog_->update(deltaTime);
+
+        // Same "TAP/Press SPACE to continue..." advance convention as every
+        // other dialog box -- once the line has finished revealing, any
+        // click or Space sends the player straight back to the gotchi scene
+        // (skipping the reveal on the first press, same as DialogBox/
+        // GotchiDialogBox's own skip-then-advance convention) rather than
+        // requiring them to separately hunt down the Back button.
+        SceneInputHandler* dialogIh = getInputHandler();
+        bool advancePressed = dialogIh && (dialogIh->isKeyPressed(KEY_SPACE) ||
+                                            dialogIh->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+        if (advancePressed) {
+            if (!tiredDialog_->isFinished()) {
+                tiredDialog_->skipReveal();
+            } else if (getSceneManager()) {
+                if (gameState_ && gotchi) {
+                    HexCoords currentHex = gotchi->getCurrentHex();
+                    gameState_->gotchiHexQ = currentHex.q;
+                    gameState_->gotchiHexR = currentHex.r;
+                    gameState_->gotchiBiome = world->getBiomeAt(gotchi->getPosition().x, gotchi->getPosition().y);
+                }
+                static_cast<SceneManager*>(getSceneManager())->switchScene("gotchi");
+                return;
+            }
+        }
     }
 
     // Camera panning logic
