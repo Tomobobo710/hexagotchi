@@ -1,6 +1,6 @@
 # Hexagotchi
 
-A game jam submission for [Raylib Game Jam 6.x](https://itch.io/jam/raylib-game-jam-6). Hexagotchi is a hex-based life simulation game where you raise a digital pet through various life stages and scenarios.
+A game jam submission for [Raylib Game Jam 6.x](https://itch.io/jam/raylib-6x-gamejam). Hexagotchi is a hex-based life simulation game where you raise a digital pet through various life stages and scenarios.
 
 ## Game Overview
 
