@@ -4,6 +4,7 @@
 #include "AudioManager.hpp"
 #include "CharacterRegistry.hpp"
 #include "GameState.h"
+#include "HappinessCheckpoints.hpp"
 #include <cmath>
 #include <cstdio>
 
@@ -88,36 +89,35 @@ void OfficeScene::init() {
     std::string loraineStats4 = buf;
 
     // --- Projection-tagged stat lines for Scenario E (index 4) -------------
-    // Same live vitals, but each readout ends with a corporate projection
-    // verdict driven by the REAL value: on the good side of the metric ->
-    // "The projection is looking good for this quarter."; below target ->
-    // "We didn't quite meet target here." A stat "meets target" at >= 50 --
-    // shares the happiness-check midpoint, so a well-kept Tom reads as green.
-    auto projTag = [](bool met) -> const char* {
-        return met ? "The projection is looking\ngood for this quarter."
-                   : "We didn't quite meet\ntarget here.";
+    // Stats shown are live flavor; the verdict at the end of each line is the
+    // real signal. Proj_N reads happiness checkpoint N straight off the ledger:
+    // "looking good" = that check passed, "didn't meet target" = it failed.
+    auto projTag = [](bool passed) -> const char* {
+        return passed ? "The projection is looking\ngood for this quarter."
+                      : "We didn't quite meet\ntarget here.";
     };
+    GameState fallbackState;
+    const GameState& gs = gameState_ ? *gameState_ : fallbackState;
 
     // E-Line 1: Engagement (Happiness) + Vitality (Health).
     std::snprintf(buf, sizeof(buf),
         "Engagement's at %d%%. Vitality, %d%%.\n%s",
         statPct(v.getHappiness()), statPct(v.getHealth()),
-        projTag(v.getHappiness() >= 50.0f && v.getHealth() >= 50.0f));
+        projTag(getHappinessCheckpoint(gs, 1)));
     std::string loraineProj1 = buf;
 
     // E-Line 2: Bandwidth (Energy) + Fuel (100 - Hunger).
     std::snprintf(buf, sizeof(buf),
         "Bandwidth, %d%%. Fuel Reserves, %d%%.\n%s",
         statPct(v.getEnergy()), statPct(100.0f - v.getHunger()),
-        projTag(v.getEnergy() >= 50.0f && (100.0f - v.getHunger()) >= 50.0f));
+        projTag(getHappinessCheckpoint(gs, 2)));
     std::string loraineProj2 = buf;
 
-    // E-Line 3: Presentation (Hygiene) + the anxiety Risk Indicator (inverted
-    // -- LOW anxiety meets target).
+    // E-Line 3: Presentation (Hygiene) + the anxiety Risk Indicator.
     std::snprintf(buf, sizeof(buf),
         "Presentation, %d%%. Risk Indicator, %d%%.\n%s",
         statPct(v.getHygiene()), statPct(v.getStat(EmotionalStat::ANXIETY)),
-        projTag(v.getHygiene() >= 50.0f && v.getStat(EmotionalStat::ANXIETY) < 50.0f));
+        projTag(getHappinessCheckpoint(gs, 3)));
     std::string loraineProj3 = buf;
 
     // --- Scenario 0 (Scenario A): the first merge into Tom's world ---------
@@ -312,12 +312,13 @@ void OfficeScene::init() {
         { CharacterId::Larry, "The CLIENT, Tom. The player. You are\ntheir toy. A happy toy keeps them playing.",
           1, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+        // Indignant outburst -- Scared pose for the flare-up, shake.
         { CharacterId::Tom, "Why does some snot-faced alien kid\nget to press buttons on ME all day?",
-          0, false, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+          0, true, false, PortraitEmotion::Sad, "",
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy },
         { CharacterId::Tom, "I'm a grown man. I've gone through divorce.\nI have my own apartment.",
           0, false, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy },
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Happy },
         { CharacterId::Larry, "And a book of business worth MILLIONS\nin engagement. Loraine -- his numbers.",
           1, false, false, PortraitEmotion::Mid, "",
           /*movesAtStart*/ {
@@ -410,9 +411,6 @@ void OfficeScene::init() {
         { CharacterId::Tom, "...I don't know how much longer\nI can keep smiling for the glass.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Sad },
-        { CharacterId::Loraine, "That's the spirit, technically.",
-          2, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid },
     });
 }
 
@@ -444,6 +442,19 @@ void OfficeScene::update(float deltaTime) {
         Vector2 t;
         if (cameraTargetFor(currentFocusActor, t)) {
             getCamera()->followPosition(t, 8.0f);
+
+            // Fire a deferred line-shake once the camera has settled on the
+            // speaker -- within SETTLE_RADIUS px of the focus target. Lands the
+            // punch on a stable frame aimed at the right actor, not mid-pan.
+            if (pendingShake_) {
+                Vector2 cam = getCamera()->getPosition();
+                float dx = cam.x - t.x, dy = cam.y - t.y;
+                const float SETTLE_RADIUS = 24.0f;
+                if (dx * dx + dy * dy <= SETTLE_RADIUS * SETTLE_RADIUS) {
+                    getCamera()->shake(5.0f, 0.3f);
+                    pendingShake_ = false;
+                }
+            }
         }
     }
 
@@ -629,7 +640,8 @@ void OfficeScene::focusCameraOn(int actorIndex, bool shake, bool cut) {
     currentFocusActor = actorIndex;  // update() keeps following this every frame
 
     Vector2 t;
-    if (cameraTargetFor(actorIndex, t)) {
+    bool haveTarget = cameraTargetFor(actorIndex, t);
+    if (haveTarget) {
         // Smooth ease (PizzaParlorScene's normal look) unless the line asks
         // for a hard cut for a dramatic beat. Either way update()'s per-frame
         // follow takes over from here to track the actor as they walk.
@@ -638,8 +650,14 @@ void OfficeScene::focusCameraOn(int actorIndex, bool shake, bool cut) {
         getCamera()->zoomTo(2.0f, 0.5f);
     }
 
+    // Shake timing: on a hard cut the camera is already on the actor, so punch
+    // now. On a smooth ease, DEFER -- update() fires it once the camera has
+    // settled on the speaker, so the shake lands on a stable frame instead of
+    // mid-pan (see pendingShake_).
+    pendingShake_ = false;
     if (shake) {
-        getCamera()->shake(5.0f, 0.3f);
+        if (cut || !haveTarget) getCamera()->shake(5.0f, 0.3f);
+        else pendingShake_ = true;
     }
 }
 

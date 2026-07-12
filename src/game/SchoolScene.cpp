@@ -62,56 +62,65 @@ void SchoolScene::init() {
     scenarios.push_back({
         { CharacterId::Narrator, "Tom arrives at the school.\n3:35 PM. Pickup was at 3:30.",
           -1, false },
+        // Karen's cold-open jab -- pointed, deadpan Mid (she's not sad, she's needling).
         { CharacterId::Karen, "You're late.",
           1, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid },
+        // Tom defensive -- his pose carries the fluster.
         { CharacterId::Tom, "I'm FIVE minutes late, Karen.\nI walked the whole way here.",
           0, false, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
+        // The guilt-trip -- Karen coldly satisfied, not neutral.
         { CharacterId::Karen, "The boys waited.\nBy themselves.\nAgain.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid },
         { CharacterId::Tom, "There are TEACHERS here,\nthey weren't ALONE --",
           0, true, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Scared, PoseEmotion::Mid },
+        // Kids arrive -- Tom lights up, genuinely happy to see them.
         { CharacterId::Jimmy, "Hi Dad! I lost a tooth!",
           2, false, false, PortraitEmotion::Happy, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Tom, "Oh, buddy! Which one?",
-          0, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Jimmy, "This one! Mom says the fairy\ngives TWENTY dollars now.",
           2, false, false, PortraitEmotion::Happy, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
+        // The money reality hits -- his smile drops.
         { CharacterId::Tom, "...Twenty dollars.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Bimmy, "The fairy's rich, Dad.\nEveryone knows that.",
           3, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy },
+        // Karen's one-word twist of the knife -- coldly amused.
         { CharacterId::Karen, "Inflation, Tom.",
-          1, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy },
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Tom, "I KNOW what inflation is, Karen.\nI am actively EXPERIENCING it.",
           0, true, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Scared, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Bimmy, "What does experiencing inflation mean?",
           3, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+        // Deadpan-defeated dad joke.
         { CharacterId::Tom, "It means your Dad needs to extend his\ncredit limit, sweetie.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
 
-        // Karen softens -- or seems to. "Go home, take a break."
+        // Karen softens -- or seems to. Warmer read on the "take a break" beat.
         { CharacterId::Karen, "You know what, Tom? Just go home.",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Karen, "Take a break. Seriously.\nYou look like you need one.",
-          1, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+          1, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        // Tom quietly wounded -- he wants the time, not the mercy.
         { CharacterId::Tom, "...I'm fine. I want the time\nwith the boys, Karen.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        // The "good news" pivot -- Karen falsely bright, teeing up the gut-punch.
         { CharacterId::Karen, "Well -- about that. Boys?\nTell your father the good news.",
           1, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
@@ -130,9 +139,11 @@ void SchoolScene::init() {
         { CharacterId::Bimmy, "Bye Dad! Love you!\nRonzer's the BEST!",
           3, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Happy },
+        // Tom hides the hurt behind a smile for the boys -- Mid, not fully Sad:
+        // he's putting on a brave face as they run off.
         { CharacterId::Tom, "...Love you too, guys.\nGet the sour ones.",
           0, false, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Happy },
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Narrator, "Tom walked the whole way here.\nHe waves until the car is out of sight.",
           -1, false },
     });

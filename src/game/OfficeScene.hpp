@@ -121,6 +121,13 @@ private:
     // moveTo()-walk, instead of easing once to where they were at line start.
     int currentFocusActor = -1;
 
+    // A line's shake is DEFERRED until the camera has settled on that line's
+    // speaker -- firing it at line-start punches mid-pan (often while still
+    // aimed at the previous speaker), which reads as janky. focusCameraOn()
+    // sets this true for a shake line; update() fires the shake once the camera
+    // is within the settle radius of the focus target, then clears it.
+    bool pendingShake_ = false;
+
     // Counts UP from 0 once endScenario() fires, 0..END_FADE_DURATION.
     // Negative (-1) means no fade-out is in progress.
     float endElapsed = -1.0f;

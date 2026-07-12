@@ -2,6 +2,8 @@
 #include "EventBus.h"
 #include "Keys.h"
 #include "HappinessCheckpoints.hpp"
+#include "TutorialController.hpp"
+#include "Config.hpp"
 
 MergeController::MergeController(EventBus& bus, GameState& state, SceneManager& scenes)
     : bus_(bus), state_(state), scenes_(scenes) {
@@ -156,6 +158,14 @@ void MergeController::returnFromMerge() {
 
     // Increment mergeCount
     state_.mergeCount++;
+
+    // tutorial_seen is set in-memory when the tutorial dialog ends, but only
+    // persisted to disk here, on completing the 2nd merge (mergeCount hits 2).
+    // A player who quits after the tutorial but before their 2nd merge will
+    // see it again next launch (see TutorialController::finish).
+    if (state_.mergeCount == 2 && state_.getBool(TutorialController::SEEN_FLAG, false)) {
+        Config::Save();
+    }
 
     // Increment storyBeatIndex for next time
     state_.storyBeatIndex++;

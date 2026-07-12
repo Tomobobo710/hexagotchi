@@ -53,27 +53,32 @@ void KidsVisitScene::init() {
     // the question every divorced dad dreads. Tom fumbles it honestly. Kids
     // are blunt and loving at the same time.
     scenarios.push_back({
+        // Kids report the cold matter-of-factly (Mid), not sad -- they're just
+        // stating facts. Tom overcompensates cheerfully.
         { CharacterId::Bimmy, "Dad, why's it so COLD in here?\nI can see my breath.",
-          1, false, false, PortraitEmotion::Sad, "Bimmy (Tom's son)",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Mid },
+          1, false, false, PortraitEmotion::Mid, "Bimmy (Tom's son)",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Tom, "It's -- it's bracing! It's good for you.\nBuilds character.",
-          0, false, false, PortraitEmotion::Mid, "Tom Gatchi",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Mid },
+          0, false, false, PortraitEmotion::Happy, "Tom Gatchi",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
+        // The Ronzer comparisons -- kids genuinely delighted, oblivious to the sting.
         { CharacterId::Jimmy, "Ronzer's apartment has a HOT TUB.",
           2, false, false, PortraitEmotion::Happy, "Jimmy (Tom's son)",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Bimmy, "And the bus here SMELLED.\nA man was eating soup on it.",
-          1, false, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Mid },
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Jimmy, "Ronzer picks us up in the car.\nIt has the screens in the seats.",
           2, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
+        // Tom spinning it -- putting on a brave face.
         { CharacterId::Tom, "The bus is an adventure, guys.\nYou meet... interesting people.",
-          0, false, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
+          0, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Bimmy, "The soup man asked if I was\nalso 'running from someone.'",
-          1, false, false, PortraitEmotion::Sad, "",
+          1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Scared, PoseEmotion::Happy },
+        // Deadpan defeat -- that one lands.
         { CharacterId::Tom, "...Okay, that one's fair.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Scared, PoseEmotion::Happy },
@@ -101,16 +106,19 @@ void KidsVisitScene::init() {
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
 
-        // The turn: they still love him. Then the question.
+        // The turn: they still love him -- warm, sincere.
         { CharacterId::Jimmy, "We still like it here, Dad.\nEven if it's cold.",
-          2, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid },
+          2, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Bimmy, "Yeah. You're funnier than Ronzer.\nRonzer doesn't get jokes.",
           1, false, false, PortraitEmotion::Happy, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+        // Genuinely touched.
         { CharacterId::Tom, "...Thanks, buddy. That -- that means a lot.",
-          0, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid },
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+        // The question every divorced dad dreads -- the child asks it innocently
+        // (Mid), which is exactly what makes it land. Tom's pose drops to Scared.
         { CharacterId::Bimmy, "So when are you moving back home?",
           1, false, false, PortraitEmotion::Mid, "",
           {}, {}, PoseEmotion::Scared, PoseEmotion::Mid, PoseEmotion::Mid },
@@ -134,12 +142,13 @@ void KidsVisitScene::init() {
         { CharacterId::Jimmy, "That IS the worst answer.",
           2, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Sad },
+        // The recovery -- Tom pulls it back with warmth. Kids melt.
         { CharacterId::Tom, "Yeah. I'm working on a better one.\nCome here. You're not too cold to hug your old man?",
-          0, false, false, PortraitEmotion::Mid, "",
-          {}, {}, PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Sad },
+          0, false, false, PortraitEmotion::Happy, "",
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Bimmy, "Only because it's freezing and\nyou're the warmest thing in here.",
           1, false, false, PortraitEmotion::Happy, "",
-          {}, {}, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Mid },
+          {}, {}, PoseEmotion::Happy, PoseEmotion::Happy, PoseEmotion::Happy },
         { CharacterId::Narrator, "It is the best Tom will feel all week.\nThe bus home leaves in twenty minutes.",
           -1, false },
     });

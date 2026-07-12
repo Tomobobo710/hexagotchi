@@ -129,9 +129,10 @@ void PizzaParlorScene::init() {
         { CharacterId::Tom,    "I -- yeah, I'm looking into it. Work's been --",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
+        // Cold, cutting -- deadpan Mid lands harder than Sad here.
         { CharacterId::Karen,  "You're a digital pet, Tom. What work.",
-          1, true, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
+          1, true, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Ronzer, "RONZER RONZER RONZER.",
           2, false, false, PortraitEmotion::Happy, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
@@ -147,9 +148,10 @@ void PizzaParlorScene::init() {
         { CharacterId::Tom,    "That's not -- that isn't how promotions --",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Happy, PoseEmotion::Happy },
+        // Passive-aggressive parting shot -- falsely pleasant Mid.
         { CharacterId::Karen,  "Get the pizza to go next time, Tom. It's for the kids.",
-          1, false, false, PortraitEmotion::Sad, "",
-          {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
+          1, false, false, PortraitEmotion::Mid, "",
+          {}, {}, PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Tom,    "It's always been for the kids.",
           0, true, false, PortraitEmotion::Sad, "",
           {}, {}, PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy },
@@ -222,7 +224,7 @@ void PizzaParlorScene::init() {
 
         // Mark walks in from off-screen, uninvited energy.
         { CharacterId::Mark, "Hey, everybody! Great to finally\nmeet the rest of Tom.",
-          5, false, false, PortraitEmotion::Happy, "",
+          5, false, false, PortraitEmotion::Mid, "",
           /*movesAtStart*/ { ActorMove{5, {BDAY_MARK_WP}, 240.0f} }, {},
           PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy,
           PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
@@ -232,7 +234,7 @@ void PizzaParlorScene::init() {
           PoseEmotion::Mid, PoseEmotion::Sad, PoseEmotion::Happy,
           PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
         { CharacterId::Mark, "Free pizza? Wouldn't miss it.",
-          5, false, false, PortraitEmotion::Happy, "",
+          5, false, false, PortraitEmotion::Mid, "",
           {}, {},
           PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Happy,
           PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Happy },
@@ -294,21 +296,23 @@ void PizzaParlorScene::init() {
           PoseEmotion::Mid, PoseEmotion::Happy, PoseEmotion::Mid,
           PoseEmotion::Happy, PoseEmotion::Mid, PoseEmotion::Mid },
 
-        // Karen turns on Tom about money. He deflects and slips out.
+        // Karen turns on Tom about money -- cold, pointed needling (Mid), not
+        // sad. Her pose stays Mid; the flatness is the weapon.
         { CharacterId::Karen, "So. Did you actually have the money\nto get Jimmy anything this year?",
-          1, false, false, PortraitEmotion::Sad, "",
+          1, false, false, PortraitEmotion::Mid, "",
           {}, {},
-          PoseEmotion::Sad, PoseEmotion::Sad, PoseEmotion::Mid,
+          PoseEmotion::Sad, PoseEmotion::Mid, PoseEmotion::Mid,
           PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Tom, "Of course I did. It's -- it's outside.\nOn the back of my bike. Big box.",
           0, false, false, PortraitEmotion::Sad, "",
           {}, {},
-          PoseEmotion::Scared, PoseEmotion::Sad, PoseEmotion::Mid,
+          PoseEmotion::Scared, PoseEmotion::Mid, PoseEmotion::Mid,
           PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
+        // The devastating deadpan callout -- Mid, not Sad. Flat menace, shake.
         { CharacterId::Karen, "On your bike.",
-          1, true, false, PortraitEmotion::Sad, "",
+          1, true, false, PortraitEmotion::Mid, "",
           {}, {},
-          PoseEmotion::Scared, PoseEmotion::Sad, PoseEmotion::Mid,
+          PoseEmotion::Scared, PoseEmotion::Mid, PoseEmotion::Mid,
           PoseEmotion::Mid, PoseEmotion::Mid, PoseEmotion::Mid },
         { CharacterId::Tom, "I'll -- let me just go grab it.\nRight now. Be right back.",
           0, false, false, PortraitEmotion::Sad, "",

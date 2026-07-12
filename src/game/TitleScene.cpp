@@ -14,6 +14,32 @@
 // Global scene manager pointer (extern'd in main.cpp)
 extern SceneManager* sceneManager;
 
+// Draws a horizontally-elongated hexagon (flat top/bottom, pointed left/right
+// ends) filling a rect -- an on-theme "hex pill". `endFrac` is how far the
+// pointed ends reach in from each side, as a fraction of the height. A filled
+// convex fan from the center covers it cleanly at any alpha.
+static void DrawHexPill(Rectangle r, float endFrac, Color color) {
+    float ptInset = r.height * endFrac;   // horizontal reach of each pointed end
+    float midY = r.y + r.height * 0.5f;
+    // 6 vertices, clockwise from the left point.
+    Vector2 v[6] = {
+        { r.x,                    midY },                 // left point
+        { r.x + ptInset,          r.y },                  // top-left
+        { r.x + r.width - ptInset, r.y },                 // top-right
+        { r.x + r.width,          midY },                 // right point
+        { r.x + r.width - ptInset, r.y + r.height },      // bottom-right
+        { r.x + ptInset,          r.y + r.height },       // bottom-left
+    };
+    Vector2 center = { r.x + r.width * 0.5f, midY };
+    // Triangle fan (DrawTriangle winding: v[i], center, v[i+1] to stay CCW in
+    // raylib's y-down space so the fill isn't culled).
+    for (int i = 0; i < 6; i++) {
+        Vector2 a = v[i];
+        Vector2 b = v[(i + 1) % 6];
+        DrawTriangle(a, center, b, color);
+    }
+}
+
 // SaveManager - DISABLED: Save system shut off for game jam
 // extern SaveManager saveManager;
 
@@ -163,14 +189,19 @@ void TitleScene::init() {
     float buttonWidth = 200.0f;
     float buttonHeight = 50.0f;
 
-    // Start Game button (was NEW GAME)
-    newGameButton_ = new Button({centerX, centerY - buttonHeight/2}, buttonWidth, buttonHeight, "START GAME");
+    // Button cluster sits at ~1/3 up from the bottom of the screen. The pair is
+    // centered on buttonsCenterY; the gap between them is (buttonHeight + 14).
+    float buttonsCenterY = (float)GAME_H * 2.0f / 3.0f;
+    float buttonGap = buttonHeight + 14.0f;
+
+    // Start Game button (was NEW GAME) -- top of the pair.
+    newGameButton_ = new Button({centerX, buttonsCenterY - buttonGap / 2.0f}, buttonWidth, buttonHeight, "START GAME");
     newGameButton_->setAnchor("center");
     newGameButton_->setFontSize(20);
     newGameButton_->setOnClick([this]() { onNewGame(); });
 
     // Options button, directly below Start Game.
-    optionsButton_ = new Button({centerX, centerY - buttonHeight/2 + (buttonHeight + 14.0f)}, buttonWidth, buttonHeight, "OPTIONS");
+    optionsButton_ = new Button({centerX, buttonsCenterY + buttonGap / 2.0f}, buttonWidth, buttonHeight, "OPTIONS");
     optionsButton_->setAnchor("center");
     optionsButton_->setFontSize(20);
     optionsButton_->setOnClick([this]() {
@@ -293,23 +324,56 @@ void TitleScene::update(float deltaTime) {
 void TitleScene::draw() {
     Scene::draw();
 
-    // Draw title text
-    const char* title = "HEXAGOTCHI";
-    int titleWidth = MeasureText(title, 48);
-    DrawText(title, (int)((GAME_W - titleWidth) / 2.0f), 100, 48, {200, 200, 255, 255});
+    // A translucent grey HEX pill behind the title, so it reads over the busy
+    // hex background (and stays on-theme).
+    Color pillColor = {60, 60, 70, 150};   // grey, see-through
+    {
+        const char* title = "HEXAGOTCHI";
+        int titleSize = 48;
+        int titleWidth = MeasureText(title, titleSize);
+        int titleY = 100;
+        // Extra horizontal pad so the text clears the hex's pointed ends.
+        float padX = 60.0f, padY = 16.0f;
+        Rectangle pill = {
+            (GAME_W - titleWidth) / 2.0f - padX,
+            (float)titleY - padY,
+            titleWidth + padX * 2.0f,
+            titleSize + padY * 2.0f
+        };
+        DrawHexPill(pill, 0.5f, pillColor);
+        DrawText(title, (int)((GAME_W - titleWidth) / 2.0f), titleY, titleSize, {200, 200, 255, 255});
+    }
 
-    // Draw credit text under the Options button -- two separately-centered
-    // lines (MeasureText doesn't account for '\n', so a single string can't be
-    // truly centered).
-    float centerY = (float)GAME_H / 2.0f;
-    float buttonHeight = 50.0f;
-    Color creditColor = {180, 180, 220, 200};
-    float creditsY = centerY + buttonHeight/2 + 30 + buttonHeight + 14.0f;
+    // Credits pill: a single grey capsule near the bottom of the screen holding
+    // both credit lines, text centered inside it, with padding from the edge.
+    {
+        Color creditColor = {200, 200, 220, 220};
+        const char* creditLine1 = "A Game by";
+        const char* creditLine2 = "Tomobobo and Bazola";
+        int cSize = 20;
+        int w1 = MeasureText(creditLine1, cSize);
+        int w2 = MeasureText(creditLine2, cSize);
+        int textW = (w1 > w2) ? w1 : w2;
+        float lineGap = 24.0f;
+        // Extra horizontal pad so text clears the hex's pointed ends.
+        float padX = 60.0f, padY = 14.0f;
 
-    const char* creditLine1 = "A Game by";
-    const char* creditLine2 = "Tomobobo and Bazola";
-    DrawText(creditLine1, (int)((GAME_W - MeasureText(creditLine1, 20)) / 2.0f), (int)creditsY, 20, creditColor);
-    DrawText(creditLine2, (int)((GAME_W - MeasureText(creditLine2, 20)) / 2.0f), (int)(creditsY + 24.0f), 20, creditColor);
+        float pillW = textW + padX * 2.0f;
+        // Content = line1 (cSize tall) + gap down to line2's top + line2 (cSize).
+        float pillH = (float)cSize + lineGap + padY * 2.0f;
+
+        float edgePad = 24.0f;                       // padding from the bottom edge
+        float pillY = (float)GAME_H - edgePad - pillH;
+        float pillX = (GAME_W - pillW) / 2.0f;
+        Rectangle pill = { pillX, pillY, pillW, pillH };
+        DrawHexPill(pill, 0.5f, pillColor);
+
+        // Center each line horizontally within the pill.
+        float line1Y = pillY + padY;
+        float line2Y = line1Y + lineGap;
+        DrawText(creditLine1, (int)(pillX + (pillW - w1) / 2.0f), (int)line1Y, cSize, creditColor);
+        DrawText(creditLine2, (int)(pillX + (pillW - w2) / 2.0f), (int)line2Y, cSize, creditColor);
+    }
 
     // DISABLED: Save system shut off for game jam
     // if (showingLoadOptions_) {

@@ -1,7 +1,6 @@
 #include "TutorialController.hpp"
 #include "GameConstants.hpp"
 #include "AudioManager.hpp"
-#include "Config.hpp"
 #include "raylib.h"
 #include "SceneInputHandler.hpp"
 
@@ -36,10 +35,10 @@ TutorialController::TutorialController(GameState& state)
         { "Try Wash -- keeps me clean.", "Wash", "gotchi" },
         { "Try Water -- quenches my thirst.", "Water", "gotchi" },
         { "Try Groom -- leaves me happy and shiny.", "Groom", "gotchi" },
+        { "Try Merge -- Oh that button shouldn't be here. Nevermind!", "", "gotchi" },
         { "Try Sleep --", "", "gotchi" },
         { "Wait, where's my sleep button? Weird things happen when I don't sleep. Anyway.", "", "gotchi" },
         { "HexMap, you've already seen. It'll take us exploring on HexLand's HexMap!", "", "gotchi" },
-        { "Oh that button...", "", "gotchi" },
         { "Ok I'll unlock all the buttons now!", "", "gotchi" },
         { "Hmm. One of the buttons isn't unlocking.", "", "gotchi" },
         { "Oh well, I'll unlock what I can.", "", "gotchi" },
@@ -110,9 +109,11 @@ bool TutorialController::isFinished() const {
 void TutorialController::finish() {
     state_.setFlag(TUTORIAL_SEEN_FLAG, true);
     active_ = false;
-    // Persist tutorial_seen so the tutorial never replays on a future launch of
-    // this machine/browser (see Config).
-    Config::Save();
+    // Deliberately NOT persisted here: tutorial_seen is only written to disk
+    // once the player completes their 2nd merge (see MergeController::
+    // returnFromMerge). This keeps shouldRun() false for the rest of THIS
+    // session (in-memory flag), but a player who quits after the tutorial
+    // without reaching the 2nd merge will see it again next launch.
 }
 
 void TutorialController::update(float deltaTime) {
@@ -156,6 +157,7 @@ void TutorialController::draw() {
     if (!active_) return;
     dialog_.draw();
 }
+
 
 
 

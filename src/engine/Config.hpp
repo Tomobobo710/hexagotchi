@@ -17,8 +17,10 @@
 //                          GameConstants globals + globalGameState's
 //                          tutorial_seen flag. Missing/absent config -> defaults.
 //   Config::Save()      -- writes the CURRENT global values out. Call after any
-//                          settings change (Options menu) or when tutorial_seen
-//                          flips. Cheap; safe to call on every change.
+//                          settings change (Options menu), or when tutorial_seen
+//                          flips AND the player has completed their 2nd merge
+//                          (see MergeController::returnFromMerge). Cheap; safe
+//                          to call on every change.
 //   Config::ResetToDefaults() -- restore default settings (does NOT clear
 //                          tutorial_seen) and Save(). Wired to the Options
 //                          "Reset to Defaults" button.

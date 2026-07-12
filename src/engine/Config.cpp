@@ -148,12 +148,12 @@ void Save() {
 }
 
 void ResetToDefaults() {
-    // Restore default SETTINGS only. tutorial_seen is intentionally left as-is
-    // -- resetting settings shouldn't force a returning player back through the
-    // tutorial.
+    // Full reset: default settings AND re-arm the tutorial, so the next new game
+    // walks the player through it again.
     SetMusicVolume(VOLUME_LEVEL_DEFAULT);
     SetSfxVolume(VOLUME_LEVEL_DEFAULT);
     SetDialogSpeed(DialogSpeed::Normal);
+    globalGameState.setFlag(TutorialController::SEEN_FLAG, false);
     Save();
 }
 

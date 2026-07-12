@@ -43,8 +43,8 @@ const CharacterInfo kJimmy = {
 
 const CharacterInfo kBimmy = {
     "Bimmy",
-    {60, 170, 90, 255}, {60, 170, 90, 255},   // green kid, distinct from Jimmy's blue
-    {60, 170, 90, 255}, {20, 70, 40, 255},
+    {170, 120, 210, 255}, {170, 120, 210, 255},   // purple kid (matches his art), vs Jimmy's blue
+    {150, 110, 190, 255}, {60, 40, 90, 255},
     {"portraits/bimmy/bimmysad.png", "portraits/bimmy/bimmymid.png", "portraits/bimmy/bimmyhappy.png"},
     {"poses/bimmy/bimmyposesad.png", "poses/bimmy/bimmyposemid.png", "poses/bimmy/bimmyposehappy.png", "poses/bimmy/bimmyposescared.png"},
 };
