@@ -56,6 +56,7 @@ if(RBUILD_DESKTOP)
         "src/game/ApartmentScene.cpp"
         "src/game/SchoolScene.cpp"
         "src/game/SceneSelectScene.cpp"
+        "src/game/SplashScreenScene.cpp"
         "src/game/SpriteTestScene.cpp"
         "src/game/StorySequencer.cpp"
         "src/game/DeathSequencer.cpp"
@@ -374,6 +375,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/OptionsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/SplashScreenScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiSim.cpp
         ${CMAKE_SOURCE_DIR}/src/game/StorySequencer.cpp

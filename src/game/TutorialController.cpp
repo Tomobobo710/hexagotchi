@@ -36,11 +36,12 @@ TutorialController::TutorialController(GameState& state)
         { "Try Wash -- keeps me clean.", "Wash", "gotchi" },
         { "Try Water -- quenches my thirst.", "Water", "gotchi" },
         { "Try Groom -- leaves me happy and shiny.", "Groom", "gotchi" },
+        { "Try Sleep --", "", "gotchi" },
+        { "Wait, where's my sleep button? Weird things happen when I don't sleep. Anyway.", "", "gotchi" },
         { "HexMap, you've already seen. It'll take us exploring on HexLand's HexMap!", "", "gotchi" },
-        { "That button.. hmm.. I'm not sure what that one does.", "", "gotchi" },
-        { "Ok I'll unlock all the buttons now!", "", "gotchi" },
-        { "Hmm, one of them isn't working.", "", "gotchi" },
         { "Oh that button...", "", "gotchi" },
+        { "Ok I'll unlock all the buttons now!", "", "gotchi" },
+        { "Hmm. One of the buttons isn't unlocking.", "", "gotchi" },
         { "Oh well, I'll unlock what I can.", "", "gotchi" },
     };
 }
@@ -155,6 +156,7 @@ void TutorialController::draw() {
     if (!active_) return;
     dialog_.draw();
 }
+
 
 
 

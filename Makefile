@@ -7,18 +7,16 @@
 # reports "ready", but the game is mute. Baked in at raylib compile time; no
 # link flag can fix it. So: prefer MSYS2 UCRT64 when installed, else fall back
 # to PATH g++ (which must then be a MinGW one).
+# NOTE: on Windows, do NOT build via `make` -- use build-desktop.bat /
+# build-web.bat / scene-editor.bat, which run build-alt.sh / build-web.sh /
+# build-scene-editor.sh directly in bash. Running the native MinGW compiler
+# through make's msys-bash recipes fails ("Cannot create temporary file in
+# C:\WINDOWS"). This Makefile is kept for non-Windows / CI environments where
+# make works normally. CXX/CC/AR here default to a MinGW toolchain on PATH.
 UCRT64_GXX := $(wildcard /c/msys64/ucrt64/bin/g++.exe)
 ifneq ($(UCRT64_GXX),)
 TOOLDIR := /c/msys64/ucrt64/bin/
 export PATH := /c/msys64/ucrt64/bin:$(PATH)
-endif
-# msys-based makes (e.g. devkitPro's) scrub TMP/TEMP from recipe environments.
-# Native MinGW gcc then falls back to C:\WINDOWS for its temp files and dies
-# with "Cannot create temporary file: Permission denied". Restore a writable
-# Windows-style temp dir whenever the environment lost it.
-ifeq ($(strip $(TMP)),)
-export TMP  := $(shell cygpath -w /tmp 2>/dev/null)
-export TEMP := $(TMP)
 endif
 CXX  = $(TOOLDIR)g++
 CC   = $(TOOLDIR)gcc
@@ -128,7 +126,11 @@ SCENE_EDITOR_BIN = $(SCENE_EDITOR_OUT)/scene_editor.exe
 
 scene-editor: $(SCENE_EDITOR_BIN) $(SCENE_EDITOR_OUT)/assets.rres $(SCENE_EDITOR_OUT)/assets_manifest.txt
 
-$(SCENE_EDITOR_BIN): tools/scene_editor.cpp
+# Depends on libraylib.a so a clean build builds raylib (with the pinned MinGW
+# toolchain) first -- without this dep the link would fail on a fresh clone,
+# since the editor links -lraylib. GLFW is inside libraylib.a; the WASAPI/static
+# libs come from $(LDFLAGS), shared with the game.
+$(SCENE_EDITOR_BIN): tools/scene_editor.cpp $(RL)/libraylib.a
 	mkdir -p $(SCENE_EDITOR_OUT)
 	$(CXX) -std=c++11 -I raylib/src -I rres/src tools/scene_editor.cpp -o $(SCENE_EDITOR_BIN) $(LDFLAGS)
 

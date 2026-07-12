@@ -27,6 +27,7 @@
 #include "game/SceneSelectScene.hpp"
 #include "game/OptionsScene.hpp"
 #include "game/TitleScene.hpp"
+#include "game/SplashScreenScene.hpp"
 #include "game/GotchiStatsScene.hpp"
 #include "game/MergeController.hpp"
 #include "game/TutorialController.hpp"
@@ -419,6 +420,7 @@ int main() {
     sceneManager->registerScene("toy_animation", new ToyAnimationScene());
     sceneManager->registerScene("death", new DeathScene());
     sceneManager->registerScene("title", new TitleScene());
+    sceneManager->registerScene("splash", new SplashScreenScene(sceneManager));
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
     sceneManager->registerScene("options", new OptionsScene(sceneManager));
     GotchiStatsScene* gotchiStatsScene = new GotchiStatsScene();
@@ -469,10 +471,13 @@ int main() {
     // saveWiring->setGameState(&globalGameState);
 
 #ifdef HEXA_SHOT_TOOL
+    // Screenshot tool jumps straight to its target scene (or title) -- never
+    // through the splash sequence.
     sceneManager->switchSceneImmediate(
         (shotScene && shotScene[0]) ? shotScene : "title");
 #else
-    sceneManager->switchSceneImmediate("title");
+    // Normal boot: the logo splash sequence, which then switches to the title.
+    sceneManager->switchSceneImmediate("splash");
 #endif
 
     dialog->setAnchor("bottom");
