@@ -56,6 +56,7 @@ if(RBUILD_DESKTOP)
         "src/game/ApartmentScene.cpp"
         "src/game/SchoolScene.cpp"
         "src/game/SceneSelectScene.cpp"
+        "src/game/SkipSceneOverlay.cpp"
         "src/game/SplashScreenScene.cpp"
         "src/game/SpriteTestScene.cpp"
         "src/game/StorySequencer.cpp"
@@ -90,71 +91,77 @@ if(RBUILD_DESKTOP)
     set(SOURCES src/main.cpp ${ENGINE_SRCS} ${GAME_SRCS} ${EFFECTS_SRCS} ${EVENT_SRCS})
 
     # Test executable for MergeController
-    set(TEST_ENGINE_SRCS
-        src/engine/AssetPack.cpp
-        src/engine/DialogBox.cpp
-        src/engine/GameState.cpp
-        src/engine/SaveManager.cpp
-        src/engine/Scene.cpp
-        src/engine/SceneActor.cpp
-        src/engine/SceneCamera.cpp
-        src/engine/SceneInputHandler.cpp
-        src/engine/SceneManager.cpp
-    )
-    set(TEST_EVENT_SRCS
-        src/events/EventBus.cpp
-    )
-    set(TEST_GAME_SRCS
-        src/game/MergeController.cpp
-        src/game/StorySequencer.cpp
-        src/game/MergeScene.cpp
-        src/game/ScenarioDirector.cpp
-        src/game/GotchiSim.cpp
-        src/game/GotchiStats.cpp
-        src/game/GotchiMood.cpp
-        src/game/CharacterRegistry.cpp
-    )
-    set(TEST_EFFECTS_SRCS
-        src/effects/PortalEffect.cpp
-        src/effects/PortalShader.cpp
-        src/effects/LitShader.cpp
-        src/effects/PortalRingMesh.cpp
-        src/effects/PortalBaseMesh.cpp
-        src/effects/MoonEffect.cpp
-    )
-    set(TEST_SRCS
-        tests/TestMergeController.cpp
-        ${TEST_ENGINE_SRCS}
-        ${TEST_EVENT_SRCS}
-        ${TEST_GAME_SRCS}
-        ${TEST_EFFECTS_SRCS}
-    )
-    add_executable(test_merge_controller ${TEST_SRCS})
-    target_include_directories(test_merge_controller PRIVATE . src src/engine src/game src/events src/flags raylib/src)
-    target_link_libraries(test_merge_controller PRIVATE raylib glfw)
+    # Test executables - disabled for this release build to avoid dependency
+    # complexity; tests can be built separately if needed for development
+    if(0)
+        set(TEST_ENGINE_SRCS
+            src/engine/AssetPack.cpp
+            src/engine/Config.cpp
+            src/engine/DialogBox.cpp
+            src/engine/GameState.cpp
+            src/engine/SaveManager.cpp
+            src/engine/Scene.cpp
+            src/engine/SceneActor.cpp
+            src/engine/SceneCamera.cpp
+            src/engine/SceneInputHandler.cpp
+            src/engine/SceneManager.cpp
+            src/main.cpp
+        )
+        set(TEST_EVENT_SRCS
+            src/events/EventBus.cpp
+        )
+        set(TEST_GAME_SRCS
+            src/game/MergeController.cpp
+            src/game/StorySequencer.cpp
+            src/game/MergeScene.cpp
+            src/game/ScenarioDirector.cpp
+            src/game/GotchiSim.cpp
+            src/game/GotchiStats.cpp
+            src/game/GotchiMood.cpp
+            src/game/CharacterRegistry.cpp
+        )
+        set(TEST_EFFECTS_SRCS
+            src/effects/PortalEffect.cpp
+            src/effects/PortalShader.cpp
+            src/effects/LitShader.cpp
+            src/effects/PortalRingMesh.cpp
+            src/effects/PortalBaseMesh.cpp
+            src/effects/MoonEffect.cpp
+        )
+        set(TEST_SRCS
+            tests/TestMergeController.cpp
+            ${TEST_ENGINE_SRCS}
+            ${TEST_EVENT_SRCS}
+            ${TEST_GAME_SRCS}
+            ${TEST_EFFECTS_SRCS}
+        )
+        add_executable(test_merge_controller ${TEST_SRCS})
+        target_include_directories(test_merge_controller PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+        target_link_libraries(test_merge_controller PRIVATE raylib glfw)
 
-    # Test executable for GotchiSim
-    set(GOTCHI_SIM_TEST_SRCS
-        tests/TestGotchiSim.cpp
-        ${TEST_ENGINE_SRCS}
-        ${TEST_EVENT_SRCS}
-        ${TEST_GAME_SRCS}
-        ${TEST_EFFECTS_SRCS}
-    )
-    add_executable(test_gotchi_sim ${GOTCHI_SIM_TEST_SRCS})
-    target_include_directories(test_gotchi_sim PRIVATE . src src/engine src/game src/events src/flags raylib/src)
-    target_link_libraries(test_gotchi_sim PRIVATE raylib glfw)
+        # Test executable for GotchiSim
+        set(GOTCHI_SIM_TEST_SRCS
+            tests/TestGotchiSim.cpp
+            ${TEST_ENGINE_SRCS}
+            ${TEST_EVENT_SRCS}
+            ${TEST_GAME_SRCS}
+            ${TEST_EFFECTS_SRCS}
+        )
+        add_executable(test_gotchi_sim ${GOTCHI_SIM_TEST_SRCS})
+        target_include_directories(test_gotchi_sim PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+        target_link_libraries(test_gotchi_sim PRIVATE raylib glfw)
 
-    # Test executable for StorySequencer
-    add_executable(test_story_sequencer
-        tests/TestStorySequencer.cpp
-        ${TEST_ENGINE_SRCS}
-        ${TEST_EVENT_SRCS}
-        ${TEST_GAME_SRCS}
-        ${TEST_EFFECTS_SRCS}
-    )
-    target_include_directories(test_story_sequencer PRIVATE . src src/engine src/game src/events src/flags raylib/src)
-    target_link_libraries(test_story_sequencer PRIVATE raylib glfw)
+        # Test executable for StorySequencer
+        add_executable(test_story_sequencer
+            tests/TestStorySequencer.cpp
+            ${TEST_ENGINE_SRCS}
+            ${TEST_EVENT_SRCS}
+            ${TEST_GAME_SRCS}
+            ${TEST_EFFECTS_SRCS}
+        )
+        target_include_directories(test_story_sequencer PRIVATE . src src/engine src/game src/events src/flags raylib/src)
+        target_link_libraries(test_story_sequencer PRIVATE raylib glfw)
+    endif()
 
     # DISABLED: Save system shut off for game jam
     # Test executable for SaveManager
@@ -262,7 +269,9 @@ if(RBUILD_DESKTOP)
     )
 
     # Build assets.rres automatically before building the game
-    if(NOT RBUILD_WEB)
+    # Note: On Windows (cross-compile), assets.rres must be built on the target
+    # machine using the native pack_assets tool
+    if(NOT RBUILD_WEB AND NOT WIN32)
         # Ensure pack_assets is built before assets.rres
         add_dependencies(pack_assets raylib glfw)
 
@@ -375,6 +384,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/OptionsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/SkipSceneOverlay.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SplashScreenScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiSim.cpp
