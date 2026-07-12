@@ -178,3 +178,56 @@ make clean          # wipe desktop build
 make clean-web      # wipe web build
 rm -rf build        # wipe all CMake builds
 ```
+
+## Linux Release Build
+
+For a production-ready release on Linux, follow these steps to build with optimizations and prepare a distributable folder:
+
+### 1. Configure and build (Release configuration)
+
+```bash
+cmake -B build -D RBUILD_DESKTOP=ON -D RBUILD_WEB=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
+
+### 2. Create release directory and copy files
+
+```bash
+mkdir -p release
+cp build/desktop/game release/
+cp build/desktop/assets.rres release/
+cp build/desktop/assets_manifest.txt release/
+```
+
+### 3. Strip debug symbols from the binary
+
+```bash
+strip release/game
+```
+
+### 4. Verify the stripped binary
+
+```bash
+file release/game
+# Should show: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), dynamically linked, stripped
+```
+
+### One-liner for the entire release process:
+
+```bash
+cmake -B build -D RBUILD_DESKTOP=ON -D RBUILD_WEB=OFF -DCMAKE_BUILD_TYPE=Release && \
+cmake --build build && \
+mkdir -p release && \
+cp build/desktop/{game,assets.rres,assets_manifest.txt} release/ && \
+strip release/game
+```
+
+### Notes:
+
+- **Static linking**: The build already uses `-static-libgcc -static-libstdc++` to bundle the C++ runtime. Full static linking isn't possible because `libGL` is only available as a shared library on Linux.
+
+- **Dependencies**: The binary is dynamically linked to `libGL.so`, system libraries (`m`, `pthread`, `dl`, `rt`), and bundled GLFW via `libraylib.a`.
+
+- **Assets**: The `assets.rres` and `assets_manifest.txt` must be in the same directory as the executable since the game loads them via relative path.
+
+- **For portability**: To create a fully self-contained release, you can bundle the required shared libraries with `ldd release/game | grep "=> /lib" | awk '{print $3}' | xargs -I {} cp {} release/lib/` (add this only if targeting machines without those libraries installed).
