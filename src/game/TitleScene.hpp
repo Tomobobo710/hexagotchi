@@ -26,6 +26,7 @@ public:
 private:
     // Button groups - SAVE SYSTEM DISABLED: Save system shut off for game jam
     Button* newGameButton_ = nullptr;
+    Button* optionsButton_ = nullptr;
     // Button* loadGameButton_ = nullptr;
     // Button* mainMenuSaveButton_ = nullptr;  // Save button for main menu
     // std::vector<Button*> slotButtons_;      // Slot summary/load buttons

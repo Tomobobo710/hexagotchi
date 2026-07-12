@@ -36,6 +36,17 @@
 #include <sys/stat.h>
 #endif
 
+// True for the file types we pack. Bytes are stored verbatim as RAWD chunks
+// regardless of type -- PNGs decode on load via LoadImageFromMemory, audio via
+// LoadWaveFromMemory. Keep this in sync with AssetPack's loaders.
+static bool IsPackableAsset(const std::string& name) {
+    auto endsWith = [&](const char* ext) {
+        size_t n = strlen(ext);
+        return name.size() > n && name.substr(name.size() - n) == ext;
+    };
+    return endsWith(".png") || endsWith(".mp3");
+}
+
 static std::vector<std::string> FindPngsRecursive(const std::string& root) {
     std::vector<std::string> found;
     std::vector<std::string> dirs = {root};
@@ -59,7 +70,7 @@ static std::vector<std::string> FindPngsRecursive(const std::string& root) {
             // Check if it's a directory
             if (ffd.attrib & _A_SUBDIR) {
                 dirs.push_back(full);
-            } else if (name.size() > 4 && name.substr(name.size() - 4) == ".png") {
+            } else if (IsPackableAsset(name)) {
                 found.push_back(full);
             }
         } while (_findnext(hFind, &ffd) == 0);
@@ -78,7 +89,7 @@ static std::vector<std::string> FindPngsRecursive(const std::string& root) {
             if (stat(full.c_str(), &st) != 0) continue;
             if (S_ISDIR(st.st_mode)) {
                 dirs.push_back(full);
-            } else if (name.size() > 4 && name.substr(name.size() - 4) == ".png") {
+            } else if (IsPackableAsset(name)) {
                 found.push_back(full);
             }
         }

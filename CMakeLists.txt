@@ -49,6 +49,7 @@ if(RBUILD_DESKTOP)
         "src/game/MergeScene.cpp"
         "src/game/Model3DTestScene.cpp"
         "src/game/OfficeScene.cpp"
+        "src/game/OptionsScene.cpp"
         "src/game/PauseMenuOverlay.cpp"
         "src/game/PizzaParlorScene.cpp"
         "src/game/PlayerActor.cpp"
@@ -207,8 +208,11 @@ if(RBUILD_DESKTOP)
 
     # Platform-specific libraries for raylib
     if(WIN32)
-        # Windows: opengl32, gdi32, winmm
-        target_link_libraries(raylib PUBLIC opengl32 gdi32 winmm)
+        # Windows: opengl32/gdi32/winmm plus the WASAPI/COM libs miniaudio's
+        # audio backend needs (ole32 etc.) -- see the Makefile's LDFLAGS
+        # comment: without a real backend miniaudio silently falls back to the
+        # Null device and the game is mute.
+        target_link_libraries(raylib PUBLIC opengl32 gdi32 winmm ole32 oleaut32 uuid ksuser)
     else()
         # Linux: GL, m, pthread, dl, rt
         target_link_libraries(raylib PUBLIC GL m pthread dl rt)
@@ -334,6 +338,7 @@ if(RBUILD_WEB)
     set(WEB_SOURCES
         ${CMAKE_SOURCE_DIR}/src/main.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/AssetPack.cpp
+        ${CMAKE_SOURCE_DIR}/src/engine/AudioManager.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/Button.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/DialogBox.cpp
         ${CMAKE_SOURCE_DIR}/src/engine/GameState.cpp
@@ -365,6 +370,7 @@ if(RBUILD_WEB)
         ${CMAKE_SOURCE_DIR}/src/game/PlayerActor.cpp
         ${CMAKE_SOURCE_DIR}/src/game/ApartmentScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/OfficeScene.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/OptionsScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SchoolScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/SceneSelectScene.cpp
         ${CMAKE_SOURCE_DIR}/src/game/GotchiStatsScene.cpp

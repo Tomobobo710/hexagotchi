@@ -1153,8 +1153,20 @@ void GotchiScene::applyTutorialLocks() {
             continue;
         }
 
-        if (tutorialController_) {
-            btn->setEnabled(tutorialController_->isActionUnlocked(label));
+        if (tutorialController_ && tutorialController_->isActive()) {
+            // While the tutorial is running: use isAwaitingAction (not
+            // isActionUnlocked) so a care button disables the INSTANT it's
+            // pressed -- reportAction() flips currentActionDone_, dropping
+            // isAwaitingAction to false the same frame. This stops a second
+            // press and the double click-sound (the press that fired the button
+            // would otherwise still be over an enabled button when the
+            // tutorial's own advance runs later that frame).
+            btn->setEnabled(tutorialController_->isAwaitingAction(label));
+        } else {
+            // Tutorial finished (or none): everything is unlocked. Without this
+            // branch, isAwaitingAction returns false for every button once the
+            // tutorial ends, leaving them all permanently disabled.
+            btn->setEnabled(true);
         }
     }
 }

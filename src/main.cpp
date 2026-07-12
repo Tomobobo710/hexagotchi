@@ -1,3 +1,7 @@
+#include <cstdio>
+#include <cstdarg>
+#include <iostream>
+#include <fstream>
 #include "SceneManager.hpp"
 #include "DialogBox.hpp"
 #include "GameConstants.hpp"
@@ -21,6 +25,7 @@
 #include "game/ToyAnimationScene.hpp"
 #include "game/DeathScene.hpp"
 #include "game/SceneSelectScene.hpp"
+#include "game/OptionsScene.hpp"
 #include "game/TitleScene.hpp"
 #include "game/GotchiStatsScene.hpp"
 #include "game/MergeController.hpp"
@@ -31,6 +36,7 @@
 #include "engine/GameState.h"
 #include "engine/SaveManager.h"
 #include "engine/SaveWiring.h"
+#include "engine/AudioManager.hpp"
 #include "events/EventBus.h"
 #include <string>
 #include <vector>
@@ -70,6 +76,17 @@ DriversController* driversController = nullptr;
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
+    #include <emscripten/html5.h>
+
+// Pause music when the browser tab is hidden and resume when it's shown again.
+// Fires off the Page Visibility API, so it runs even while the game loop is
+// parked by the browser (which is exactly when the music stream would otherwise
+// underrun and glitch). Registered once, after AudioManager::init().
+static EM_BOOL OnVisibilityChange(int, const EmscriptenVisibilityChangeEvent* e, void*) {
+    if (e->hidden) AudioManager::Get().pauseMusic();
+    else           AudioManager::Get().resumeMusic();
+    return EM_TRUE;
+}
 #endif
 
 SceneManager* sceneManager = nullptr;
@@ -115,7 +132,15 @@ static void SyncMouseToGameSpace() {
 void UpdateDrawFrame() {
     SyncMouseToGameSpace();
 
+    // Clamp dt so a backgrounded/throttled tab can't deliver a monster delta.
+    // On web the loop is requestAnimationFrame-driven (emscripten fps=0), which
+    // the browser pauses while the tab is unfocused; on return, GetFrameTime()
+    // can report the entire away-duration as one frame. An unbounded dt makes
+    // timers fire thousands of times, animations/physics integrate to garbage,
+    // and state corrupt ("game breaks on return"). Capping at 100ms means the
+    // worst case is a single slightly-long frame, never a catastrophic one.
     float dt = GetFrameTime();
+    if (dt > 0.1f) dt = 0.1f;
     std::string currentScene = sceneManager->getCurrentSceneName();
 
     if (currentScene != lastScene) {
@@ -191,6 +216,31 @@ void UpdateDrawFrame() {
     }
 
     sceneManager->update(dt);
+
+    // --- Global music: pick a "world" from the current scene name and let the
+    // AudioManager own the single music track. setMusicWorld() is idempotent,
+    // so calling it every frame just keeps the right track playing and only
+    // swaps when the world actually changes. Silence (None) on menus/death/etc.
+    // Re-read the scene name here (not the top-of-frame `currentScene`) because
+    // sceneManager->update() may have just flipped scenes.
+    {
+        const std::string& s = sceneManager->getCurrentSceneName();
+        AudioManager::MusicWorld world = AudioManager::MusicWorld::None;
+        if (s == "gotchi" || s == "hexboard") {
+            world = AudioManager::MusicWorld::Gotchi;
+        } else if (s == "merge") {
+            world = AudioManager::MusicWorld::Merge;
+        } else if (s == "office" || s == "apartment" || s == "pizza_parlor" ||
+                   s == "therapist_office" || s == "school" || s == "kids_visit" ||
+                   s == "ending") {
+            world = AudioManager::MusicWorld::RealWorld;
+        }
+        // Everything else (title, options, credits, death, toy_animation, the
+        // debug/test scenes) stays silent.
+        AudioManager::Get().setMusicWorld(world);
+        AudioManager::Get().updateMusic();
+    }
+
     if (mergeController) {
         mergeController->update(dt);
     }
@@ -244,6 +294,49 @@ void UpdateDrawFrame() {
 }
 
 int main() {
+    // Silence ALL console output. Three separate channels emit logs:
+    //   1. raylib's TraceLog (RRES/TEXTURE/SHADER/IMAGE spam + the game's own
+    //      TraceLog calls like GOTCHI_FRAME/HEXCAM/ASSETPACK) -> LOG_NONE.
+    //   2. C stdio printf/fprintf(stderr) -> redirect stdout+stderr to null.
+    //   3. C++ std::cout/cerr/clog (StorySequencer DEBUG_LOG, care-action
+    //      debug, etc.) -> point their stream buffers at a null sink.
+    // Must be first, before any resource loading or InitWindow.
+#ifdef HEXA_DEBUG_LOG
+    // Debug build: keep ALL logging on and route raylib's TraceLog to a file
+    // next to the exe (hexa_log.txt) so a -mwindows (no-console) build can still
+    // be diagnosed. Build with: build-alt.sh debug  (defines HEXA_DEBUG_LOG).
+    SetTraceLogLevel(LOG_ALL);
+    {
+        static FILE* logFile = fopen("hexa_log.txt", "w");
+        if (logFile) {
+            // Mirror raylib TraceLog into the file.
+            SetTraceLogCallback([](int logLevel, const char* text, va_list args) {
+                static FILE* f = fopen("hexa_log.txt", "a");
+                if (f) { vfprintf(f, text, args); fputc('\n', f); fflush(f); }
+                (void)logLevel;
+            });
+        }
+    }
+#else
+    // Release: silence ALL console output. Three channels emit logs:
+    //   1. raylib's TraceLog -> LOG_NONE.
+    //   2. C stdio printf/fprintf(stderr) -> redirect stdout+stderr to null.
+    //   3. C++ std::cout/cerr/clog -> point their buffers at a null sink.
+    // Must be first, before any resource loading or InitWindow.
+    SetTraceLogLevel(LOG_NONE);
+#if defined(_WIN32)
+    freopen("NUL", "w", stdout);
+    freopen("NUL", "w", stderr);
+#else
+    freopen("/dev/null", "w", stdout);
+    freopen("/dev/null", "w", stderr);
+#endif
+    static std::ofstream nullSink;   // never opened -> a silently-failing sink
+    std::cout.rdbuf(nullSink.rdbuf());
+    std::cerr.rdbuf(nullSink.rdbuf());
+    std::clog.rdbuf(nullSink.rdbuf());
+#endif // HEXA_DEBUG_LOG
+
 #ifdef HEXA_SHOT_TOOL
     // Dev tooling only, compiled in solely when built with -DHEXA_SHOT_TOOL
     // (see tools/screenshot.sh). Starts on the scene named by the HEXA_SHOT
@@ -265,7 +358,7 @@ int main() {
 #if !defined(PLATFORM_WEB)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 #endif
-    InitWindow(720, 720, "2D Engine Demo");
+    InitWindow(720, 720, "Hexagotchi");
     SetTargetFPS(60);
 
     gameTarget = LoadRenderTexture(GAME_W, GAME_H);
@@ -278,6 +371,16 @@ int main() {
 
     // Initialize the asset pack system
     AssetPack::setPackFile("assets.rres");
+
+    // Audio: opens the device and loads shared SFX (UI click) from the pack.
+    // Must run after setPackFile so the click clip resolves.
+    AudioManager::Get().init();
+
+#if defined(PLATFORM_WEB)
+    // Pause/resume music when the browser tab is hidden/shown so the streaming
+    // buffer doesn't underrun and glitch while the game loop is parked.
+    emscripten_set_visibilitychange_callback(nullptr, EM_FALSE, OnVisibilityChange);
+#endif
 
     sceneManager = new SceneManager();
     sceneManager->registerScene("hexboard", new HexViewScene());
@@ -299,6 +402,7 @@ int main() {
     sceneManager->registerScene("death", new DeathScene());
     sceneManager->registerScene("title", new TitleScene());
     sceneManager->registerScene("scene_select", new SceneSelectScene(sceneManager));
+    sceneManager->registerScene("options", new OptionsScene(sceneManager));
     GotchiStatsScene* gotchiStatsScene = new GotchiStatsScene();
     sceneManager->registerScene("gotchi_stats", gotchiStatsScene);
 
@@ -391,6 +495,7 @@ int main() {
     delete driversController;
     // delete saveWiring;  // DISABLED: Save system shut off for game jam
     delete sceneManager;
+    AudioManager::Get().shutdown();
     CloseWindow();
 #endif
     return 0;

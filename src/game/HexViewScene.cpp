@@ -553,14 +553,14 @@ void HexViewScene::onExitSelected() {
 void HexViewScene::addBackButton() {
     // Add Back button at top-left of screen
     // Takes input priority so clicking it does NOT also trigger a hex move
-    float buttonWidth = 100.0f;
-    float buttonHeight = 32.0f;
+    float buttonWidth = 200.0f;
+    float buttonHeight = 64.0f;
     float x = 20.0f;
     float y = 40.0f;
 
     backButton_ = std::unique_ptr<Button>(new Button({x, y}, buttonWidth, buttonHeight, "BACK"));
     backButton_->setAnchor("top-left");
-    backButton_->setFontSize(14);
+    backButton_->setFontSize(28);
     backButton_->setBackgroundColor({60, 60, 100, 220});
     backButton_->setHoverColor({100, 100, 160, 240});
     backButton_->setBorderColor({150, 150, 200, 255});

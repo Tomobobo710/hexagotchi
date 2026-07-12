@@ -5,6 +5,7 @@
 #include "SceneManager.hpp"
 #include "ToyAnimationScene.hpp"
 #include "SceneInputHandler.hpp"
+#include "TutorialController.hpp"
 
 DeathScene::DeathScene()
     : Scene((float)GAME_W, (float)GAME_H, BLACK) {
@@ -36,17 +37,13 @@ void DeathScene::update(float deltaTime) {
 }
 
 void DeathScene::onTryAgain() {
-    // Same reset TitleScene::onNewGame() uses: a fresh default GameState
-    // overwrites the shared global by value, so every scene/controller
-    // holding a GameState* sees the reset immediately (they only ever hold
-    // the pointer, never a copy). This also clears tutorial_seen, so a new
-    // playthrough gets the tutorial again, same as an actual new game.
-    GameState state;
-    state.version = SAVE_VERSION;
-    state.mode = Mode::Gotchi;
-    state.storyBeatIndex = 0;
-    state.mergeCount = 0;
-    globalGameState = state;
+    // Fresh-run reset that overwrites the shared global by value, so every
+    // scene/controller holding a GameState* sees it immediately (they only ever
+    // hold the pointer, never a copy). PRESERVES tutorial_seen -- a Try Again is
+    // the same player restarting, so they shouldn't be re-walked through the
+    // tutorial. Audio/dialog preferences are external (GameConstants globals),
+    // so they survive this untouched.
+    ResetRunKeepingTutorial(globalGameState);
 
     if (getSceneManager()) {
         SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());

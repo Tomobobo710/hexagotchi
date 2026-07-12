@@ -99,6 +99,68 @@ std::vector<Texture2D> loadFrames(const std::string& dir, const std::string& pre
     return frames;
 }
 
+Sound loadSound(const std::string& key) {
+    unsigned int id = rresComputeCRC32((const unsigned char*)key.c_str(), (int)key.size());
+    rresResourceChunk chunk = rresLoadResourceChunk(packFile.c_str(), id);
+
+    if (chunk.data.raw == nullptr) {
+        TraceLog(LOG_WARNING, "ASSETPACK sound miss: key='%s' id=%08X", key.c_str(), id);
+        return Sound{0};
+    }
+
+    unsigned int dataSize = 0;
+    unsigned char* bytes = (unsigned char*)LoadDataFromResource(chunk, &dataSize);
+    rresUnloadResourceChunk(chunk);
+
+    if (bytes == nullptr || dataSize == 0) {
+        TraceLog(LOG_WARNING, "ASSETPACK sound no data: key='%s'", key.c_str());
+        if (bytes) UnloadFileData(bytes);
+        return Sound{0};
+    }
+
+    // Decode using the key's file extension (".mp3", ".wav", ...) so
+    // LoadWaveFromMemory picks the right decoder.
+    std::string ext = ".mp3";
+    size_t dot = key.find_last_of('.');
+    if (dot != std::string::npos) ext = key.substr(dot);
+
+    Wave wave = LoadWaveFromMemory(ext.c_str(), bytes, (int)dataSize);
+    UnloadFileData(bytes);
+
+    if (wave.data == nullptr) {
+        TraceLog(LOG_WARNING, "ASSETPACK sound decode fail: key='%s' ext='%s'", key.c_str(), ext.c_str());
+        return Sound{0};
+    }
+
+    Sound snd = LoadSoundFromWave(wave);
+    UnloadWave(wave);
+    return snd;
+}
+
+unsigned char* loadRawBytes(const std::string& key, unsigned int* outSize) {
+    if (outSize) *outSize = 0;
+    unsigned int id = rresComputeCRC32((const unsigned char*)key.c_str(), (int)key.size());
+    rresResourceChunk chunk = rresLoadResourceChunk(packFile.c_str(), id);
+
+    if (chunk.data.raw == nullptr) {
+        TraceLog(LOG_WARNING, "ASSETPACK raw miss: key='%s' id=%08X", key.c_str(), id);
+        return nullptr;
+    }
+
+    unsigned int dataSize = 0;
+    unsigned char* bytes = (unsigned char*)LoadDataFromResource(chunk, &dataSize);
+    rresUnloadResourceChunk(chunk);
+
+    if (bytes == nullptr || dataSize == 0) {
+        TraceLog(LOG_WARNING, "ASSETPACK raw no data: key='%s'", key.c_str());
+        if (bytes) UnloadFileData(bytes);
+        return nullptr;
+    }
+
+    if (outSize) *outSize = dataSize;
+    return bytes;
+}
+
 void unloadFrames(std::vector<Texture2D>& frames) {
     for (auto& tex : frames) {
         if (tex.id != 0) UnloadTexture(tex);

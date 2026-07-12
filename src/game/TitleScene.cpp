@@ -5,6 +5,7 @@
 #include "GotchiScene.hpp"
 #include "ToyAnimationScene.hpp"
 #include "GameState.h"
+#include "TutorialController.hpp"
 #include <functional>
 #include <fstream>
 #include <sstream>
@@ -134,23 +135,11 @@ void TitleScene::goBackToMainMenu() {
 #endif
 
 void TitleScene::onNewGame() {
-    // Create a new GameState with default values
-    GameState state;
-    state.version = SAVE_VERSION;
-    state.mode = Mode::Gotchi;
-    state.storyBeatIndex = 0;
-    state.mergeCount = 0;
-
-    // DISABLED: Save system shut off for game jam
-    // bool success = saveManager_.save(saveManager_.activeSlot(), state);
-    // if (success) {
-    //     std::cout << "[TitleScene] New game saved to slot " << saveManager_.activeSlot() << std::endl;
-    // } else {
-    //     std::cerr << "[TitleScene] Failed to save new game" << std::endl;
-    // }
-
-    // Update globalGameState so the new game actually starts
-    globalGameState = state;
+    // Fresh-run reset that PRESERVES tutorial_seen (see ResetRunKeepingTutorial)
+    // -- consistent with death Try Again / credits Play Again, so the tutorial
+    // only ever plays on the very first run of the session. Audio/dialog
+    // preferences are external globals and survive regardless.
+    ResetRunKeepingTutorial(globalGameState);
 
     // Transition through the toy intro animation on the way to the gotchi
     // scene -- same "switch, then configure before init() actually runs"
@@ -179,6 +168,14 @@ void TitleScene::init() {
     newGameButton_->setAnchor("center");
     newGameButton_->setFontSize(20);
     newGameButton_->setOnClick([this]() { onNewGame(); });
+
+    // Options button, directly below Start Game.
+    optionsButton_ = new Button({centerX, centerY - buttonHeight/2 + (buttonHeight + 14.0f)}, buttonWidth, buttonHeight, "OPTIONS");
+    optionsButton_->setAnchor("center");
+    optionsButton_->setFontSize(20);
+    optionsButton_->setOnClick([this]() {
+        if (sceneManager) sceneManager->switchScene("options");
+    });
 
     // DISABLED: Save system shut off for game jam
     // loadGameButton_ = new Button({centerX, centerY + buttonHeight/2}, buttonWidth, buttonHeight, "LOAD GAME");
@@ -281,6 +278,9 @@ void TitleScene::update(float deltaTime) {
         if (newGameButton_) {
             newGameButton_->update(input, deltaTime);
         }
+        if (optionsButton_) {
+            optionsButton_->update(input, deltaTime);
+        }
         // if (loadGameButton_) {
         //     loadGameButton_->update(input, deltaTime);
         // }
@@ -298,12 +298,18 @@ void TitleScene::draw() {
     int titleWidth = MeasureText(title, 48);
     DrawText(title, (int)((GAME_W - titleWidth) / 2.0f), 100, 48, {200, 200, 255, 255});
 
-    // Draw credit text under Start Game button
-    const char* credits = "         A Game by\nTomobobo and Bazola";
-    int creditsHeight = 20;
+    // Draw credit text under the Options button -- two separately-centered
+    // lines (MeasureText doesn't account for '\n', so a single string can't be
+    // truly centered).
     float centerY = (float)GAME_H / 2.0f;
     float buttonHeight = 50.0f;
-    DrawText(credits, (int)((GAME_W - MeasureText(credits, 20)) / 2.0f), (int)(centerY + buttonHeight/2 + 30), 20, {180, 180, 220, 200});
+    Color creditColor = {180, 180, 220, 200};
+    float creditsY = centerY + buttonHeight/2 + 30 + buttonHeight + 14.0f;
+
+    const char* creditLine1 = "A Game by";
+    const char* creditLine2 = "Tomobobo and Bazola";
+    DrawText(creditLine1, (int)((GAME_W - MeasureText(creditLine1, 20)) / 2.0f), (int)creditsY, 20, creditColor);
+    DrawText(creditLine2, (int)((GAME_W - MeasureText(creditLine2, 20)) / 2.0f), (int)(creditsY + 24.0f), 20, creditColor);
 
     // DISABLED: Save system shut off for game jam
     // if (showingLoadOptions_) {
@@ -332,6 +338,9 @@ void TitleScene::draw() {
         if (newGameButton_) {
             newGameButton_->draw();
         }
+        if (optionsButton_) {
+            optionsButton_->draw();
+        }
         // if (loadGameButton_) {
         //     loadGameButton_->draw();
         // }
@@ -347,6 +356,10 @@ void TitleScene::cleanup() {
     if (newGameButton_) {
         delete newGameButton_;
         newGameButton_ = nullptr;
+    }
+    if (optionsButton_) {
+        delete optionsButton_;
+        optionsButton_ = nullptr;
     }
 
     titleShader_ = nullptr;

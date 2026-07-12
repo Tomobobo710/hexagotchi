@@ -48,6 +48,12 @@ struct TutorialStep {
 
 class TutorialController {
 public:
+    // GameState flag key that records whether the tutorial has been completed.
+    // Public so reset paths (DeathScene "Try Again", CreditsScene "Play Again",
+    // TitleScene "New Game") can PRESERVE it across a full GameState reset --
+    // the tutorial should only ever run once, not again on every replay.
+    static constexpr const char* SEEN_FLAG = "tutorial_seen";
+
     TutorialController(GameState& state);
 
     // True if the tutorial should run for this playthrough (i.e. hasn't been
@@ -109,5 +115,24 @@ private:
     void showCurrentStep();
     void advanceStep();
 };
+
+// Resets a GameState to a fresh new-run default (mode/beat/merge all zeroed)
+// while PRESERVING the "tutorial completed" flag -- so a restart (death Try
+// Again, credits Play Again, title New Game) doesn't re-run the tutorial once
+// the player has already done it. Audio/dialog PREFERENCES are unaffected by
+// this either way: they live as globals in GameConstants.hpp, not in GameState,
+// so a GameState reset never touches them.
+inline void ResetRunKeepingTutorial(GameState& target) {
+    bool tutorialSeen = target.getBool(TutorialController::SEEN_FLAG, false);
+
+    GameState fresh;
+    fresh.version        = SAVE_VERSION;
+    fresh.mode           = Mode::Gotchi;
+    fresh.storyBeatIndex = 0;
+    fresh.mergeCount     = 0;
+    if (tutorialSeen) fresh.setFlag(TutorialController::SEEN_FLAG, true);
+
+    target = fresh;
+}
 
 #endif // TUTORIAL_CONTROLLER_HPP

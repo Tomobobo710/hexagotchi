@@ -1,10 +1,11 @@
 #include "TutorialController.hpp"
 #include "GameConstants.hpp"
+#include "AudioManager.hpp"
 #include "raylib.h"
 #include "SceneInputHandler.hpp"
 
 namespace {
-    const std::string TUTORIAL_SEEN_FLAG = "tutorial_seen";
+    const std::string TUTORIAL_SEEN_FLAG = TutorialController::SEEN_FLAG;
 
     // Bubble sized/positioned per scene: GotchiScene is a 720x720 tight shot
     // on the gotchi, HexViewScene is a wide world view, so the bubble sits
@@ -25,18 +26,20 @@ TutorialController::TutorialController(GameState& state)
         { "Let's try the explore the HexMap first. TAP/Press SPACE to head out there.", "", "gotchi" },
 
         { "This is the HexMap! Tap on any other tile to send me walking there.", "walk", "hexboard" },
-        { "Nice! You can drag food or water from the palette below onto a tile, and I'll go eat or drink it.", "", "hexboard" },
+        { "Nice! You can drag food or water from the bar below onto a tile, and I'll go eat or drink it.", "", "hexboard" },
         { "That's the HexMap basics. Let's head back so I can show you my home screen.", "", "hexboard" },
 
         { "This is my home screen. These buttons take care of me directly.", "", "gotchi" },
         { "Try Feed -- it fills me up when I'm hungry.", "Feed", "gotchi" },
         { "Try Pet -- it makes me happy.", "Pet", "gotchi" },
         { "Try Wash -- keeps me clean.", "Wash", "gotchi" },
+        { "Try Water -- quenches my thirst.", "Water", "gotchi" },
+        { "Try Groom -- leaves me happy and shiny.", "Groom", "gotchi" },
         { "HexMap, you've already seen. It'll take us exploring on HexLand's HexMap!", "", "gotchi" },
         { "That button.. hmm.. I'm not sure what that one does.", "", "gotchi" },
         { "Ok I'll unlock all the buttons now!", "", "gotchi" },
         { "Hmm, one of them isn't working.", "", "gotchi" },
-        { "Oh that button..", "", "gotchi" },
+        { "Oh that button...", "", "gotchi" },
         { "Oh well, I'll unlock what I can.", "", "gotchi" },
     };
 }
@@ -116,7 +119,19 @@ void TutorialController::update(float deltaTime) {
     bool acceptPressed = IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     if (!acceptPressed) return;
 
+    // Whether THIS step is gated on a care-button action (Feed/Pet/Wash/walk).
+    // On those steps the actual button already played its own click sound when
+    // it was pressed, so the tutorial must NOT play a second one -- that's the
+    // double-click-sound bug. Only the tutorial's own actions (skipping a
+    // reveal, advancing a pure-narration step) get a click here.
+    bool actionGatedStep = (stepIndex_ >= 0 && stepIndex_ < (int)steps_.size())
+                           && !steps_[stepIndex_].actionId.empty();
+
     if (!dialog_.isFinished()) {
+        // Skipping the typing reveal is a tutorial action -> click, but never
+        // on an action-gated step: there the press may be hitting the care
+        // button (which already clicked), so the tutorial stays silent.
+        if (!actionGatedStep) AudioManager::Get().playClick();
         dialog_.skipReveal();
         return;
     }
@@ -125,6 +140,9 @@ void TutorialController::update(float deltaTime) {
     // advance -- a step gated on an unperformed action (e.g. "Feed") simply
     // eats the space press until the player actually presses that button.
     if (currentActionDone_) {
+        // Click only if this wasn't an action-gated step (whose button already
+        // clicked). Pure-narration advances via tap/space still click here.
+        if (!actionGatedStep) AudioManager::Get().playClick();
         advanceStep();
     }
 }
@@ -133,5 +151,7 @@ void TutorialController::draw() {
     if (!active_) return;
     dialog_.draw();
 }
+
+
 
 

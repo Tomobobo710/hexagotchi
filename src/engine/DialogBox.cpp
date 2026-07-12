@@ -1,4 +1,5 @@
 #include "DialogBox.hpp"
+#include "GameConstants.hpp"
 #include "raylib.h"
 #include <sstream>
 #include <algorithm>
@@ -262,6 +263,9 @@ void DialogBox::setText(const std::string& text) {
         if (autoContinueDuration < DIALOG_AUTO_CONTINUE_MIN_DURATION) {
             autoContinueDuration = DIALOG_AUTO_CONTINUE_MIN_DURATION;
         }
+        // Global dialog-speed setting scales the whole thing (FAST = 1.5x
+        // quicker). Applied after the floor so short lines speed up too.
+        autoContinueDuration *= DialogSpeedDurationScale();
     }
     wrapText();
 }
@@ -338,6 +342,10 @@ void DialogBox::skip() {
 }
 
 void DialogBox::setAutoContinueEnabled(bool enabled) {
+    // Global OFF setting hard-disables the feature regardless of what a scene
+    // requests -- both the timer (update) and the progress bar (draw) are gated
+    // on autoContinueEnabled, so forcing it false gives "no bar, manual-only".
+    if (GetDialogSpeed() == DialogSpeed::Off) enabled = false;
     autoContinueEnabled = enabled;
     autoContinueTimer = 0.0f;
     autoAdvancePending = false;

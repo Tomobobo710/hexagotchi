@@ -26,11 +26,24 @@ WAIT_FRAMES="${3:-30}"
 mkdir -p "$(dirname "$OUT")"
 OUT="$(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")"
 
-GPP=/c/devkitPro/msys2/usr/bin/g++.exe
-G=/c/devkitPro/msys2/usr/lib/gcc/x86_64-pc-cygwin/15.2.0
-SYS="-isystem $G/include/c++ -isystem $G/include/c++/x86_64-pc-cygwin -isystem $G/include/c++/backward -isystem $G/include -isystem /c/devkitPro/msys2/usr/include"
-INC="-I src/engine -I src/game -I src/effects -I src/events -I src/flags -I raylib/src -I glfw/include -I rres/src"
-LD="-L raylib/src -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm"
+# MSYS2 UCRT64 MinGW -- same pinned toolchain as the Makefile/build-alt.sh
+# (NOT devkitPro's Cygwin g++; see the Makefile's toolchain comment). Must
+# match, since this links the same MinGW-built raylib/src/libraylib.a.
+TOOLDIR=/c/msys64/ucrt64/bin
+export PATH="$TOOLDIR:$PATH"
+GPP=$TOOLDIR/g++.exe
+SYS=""
+INC="-I src/engine -I src/game -I src/effects -I src/events -I src/flags -I raylib/src -I rres/src"
+# Mirrors the Makefile's LDFLAGS: GLFW lives inside libraylib.a (rglfw),
+# ole32/oleaut32/uuid/ksuser for the WASAPI audio backend, -static* so the
+# tool exe is self-contained.
+LD="-static -static-libgcc -static-libstdc++ -L raylib/src -lraylib -lopengl32 -lgdi32 -lwinmm -lole32 -loleaut32 -limm32 -lversion -luuid -lksuser"
+
+# Desktop raylib lib: built by the Makefile's own rule if missing, so there is
+# exactly ONE definition of how raylib gets compiled.
+if [ ! -f raylib/src/libraylib.a ]; then
+    make raylib/src/libraylib.a >/dev/null
+fi
 
 DEVOUT=build/devtools
 OBJ="$DEVOUT/obj"
@@ -45,12 +58,15 @@ else
     tools/pack_assets.sh assets build/assets.rres >/dev/null
 fi
 
+# No `timeout` around the compiler: Cygwin's timeout rewrites TMP/TEMP when
+# spawning the native MinGW g++, which then dies with "Cannot create temporary
+# file in C:\WINDOWS" (same fix as tools/pack_assets.sh).
 for f in src/main.cpp src/engine/*.cpp src/game/*.cpp src/effects/*.cpp src/events/*.cpp; do
     n=$(basename "$f" .cpp)
-    timeout 120 $GPP -DHEXA_SHOT_TOOL $SYS -std=c++17 $INC -c "$f" -o "$OBJ/$n.o"
+    $GPP -DHEXA_SHOT_TOOL $SYS -std=c++17 $INC -c "$f" -o "$OBJ/$n.o"
 done
 
-timeout 120 $GPP "$OBJ"/*.o -o "$DEVOUT/game_devtool.exe" $LD
+$GPP "$OBJ"/*.o -o "$DEVOUT/game_devtool.exe" $LD
 
 # AssetPack looks for "assets.rres" next to the running exe's cwd, same as
 # the real game.exe/build/desktop pairing -- copy it in rather than running

@@ -38,7 +38,10 @@ void GotchiSim::tickVitals(float dt) {
 
 // Separate method for mood updates (runs every frame, outside vitals tick gate)
 void GotchiSim::updateMood(float dt) {
-    // Mood updates must run every frame for overlay timing to work correctly
+    // Mood is a stateless snapshot of the current vitals (see
+    // GotchiMood::updateMood) -- it doesn't read dt at all, so it's cheap to
+    // recompute every frame and stays correct regardless of frame length. dt is
+    // still passed for signature compatibility.
     state_.mood.update(dt, state_.vitals);
 }
 
@@ -61,7 +64,7 @@ void GotchiSim::update(float dt) {
         // Tick vitals every GOTCHI_TICK_RATE seconds
         tickVitals(dt);
 
-        // Update mood every frame (overlay timing needs precise dt)
+        // Update mood every frame (stateless snapshot of current vitals; dt unused)
         updateMood(dt);
 
         // 4. Grime: rises with neglect each frame (clamped <= 1)

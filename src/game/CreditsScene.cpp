@@ -4,6 +4,7 @@
 #include "SceneManager.hpp"
 #include "ToyAnimationScene.hpp"
 #include "SceneInputHandler.hpp"
+#include "TutorialController.hpp"
 
 CreditsScene::CreditsScene()
     : Scene((float)GAME_W, (float)GAME_H, BLACK) {
@@ -36,15 +37,12 @@ void CreditsScene::update(float deltaTime) {
 }
 
 void CreditsScene::onPlayAgain() {
-    // Same reset DeathScene::onTryAgain() / TitleScene::onNewGame() use: a
-    // fresh default GameState overwrites the shared global by value, so every
-    // scene/controller holding a GameState* sees the reset immediately.
-    GameState state;
-    state.version = SAVE_VERSION;
-    state.mode = Mode::Gotchi;
-    state.storyBeatIndex = 0;
-    state.mergeCount = 0;
-    globalGameState = state;
+    // Fresh-run reset (see DeathScene::onTryAgain). Overwrites the shared global
+    // by value so every GameState* holder sees it at once. PRESERVES
+    // tutorial_seen -- someone who just finished the whole game replaying it
+    // shouldn't be re-tutorialized. Audio/dialog preferences are external
+    // globals, unaffected either way.
+    ResetRunKeepingTutorial(globalGameState);
 
     if (getSceneManager()) {
         SceneManager* mgr = static_cast<SceneManager*>(getSceneManager());

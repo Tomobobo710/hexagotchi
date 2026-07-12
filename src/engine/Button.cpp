@@ -1,4 +1,5 @@
 #include "Button.hpp"
+#include "AudioManager.hpp"
 
 Button::Button(Vector2 pos, float w, float h, const std::string& text)
     : label(text), position(pos), width(w), height(h), anchorPoint("top-left"),
@@ -48,6 +49,7 @@ void Button::update(SceneInputHandler* input, float deltaTime) {
     // Release fires the click only if the cursor is still over the button.
     if (input->isMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
         if (pressed && hovered && onClick) {
+            AudioManager::Get().playClick();
             onClick();
         }
         pressed = false;

@@ -1,6 +1,7 @@
 #include "OfficeScene.hpp"
 #include "GameConstants.hpp"
 #include "AssetPack.hpp"
+#include "AudioManager.hpp"
 #include "CharacterRegistry.hpp"
 #include "GameState.h"
 #include <cmath>
@@ -455,7 +456,9 @@ void OfficeScene::update(float deltaTime) {
         }
         // Check for normal advance (next line)
         if (dialog->isFinished()) {
-            if (dialog->consumeAutoAdvance() || (ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT)))) {
+            bool manualAdvance = ih && (ih->isActionPressed(INPUT_ACTION_ACCEPT) || IsKeyPressed(KEY_SPACE) || ih->isMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            if (manualAdvance) AudioManager::Get().playClick();  // no click on auto-advance
+            if (dialog->consumeAutoAdvance() || manualAdvance) {
                 advanceLine();
             }
         }

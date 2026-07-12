@@ -1,4 +1,28 @@
-CXX  = g++
+# ---- Desktop toolchain ------------------------------------------------------
+# The desktop build MUST use a real Windows (MinGW) compiler -- one that
+# defines _WIN32 and ships windows.h. A Cygwin g++ (e.g. devkitPro's, which is
+# what a bare `g++` resolves to on some machines) compiles raylib's miniaudio
+# down its POSIX branch: it looks for ALSA/PulseAudio at runtime, finds none on
+# Windows, and silently falls back to the Null backend -- audio loads, device
+# reports "ready", but the game is mute. Baked in at raylib compile time; no
+# link flag can fix it. So: prefer MSYS2 UCRT64 when installed, else fall back
+# to PATH g++ (which must then be a MinGW one).
+UCRT64_GXX := $(wildcard /c/msys64/ucrt64/bin/g++.exe)
+ifneq ($(UCRT64_GXX),)
+TOOLDIR := /c/msys64/ucrt64/bin/
+export PATH := /c/msys64/ucrt64/bin:$(PATH)
+endif
+# msys-based makes (e.g. devkitPro's) scrub TMP/TEMP from recipe environments.
+# Native MinGW gcc then falls back to C:\WINDOWS for its temp files and dies
+# with "Cannot create temporary file: Permission denied". Restore a writable
+# Windows-style temp dir whenever the environment lost it.
+ifeq ($(strip $(TMP)),)
+export TMP  := $(shell cygpath -w /tmp 2>/dev/null)
+export TEMP := $(TMP)
+endif
+CXX  = $(TOOLDIR)g++
+CC   = $(TOOLDIR)gcc
+AR   = $(TOOLDIR)ar
 EMCC = python emsdk/upstream/emscripten/emcc.py
 EMAR = python emsdk/upstream/emscripten/emar.py
 RL   = raylib/src
@@ -6,7 +30,12 @@ RL   = raylib/src
 SRCS        = src/main.cpp $(wildcard src/engine/*.cpp) $(wildcard src/game/*.cpp) $(wildcard src/effects/*.cpp) $(wildcard src/events/*.cpp)
 INCLUDES    = -I src/engine -I src/game -I src/effects -I src/events -I src/flags -I $(RL) -I glfw/include -I rres/src
 CXXFLAGS    = -std=c++17 $(INCLUDES)
-LDFLAGS     = -L $(RL) -L glfw/build/src -lraylib -lglfw3 -lopengl32 -lgdi32 -lwinmm
+# GLFW is compiled INTO libraylib.a via rglfw.c (see the libraylib.a rule), so
+# no separate -lglfw3 / glfw cmake build is needed for desktop anymore.
+# ole32/oleaut32/uuid/ksuser: WASAPI (miniaudio) COM dependencies.
+# -static*: bundle libstdc++/libgcc/winpthread so game.exe runs on machines
+# without the MSYS2 runtime DLLs (teammates, jam judges).
+LDFLAGS     = -static -static-libgcc -static-libstdc++ -L $(RL) -lraylib -lopengl32 -lgdi32 -lwinmm -lole32 -loleaut32 -limm32 -lversion -luuid -lksuser
 
 WEBINCLUDES = -I src/engine -I src/game -I src/effects -I src/events -I src/flags -I $(RL) -I rres/src
 WEBFLAGS    = -Os -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 -I $(RL)
@@ -20,12 +49,32 @@ OBJ         = $(SRCS:src/%.cpp=$(DESKTOP_OUT)/obj/%.o)
 all: $(DESKTOP_OUT)/game.exe $(DESKTOP_OUT)/assets.rres
 
 # Link the compiled object files into the executable.
-$(DESKTOP_OUT)/game.exe: $(OBJ)
-	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
+$(DESKTOP_OUT)/game.exe: $(OBJ) $(RL)/libraylib.a
+	$(CXX) $(OBJ) -o $@ -mwindows $(LDFLAGS)
+
+# Desktop raylib static lib, built from the vendored sources with the SAME
+# MinGW toolchain as the game (see the toolchain block up top -- a Cygwin-built
+# raylib means Null audio backend / silent game). rglfw.c compiles GLFW in, so
+# desktop needs no separate glfw build. Mirrors the libraylib.web.a rule below.
+RLFLAGS = -Os -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33 -I $(RL) -I $(RL)/external -I $(RL)/external/glfw/include
+$(RL)/libraylib.a:
+	$(CC) -c $(RL)/rcore.c     $(RLFLAGS) -o $(RL)/rcore.desk.o
+	$(CC) -c $(RL)/rshapes.c   $(RLFLAGS) -o $(RL)/rshapes.desk.o
+	$(CC) -c $(RL)/rtextures.c $(RLFLAGS) -o $(RL)/rtextures.desk.o
+	$(CC) -c $(RL)/rtext.c     $(RLFLAGS) -o $(RL)/rtext.desk.o
+	$(CC) -c $(RL)/rmodels.c   $(RLFLAGS) -o $(RL)/rmodels.desk.o
+	$(CC) -c $(RL)/raudio.c    $(RLFLAGS) -o $(RL)/raudio.desk.o
+	$(CC) -c $(RL)/rglfw.c     $(RLFLAGS) -o $(RL)/rglfw.desk.o
+	$(AR) rcs $@ $(RL)/rcore.desk.o $(RL)/rshapes.desk.o $(RL)/rtextures.desk.o $(RL)/rtext.desk.o $(RL)/rmodels.desk.o $(RL)/raudio.desk.o $(RL)/rglfw.desk.o
 
 # game.exe reads assets.rres via a relative path, so it must sit next to the
-# exe. Depends on build/assets.rres, so editing art repacks then recopies here.
-$(DESKTOP_OUT)/assets.rres: build/assets.rres
+# exe. Depends on force-assets (phony) so the pack is ALWAYS rebuilt first,
+# matching the web: rule -- an mtime-based dependency on build/assets.rres would
+# let a stale pack ship (e.g. after a git checkout, or when assets/ isn't newer
+# than an existing pack), which is how the desktop build silently shipped a pack
+# with no audio in it. force-assets repacks unconditionally, then we copy.
+.PHONY: $(DESKTOP_OUT)/assets.rres
+$(DESKTOP_OUT)/assets.rres: force-assets
 	mkdir -p $(DESKTOP_OUT)
 	cp build/assets.rres $(DESKTOP_OUT)/assets.rres
 
@@ -106,11 +155,11 @@ $(SCENE_EDITOR_OUT)/assets_manifest.txt: build/assets.rres
 	mkdir -p $(SCENE_EDITOR_OUT)
 	cp build/assets_manifest.txt $(SCENE_EDITOR_OUT)/assets_manifest.txt
 
-# Dependencies
-deps:
-	make -C raylib/src
-	cmake -S glfw -B glfw/build -DBUILD_SHARED_LIBS=OFF -DGLFW_BUILD_WAYLAND=OFF -DGLFW_BUILD_X11=OFF
-	make -C glfw/build
+# Dependencies. Desktop raylib is built by our own $(RL)/libraylib.a rule with
+# the pinned MinGW toolchain -- do NOT use raylib's own Makefile here, it grabs
+# whatever g++ is on PATH (Cygwin on some machines -> Null audio backend).
+# The glfw cmake build is gone: rglfw.c compiles GLFW into libraylib.a.
+deps: $(RL)/libraylib.a
 
 emsdk-setup:
 	emsdk/emsdk.bat install latest

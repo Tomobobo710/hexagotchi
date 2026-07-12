@@ -33,6 +33,22 @@ namespace AssetPack {
 
     // Unloads every texture in a vector returned by loadFrames(), then clears it.
     void unloadFrames(std::vector<Texture2D>& frames);
+
+    // Loads an audio clip packed under `key` (e.g. "sfx/click.mp3"). The
+    // packed bytes are the original file verbatim; this decodes them in memory
+    // via LoadWaveFromMemory using the key's extension. Requires an audio
+    // device (InitAudioDevice) to already be initialized. Returns a Sound with
+    // frameCount == 0 if the key is missing or fails to decode. Caller owns the
+    // result and must UnloadSound() it.
+    Sound loadSound(const std::string& key);
+
+    // Reads the raw packed bytes for `key` into a freshly malloc'd buffer.
+    // Returns nullptr on miss. On success, *outSize gets the byte count and the
+    // caller OWNS the buffer -- free it with UnloadFileData() (raylib's
+    // MemFree). Used for streaming music: LoadMusicStreamFromMemory keeps a
+    // pointer INTO this buffer, so it must outlive the Music stream (don't free
+    // it until after UnloadMusicStream()).
+    unsigned char* loadRawBytes(const std::string& key, unsigned int* outSize);
 }
 
 #endif // ASSET_PACK_HPP

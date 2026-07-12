@@ -30,6 +30,50 @@ inline bool IsIntegerScalingEnabled() {
     return IntegerScalingState();
 }
 
+// ============================================================================
+// Global user settings (Options menu)
+// ============================================================================
+// Header-only inline-static accessors, mirroring IntegerScalingState() above,
+// so any scene OR the engine (DialogBox etc.) can read them without pulling in
+// GameState. NOT persisted to disk yet -- SaveManager is #if 0'd for the jam,
+// so these reset to their defaults on each launch. When save is re-enabled,
+// serialize these three values there.
+
+// --- Volumes: integer levels 0 .. 10, default 6. The Options menu steps them
+//     by 1. Audio code reads the 0..1 float form (level / 10) and applies it
+//     via SetSoundVolume/SetMusicVolume per clip.
+static const int VOLUME_LEVEL_MAX     = 10;
+static const int VOLUME_LEVEL_DEFAULT = 6;
+
+inline int ClampVolumeLevel(int v) { return (v < 0) ? 0 : (v > VOLUME_LEVEL_MAX ? VOLUME_LEVEL_MAX : v); }
+
+inline int& MusicVolumeState() { static int v = VOLUME_LEVEL_DEFAULT; return v; }
+inline int   GetMusicVolume()  { return MusicVolumeState(); }              // 0..10
+inline float GetMusicVolume01(){ return MusicVolumeState() / (float)VOLUME_LEVEL_MAX; }
+inline void  SetMusicVolume(int level) { MusicVolumeState() = ClampVolumeLevel(level); }
+
+inline int& SfxVolumeState() { static int v = VOLUME_LEVEL_DEFAULT; return v; }
+inline int   GetSfxVolume()  { return SfxVolumeState(); }                  // 0..10
+inline float GetSfxVolume01(){ return SfxVolumeState() / (float)VOLUME_LEVEL_MAX; }
+inline void  SetSfxVolume(int level) { SfxVolumeState() = ClampVolumeLevel(level); }
+
+// --- Dialog auto-advance speed. OFF disables the feature entirely (no timer,
+//     no progress bar -- dialog only advances on tap/space). NORMAL is the
+//     designed pace; FAST is 1.5x quicker. Read by DialogBox: OFF suppresses
+//     setAutoContinueEnabled(true), and the speed scales the computed
+//     auto-continue duration (see DialogBox::setText).
+enum class DialogSpeed { Off, Normal, Fast };
+inline DialogSpeed& DialogSpeedState() { static DialogSpeed s = DialogSpeed::Normal; return s; }
+inline DialogSpeed  GetDialogSpeed()   { return DialogSpeedState(); }
+inline void         SetDialogSpeed(DialogSpeed s) { DialogSpeedState() = s; }
+// Multiplier applied to auto-continue duration: smaller = faster. FAST = 1/1.5.
+inline float DialogSpeedDurationScale() {
+    switch (DialogSpeedState()) {
+        case DialogSpeed::Fast: return 1.0f / 1.5f;
+        default:                return 1.0f;   // Normal (Off never auto-advances)
+    }
+}
+
 // Gotchi world scale - fixed sprite scale in world space (64→128px)
 // The gotchi's native frame is 64px; this scales it to 128px in the world
 inline constexpr float GOTCHI_WORLD_SCALE = 2.0f;
